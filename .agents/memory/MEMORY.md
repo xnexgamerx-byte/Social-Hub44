@@ -1,0 +1,1 @@
+- [Yalla-clone Expo app](yalla-clone-expo.md) — dark Arabic social app with rooms/videos/games; frontend-only, AsyncStorage, forced dark mode.

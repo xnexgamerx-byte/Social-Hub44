@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "نبضة - دردشة وترفيه"
+version = "1.0.0"
+id = "artifacts/yalla-clone"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 22789
+
+[services.development]
+run = "pnpm --filter @workspace/yalla-clone run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/yalla-clone", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/yalla-clone", "run", "serve" ]
+
+[services.env]
+PORT = "22789"
+BASE_PATH = "/"
