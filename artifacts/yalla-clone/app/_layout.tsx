@@ -6,6 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setBaseUrl } from "@workspace/api-client-react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
@@ -16,6 +17,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppContextProvider } from "@/context/AppContext";
 
 SplashScreen.preventAutoHideAsync();
+
+const apiDomain = process.env.EXPO_PUBLIC_DOMAIN;
+if (apiDomain) {
+  setBaseUrl(`https://${apiDomain}`);
+}
 
 const queryClient = new QueryClient();
 
@@ -31,6 +37,10 @@ function RootLayoutNav() {
         name="game/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen name="store" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="vip" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="games" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="admin/index" options={{ headerShown: false, presentation: "card" }} />
     </Stack>
   );
 }

@@ -14,23 +14,23 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
+        <Label>الرئيسية</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="videos">
-        <Icon sf={{ default: "figure.walk", selected: "figure.walk" }} />
-        <Label>Movement</Label>
+        <Icon sf={{ default: "play.circle", selected: "play.circle.fill" }} />
+        <Label>اللحظات</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="rooms">
         <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
-        <Label>Chatroom</Label>
+        <Label>الغرف</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="games">
-        <Icon sf={{ default: "gamecontroller", selected: "gamecontroller.fill" }} />
-        <Label>Games</Label>
+      <NativeTabs.Trigger name="messages">
+        <Icon sf={{ default: "message", selected: "message.fill" }} />
+        <Label>الرسائل</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "face.smiling", selected: "face.smiling.inverse" }} />
-        <Label>Me</Label>
+        <Label>أنا</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -68,7 +68,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "الرئيسية",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
               <SymbolView name={focused ? "house.fill" : "house"} tintColor={color} size={24} />
@@ -80,19 +80,19 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="videos"
         options={{
-          title: "Movement",
+          title: "اللحظات",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="figure.walk" tintColor={color} size={24} />
+              <SymbolView name={focused ? "play.circle.fill" : "play.circle"} tintColor={color} size={24} />
             ) : (
-              <Ionicons name={focused ? "walk" : "walk-outline"} size={22} color={color} />
+              <Ionicons name={focused ? "play-circle" : "play-circle-outline"} size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
         name="rooms"
         options={{
-          title: "Chatroom",
+          title: "الغرف",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
               <SymbolView name={focused ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right"} tintColor={color} size={24} />
@@ -102,21 +102,21 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="games"
+        name="messages"
         options={{
-          title: "Games",
+          title: "الرسائل",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name={focused ? "gamecontroller.fill" : "gamecontroller"} tintColor={color} size={24} />
+              <SymbolView name={focused ? "message.fill" : "message"} tintColor={color} size={24} />
             ) : (
-              <Ionicons name={focused ? "game-controller" : "game-controller-outline"} size={22} color={color} />
+              <Ionicons name={focused ? "chatbubble" : "chatbubble-outline"} size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Me",
+          title: "أنا",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
               <SymbolView name={focused ? "face.smiling.inverse" : "face.smiling"} tintColor={color} size={24} />

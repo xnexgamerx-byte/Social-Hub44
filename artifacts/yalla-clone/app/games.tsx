@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React from "react";
 import {
   FlatList,
   Platform,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,7 +17,7 @@ import { useColors } from "@/hooks/useColors";
 export default function GamesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = Platform.OS === "web" ? 20 : insets.top;
 
   const pairs: (typeof GAMES)[] = [];
   for (let i = 0; i < GAMES.length; i += 2) {
@@ -25,6 +27,9 @@ export default function GamesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
+        </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>الألعاب</Text>
         <View style={[styles.onlineBadge, { backgroundColor: colors.secondary }]}>
           <View style={styles.onlineDot} />
@@ -52,7 +57,7 @@ export default function GamesScreen() {
         keyExtractor={(_, i) => i.toString()}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90 },
+          { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 },
         ]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item: pair }) => (
@@ -74,10 +79,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 14,
+    gap: 8,
   },
-  title: { fontSize: 22, fontWeight: "800" as const },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  title: { fontSize: 22, fontWeight: "800" as const, flex: 1 },
   onlineBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -100,11 +107,7 @@ const styles = StyleSheet.create({
   },
   featuredTitle: { fontSize: 15, fontWeight: "700" as const },
   featuredSub: { fontSize: 12, marginTop: 2 },
-  featuredPill: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
+  featuredPill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   featuredPillText: { color: "#000", fontSize: 12, fontWeight: "700" as const },
   list: { paddingHorizontal: 16 },
   row: { flexDirection: "row", gap: 12, marginBottom: 12 },
