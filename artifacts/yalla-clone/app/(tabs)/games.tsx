@@ -17,16 +17,16 @@ export default function GamesScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const pairs = [];
+  const pairs: (typeof GAMES)[] = [];
   for (let i = 0; i < GAMES.length; i += 2) {
     pairs.push(GAMES.slice(i, i + 2));
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+      <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>الألعاب</Text>
-        <View style={[styles.onlineBadge, { backgroundColor: colors.muted }]}>
+        <View style={[styles.onlineBadge, { backgroundColor: colors.secondary }]}>
           <View style={styles.onlineDot} />
           <Text style={[styles.onlineText, { color: colors.mutedForeground }]}>
             {GAMES.reduce((s, g) => s + g.players, 0).toLocaleString()} لاعب الآن
@@ -34,15 +34,15 @@ export default function GamesScreen() {
         </View>
       </View>
 
-      <View style={[styles.featuredBanner, { backgroundColor: colors.primary + "22", borderColor: colors.primary + "44" }]}>
-        <Ionicons name="trophy" size={28} color={colors.accent} />
+      <View style={[styles.featuredBanner, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "33" }]}>
+        <Ionicons name="trophy" size={28} color="#F59E0B" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.featuredTitle, { color: colors.foreground }]}>بطولة اليوم</Text>
           <Text style={[styles.featuredSub, { color: colors.mutedForeground }]}>
             انضم للتحدي واكسب مكافآت يومية
           </Text>
         </View>
-        <View style={[styles.featuredPill, { backgroundColor: colors.accent }]}>
+        <View style={[styles.featuredPill, { backgroundColor: "#F59E0B" }]}>
           <Text style={styles.featuredPillText}>جديد</Text>
         </View>
       </View>
@@ -77,10 +77,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "800" as const,
-  },
+  title: { fontSize: 22, fontWeight: "800" as const },
   onlineBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -89,16 +86,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: "#22C55E",
-  },
-  onlineText: {
-    fontSize: 12,
-    fontWeight: "500" as const,
-  },
+  onlineDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#22C55E" },
+  onlineText: { fontSize: 12, fontWeight: "500" as const },
   featuredBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -109,30 +98,14 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  featuredTitle: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-  },
-  featuredSub: {
-    fontSize: 12,
-    marginTop: 2,
-  },
+  featuredTitle: { fontSize: 15, fontWeight: "700" as const },
+  featuredSub: { fontSize: 12, marginTop: 2 },
   featuredPill: {
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  featuredPillText: {
-    color: "#000",
-    fontSize: 12,
-    fontWeight: "700" as const,
-  },
-  list: {
-    paddingHorizontal: 16,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-  },
+  featuredPillText: { color: "#000", fontSize: 12, fontWeight: "700" as const },
+  list: { paddingHorizontal: 16 },
+  row: { flexDirection: "row", gap: 12, marginBottom: 12 },
 });

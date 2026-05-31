@@ -1,16 +1,190 @@
-import { Room } from "@/components/RoomCard";
-import { Video } from "@/components/VideoCard";
-import { Game } from "@/components/GameCard";
+import type { Room } from "@/components/RoomCard";
+import type { Video } from "@/components/VideoCard";
+import type { Game } from "@/components/GameCard";
+
+export interface NearbyUser {
+  id: string;
+  name: string;
+  avatar: string;
+  flag: string;
+  level: number;
+  isVip: boolean;
+  status: string;
+  isOnline: boolean;
+  isVoiceChatting?: boolean;
+}
+
+export interface Post {
+  id: string;
+  user: string;
+  avatar: string;
+  level: number;
+  isVip: boolean;
+  isOnline: boolean;
+  images: string[];
+  tag: string;
+  time: string;
+  distance: string;
+  likes: number;
+  comments: number;
+}
+
+export const NEARBY_USERS: NearbyUser[] = [
+  {
+    id: "u1",
+    name: "بهيرة",
+    avatar: "https://i.pravatar.cc/150?img=1",
+    flag: "🇦🇪",
+    level: 84,
+    isVip: true,
+    status: "أراك في القريب العاجل",
+    isOnline: true,
+  },
+  {
+    id: "u2",
+    name: "أماني",
+    avatar: "https://i.pravatar.cc/150?img=5",
+    flag: "🇦🇹",
+    level: 20,
+    isVip: false,
+    status: "لم تقل أي شيء بعد",
+    isOnline: true,
+  },
+  {
+    id: "u3",
+    name: "إنتصار",
+    avatar: "https://i.pravatar.cc/150?img=12",
+    flag: "🇦🇺",
+    level: 21,
+    isVip: false,
+    status: "سعيدة بلقائك",
+    isOnline: false,
+  },
+  {
+    id: "u4",
+    name: "جيني",
+    avatar: "https://i.pravatar.cc/150?img=16",
+    flag: "🇹🇭",
+    level: 22,
+    isVip: true,
+    status: "تعال وتحدث معي...",
+    isOnline: true,
+    isVoiceChatting: true,
+  },
+  {
+    id: "u5",
+    name: "بسمة",
+    avatar: "https://i.pravatar.cc/150?img=25",
+    flag: "🇨🇲",
+    level: 34,
+    isVip: false,
+    status: "هل كان يومك جيداً؟",
+    isOnline: true,
+  },
+  {
+    id: "u6",
+    name: "حنان",
+    avatar: "https://i.pravatar.cc/150?img=30",
+    flag: "🇸🇦",
+    level: 20,
+    isVip: true,
+    status: "منذ وقت طويل لم نلتقِ",
+    isOnline: false,
+  },
+  {
+    id: "u7",
+    name: "ليلى",
+    avatar: "https://i.pravatar.cc/150?img=44",
+    flag: "🇲🇦",
+    level: 18,
+    isVip: false,
+    status: "أحب الموسيقى والكتب",
+    isOnline: true,
+  },
+  {
+    id: "u8",
+    name: "نور",
+    avatar: "https://i.pravatar.cc/150?img=40",
+    flag: "🇪🇬",
+    level: 30,
+    isVip: true,
+    status: "ابتسم، الحياة جميلة",
+    isOnline: true,
+  },
+];
+
+export const POSTS: Post[] = [
+  {
+    id: "p1",
+    user: "بسمة",
+    avatar: "https://i.pravatar.cc/150?img=25",
+    level: 34,
+    isVip: true,
+    isOnline: true,
+    images: ["https://picsum.photos/seed/post1/600/400"],
+    tag: "أحب السفر",
+    time: "منذ 3 دقائق",
+    distance: "800م",
+    likes: 12,
+    comments: 12,
+  },
+  {
+    id: "p2",
+    user: "يونس مودي",
+    avatar: "https://i.pravatar.cc/150?img=15",
+    level: 19,
+    isVip: true,
+    isOnline: true,
+    images: [
+      "https://picsum.photos/seed/post2a/300/300",
+      "https://picsum.photos/seed/post2b/300/300",
+    ],
+    tag: "مرحباً",
+    time: "منذ 10 دقائق",
+    distance: "1.2 كم",
+    likes: 8,
+    comments: 5,
+  },
+  {
+    id: "p3",
+    user: "نور علي",
+    avatar: "https://i.pravatar.cc/150?img=40",
+    level: 30,
+    isVip: false,
+    isOnline: false,
+    images: ["https://picsum.photos/seed/post3/600/400"],
+    tag: "المطبخ اليوم",
+    time: "منذ 25 دقيقة",
+    distance: "2 كم",
+    likes: 34,
+    comments: 7,
+  },
+  {
+    id: "p4",
+    user: "ريم الجابر",
+    avatar: "https://i.pravatar.cc/150?img=44",
+    level: 25,
+    isVip: true,
+    isOnline: true,
+    images: ["https://picsum.photos/seed/post4/600/400"],
+    tag: "لحظات الحياة",
+    time: "منذ ساعة",
+    distance: "3 كم",
+    likes: 55,
+    comments: 20,
+  },
+];
 
 export const ROOMS: Room[] = [
   {
     id: "r1",
-    name: "غرفة الليل الهادئة",
+    name: "سارة وأصحابها",
     hostName: "سارة محمد",
     hostAvatar: "https://i.pravatar.cc/150?img=5",
     speakerCount: 6,
-    listenerCount: 128,
-    tags: ["موسيقى", "هادئ"],
+    listenerCount: 500,
+    description: "احتفال بعيد الميلاد السعيد معنا",
+    tags: ["PK", "Super W", "Chat", "Lv.6"],
     isLive: true,
     category: "music",
     speakerAvatars: [
@@ -18,94 +192,78 @@ export const ROOMS: Room[] = [
       "https://i.pravatar.cc/150?img=6",
       "https://i.pravatar.cc/150?img=7",
       "https://i.pravatar.cc/150?img=8",
-      "https://i.pravatar.cc/150?img=9",
     ],
   },
   {
     id: "r2",
-    name: "الأصدقاء الجدد",
+    name: "كريم علي وأصدقاؤه",
     hostName: "كريم علي",
     hostAvatar: "https://i.pravatar.cc/150?img=12",
     speakerCount: 4,
-    listenerCount: 72,
-    tags: ["دردشة", "مرح"],
+    listenerCount: 328,
+    description: "أراك مرة أخرى",
+    tags: ["Chat", "Lv.6"],
     isLive: true,
     category: "chat",
     speakerAvatars: [
       "https://i.pravatar.cc/150?img=12",
       "https://i.pravatar.cc/150?img=13",
-      "https://i.pravatar.cc/150?img=14",
-      "https://i.pravatar.cc/150?img=15",
     ],
   },
   {
     id: "r3",
-    name: "تحدي الألعاب",
-    hostName: "فارس النجار",
+    name: "فارس النجار",
+    hostName: "فارس",
     hostAvatar: "https://i.pravatar.cc/150?img=21",
     speakerCount: 8,
-    listenerCount: 215,
-    tags: ["ألعاب", "تحدي"],
+    listenerCount: 300,
+    description: "احتفال بعيد الميلاد السعيد",
+    tags: ["Chat", "Lv.6"],
     isLive: true,
     category: "gaming",
     speakerAvatars: [
       "https://i.pravatar.cc/150?img=21",
       "https://i.pravatar.cc/150?img=22",
-      "https://i.pravatar.cc/150?img=23",
-      "https://i.pravatar.cc/150?img=24",
-      "https://i.pravatar.cc/150?img=25",
-      "https://i.pravatar.cc/150?img=26",
     ],
   },
   {
     id: "r4",
-    name: "مجلس العائلة",
-    hostName: "أم خالد",
-    hostAvatar: "https://i.pravatar.cc/150?img=30",
+    name: "بسمة",
+    hostName: "بسمة",
+    hostAvatar: "https://i.pravatar.cc/150?img=25",
     speakerCount: 5,
-    listenerCount: 45,
-    tags: ["عائلة", "اجتماعي"],
+    listenerCount: 300,
+    description: "تعال وتحدث معي بالصوت",
+    tags: ["Chat", "Lv.6"],
     isLive: false,
     category: "family",
-    speakerAvatars: [
-      "https://i.pravatar.cc/150?img=30",
-      "https://i.pravatar.cc/150?img=31",
-      "https://i.pravatar.cc/150?img=32",
-    ],
+    speakerAvatars: ["https://i.pravatar.cc/150?img=25"],
   },
   {
     id: "r5",
-    name: "الموسيقى العربية",
-    hostName: "نور حسن",
-    hostAvatar: "https://i.pravatar.cc/150?img=40",
+    name: "معلم الرقص",
+    hostName: "معلم الرقص",
+    hostAvatar: "https://i.pravatar.cc/150?img=33",
     speakerCount: 3,
-    listenerCount: 189,
-    tags: ["موسيقى", "عربي"],
+    listenerCount: 182,
+    description: "لا تكن مثل الدعم فقط...",
+    tags: ["Chat", "Lv.8"],
     isLive: true,
     category: "music",
-    speakerAvatars: [
-      "https://i.pravatar.cc/150?img=40",
-      "https://i.pravatar.cc/150?img=41",
-      "https://i.pravatar.cc/150?img=42",
-    ],
+    speakerAvatars: ["https://i.pravatar.cc/150?img=33"],
   },
   {
     id: "r6",
-    name: "الشباب العربي",
-    hostName: "عمر يوسف",
+    name: "يوم جيد",
+    hostName: "أحمد",
     hostAvatar: "https://i.pravatar.cc/150?img=50",
-    speakerCount: 10,
-    listenerCount: 302,
-    tags: ["شباب", "ترفيه"],
-    isLive: true,
+    speakerCount: 2,
+    listenerCount: 97,
+    description: "تحدث معنا اليوم",
+    tags: ["Chat", "Lv.5"],
+    isLive: false,
     category: "chat",
-    speakerAvatars: [
-      "https://i.pravatar.cc/150?img=50",
-      "https://i.pravatar.cc/150?img=51",
-      "https://i.pravatar.cc/150?img=52",
-      "https://i.pravatar.cc/150?img=53",
-      "https://i.pravatar.cc/150?img=54",
-    ],
+    speakerAvatars: ["https://i.pravatar.cc/150?img=50"],
   },
 ];
 
@@ -196,7 +354,7 @@ export const GAMES: Game[] = [
     players: 1520,
     maxPlayers: 6,
     icon: "chatbubble-ellipses",
-    color: "#7C3AED",
+    color: "#7C5CFC",
     category: "كلمات",
   },
   {
@@ -222,44 +380,12 @@ export const GAMES: Game[] = [
 ];
 
 export const TRIVIA_QUESTIONS = [
-  {
-    question: "ما هي عاصمة المملكة العربية السعودية؟",
-    choices: ["جدة", "الرياض", "مكة المكرمة", "الدمام"],
-    answer: 1,
-  },
-  {
-    question: "كم عدد كواكب المجموعة الشمسية؟",
-    choices: ["7", "8", "9", "10"],
-    answer: 1,
-  },
-  {
-    question: "من هو مؤسس تطبيق فيسبوك؟",
-    choices: ["ستيف جوبز", "بيل غيتس", "مارك زوكربرغ", "جيف بيزوس"],
-    answer: 2,
-  },
-  {
-    question: "ما هو أطول نهر في العالم؟",
-    choices: ["الأمازون", "النيل", "الميسيسيبي", "الفرات"],
-    answer: 1,
-  },
-  {
-    question: "كم عدد لاعبي كرة القدم في كل فريق؟",
-    choices: ["9", "10", "11", "12"],
-    answer: 2,
-  },
-  {
-    question: "ما هي أكبر قارة في العالم؟",
-    choices: ["أفريقيا", "أمريكا الشمالية", "آسيا", "أوروبا"],
-    answer: 2,
-  },
-  {
-    question: "في أي سنة نزل الإنسان إلى القمر للمرة الأولى؟",
-    choices: ["1965", "1969", "1972", "1975"],
-    answer: 1,
-  },
-  {
-    question: "ما هي اللغة الأكثر انتشاراً في العالم؟",
-    choices: ["العربية", "الإسبانية", "الإنجليزية", "الصينية"],
-    answer: 3,
-  },
+  { question: "ما هي عاصمة المملكة العربية السعودية؟", choices: ["جدة", "الرياض", "مكة المكرمة", "الدمام"], answer: 1 },
+  { question: "كم عدد كواكب المجموعة الشمسية؟", choices: ["7", "8", "9", "10"], answer: 1 },
+  { question: "من هو مؤسس تطبيق فيسبوك؟", choices: ["ستيف جوبز", "بيل غيتس", "مارك زوكربرغ", "جيف بيزوس"], answer: 2 },
+  { question: "ما هو أطول نهر في العالم؟", choices: ["الأمازون", "النيل", "الميسيسيبي", "الفرات"], answer: 1 },
+  { question: "كم عدد لاعبي كرة القدم في كل فريق؟", choices: ["9", "10", "11", "12"], answer: 2 },
+  { question: "ما هي أكبر قارة في العالم؟", choices: ["أفريقيا", "أمريكا الشمالية", "آسيا", "أوروبا"], answer: 2 },
+  { question: "في أي سنة نزل الإنسان إلى القمر للمرة الأولى؟", choices: ["1965", "1969", "1972", "1975"], answer: 1 },
+  { question: "ما هي اللغة الأكثر انتشاراً في العالم؟", choices: ["العربية", "الإسبانية", "الإنجليزية", "الصينية"], answer: 3 },
 ];

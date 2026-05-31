@@ -1,10 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
-import { LiveBadge } from "./LiveBadge";
-import { UserAvatar } from "./UserAvatar";
 
 export interface Room {
   id: string;
@@ -13,74 +11,62 @@ export interface Room {
   hostAvatar: string;
   speakerCount: number;
   listenerCount: number;
+  description: string;
   tags: string[];
   isLive: boolean;
   category: "chat" | "gaming" | "music" | "family";
   speakerAvatars: string[];
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  chat: "#7C3AED",
-  gaming: "#EC4899",
-  music: "#06B6D4",
-  family: "#F59E0B",
+const TAG_STYLES: Record<string, { bg: string; color: string }> = {
+  PK: { bg: "#FF7A0022", color: "#FF7A00" },
+  "Super W": { bg: "#00BCD422", color: "#0097A7" },
+  Chat: { bg: "#E8F5E9", color: "#2E7D32" },
+  "Lv.6": { bg: "#EDE7F6", color: "#7C5CFC" },
+  "Lv.8": { bg: "#EDE7F6", color: "#7C5CFC" },
+  "Lv.5": { bg: "#EDE7F6", color: "#7C5CFC" },
 };
+
+function TagPill({ tag }: { tag: string }) {
+  const style = TAG_STYLES[tag] ?? { bg: "#F0EEFF", color: "#7C5CFC" };
+  return (
+    <View style={[styles.tag, { backgroundColor: style.bg }]}>
+      <Text style={[styles.tagText, { color: style.color }]}>{tag}</Text>
+    </View>
+  );
+}
 
 export function RoomCard({ room }: { room: Room }) {
   const colors = useColors();
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={[styles.card, { backgroundColor: colors.card }]}
       onPress={() => router.push(`/room/${room.id}`)}
-      activeOpacity={0.85}
+      activeOpacity={0.88}
     >
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[room.category] }]} />
-          <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
-            {room.name}
-          </Text>
-        </View>
-        {room.isLive && <LiveBadge small />}
-      </View>
-
-      <View style={styles.hostRow}>
-        <UserAvatar uri={room.hostAvatar} size={24} />
-        <Text style={[styles.hostName, { color: colors.mutedForeground }]}>{room.hostName}</Text>
-      </View>
-
-      <View style={styles.speakersRow}>
-        {room.speakerAvatars.slice(0, 4).map((uri, i) => (
-          <View key={i} style={[styles.speakerAvatar, { marginLeft: i > 0 ? -10 : 0 }]}>
-            <UserAvatar uri={uri} size={32} bordered />
-          </View>
-        ))}
-        {room.speakerAvatars.length > 4 && (
-          <View style={[styles.moreAvatar, { backgroundColor: colors.muted }]}>
-            <Text style={[styles.moreText, { color: colors.mutedForeground }]}>
-              +{room.speakerAvatars.length - 4}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.footer}>
-        <View style={styles.stat}>
-          <Ionicons name="mic" size={13} color={colors.primary} />
-          <Text style={[styles.statText, { color: colors.mutedForeground }]}>{room.speakerCount}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Ionicons name="headset" size={13} color={colors.mutedForeground} />
-          <Text style={[styles.statText, { color: colors.mutedForeground }]}>{room.listenerCount}</Text>
-        </View>
-        <View style={styles.tags}>
-          {room.tags.slice(0, 2).map((tag) => (
-            <View key={tag} style={[styles.tag, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.tagText, { color: colors.mutedForeground }]}>{tag}</Text>
-            </View>
+      <Image
+        source={{ uri: room.hostAvatar }}
+        style={[styles.avatar, { backgroundColor: colors.muted }]}
+      />
+      <View style={styles.body}>
+        <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+          {room.name}
+        </Text>
+        <Text style={[styles.desc, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {room.description}
+        </Text>
+        <View style={styles.tagsRow}>
+          {room.tags.map((t) => (
+            <TagPill key={t} tag={t} />
           ))}
         </View>
+      </View>
+      <View style={styles.right}>
+        <Ionicons name="bar-chart" size={14} color={colors.mutedForeground} />
+        <Text style={[styles.count, { color: colors.mutedForeground }]}>
+          {room.listenerCount}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -88,85 +74,51 @@ export function RoomCard({ room }: { room: Room }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    gap: 10,
-    marginBottom: 12,
-  },
-  header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#EAE6FF",
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+  },
+  body: {
     flex: 1,
-  },
-  categoryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    gap: 4,
   },
   name: {
     fontSize: 15,
     fontWeight: "700" as const,
-    flex: 1,
   },
-  hostRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  hostName: {
-    fontSize: 13,
-  },
-  speakersRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  speakerAvatar: {
-    zIndex: 1,
-  },
-  moreAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: -10,
-  },
-  moreText: {
-    fontSize: 11,
-    fontWeight: "600" as const,
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  stat: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  statText: {
+  desc: {
     fontSize: 12,
+    lineHeight: 16,
   },
-  tags: {
+  tagsRow: {
     flexDirection: "row",
-    gap: 6,
-    flex: 1,
-    justifyContent: "flex-end",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 2,
   },
   tag: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
   },
   tagText: {
     fontSize: 11,
+    fontWeight: "600" as const,
+  },
+  right: {
+    alignItems: "center",
+    gap: 3,
+  },
+  count: {
+    fontSize: 12,
   },
 });

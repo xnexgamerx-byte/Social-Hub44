@@ -1,216 +1,203 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   FlatList,
+  Image,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GameCard } from "@/components/GameCard";
-import { RoomCard } from "@/components/RoomCard";
-import { VideoCard } from "@/components/VideoCard";
-import { useApp } from "@/context/AppContext";
-import { GAMES, ROOMS, VIDEOS } from "@/data/mockData";
+import { NEARBY_USERS, type NearbyUser } from "@/data/mockData";
 import { useColors } from "@/hooks/useColors";
-import { UserAvatar } from "@/components/UserAvatar";
+import * as Haptics from "expo-haptics";
+
+const TABS = ["قريبون", "مستخدمون جدد"];
+
+function LevelBadge({ level }: { level: number }) {
+  return (
+    <View style={styles.lvBadge}>
+      <Text style={styles.lvText}>Lv.{level}</Text>
+    </View>
+  );
+}
+
+function VipBadge() {
+  return (
+    <View style={styles.vipBadge}>
+      <Text style={styles.vipText}>VIP</Text>
+    </View>
+  );
+}
+
+function UserRow({ user }: { user: NearbyUser }) {
+  const colors = useColors();
+
+  const handleChat = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  return (
+    <View style={[styles.userRow, { backgroundColor: colors.card }]}>
+      <View style={styles.avatarContainer}>
+        <Image source={{ uri: user.avatar }} style={styles.avatar} />
+        {user.isOnline && <View style={styles.onlineDot} />}
+      </View>
+
+      <View style={styles.userInfo}>
+        <View style={styles.nameRow}>
+          <Text style={[styles.userName, { color: colors.foreground }]}>{user.name}</Text>
+          <Text style={styles.flag}>{user.flag}</Text>
+          {user.isVoiceChatting && (
+            <View style={[styles.voiceBadge, { backgroundColor: colors.primary + "22" }]}>
+              <Ionicons name="mic" size={10} color={colors.primary} />
+              <Text style={[styles.voiceText, { color: colors.primary }]}>دردشة صوتية</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.badgesRow}>
+          <LevelBadge level={user.level} />
+          {user.isVip && <VipBadge />}
+        </View>
+        <Text style={[styles.status, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {user.status}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.chatBtn, { backgroundColor: colors.secondary }]}
+        onPress={handleChat}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useApp();
+  const [activeTab, setActiveTab] = useState(0);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{
-        paddingTop: topPad + 10,
-        paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>مرحباً بك</Text>
-          <Text style={[styles.userName, { color: colors.foreground }]}>{user.name}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: topPad + 8 }]}>
+        <View style={styles.tabs}>
+          {TABS.map((t, i) => (
+            <TouchableOpacity key={t} onPress={() => setActiveTab(i)} style={styles.tabBtn} activeOpacity={0.8}>
+              <Text style={[styles.tabLabel, { color: i === activeTab ? colors.foreground : colors.mutedForeground, fontWeight: i === activeTab ? "700" : "400" }]}>
+                {t}
+              </Text>
+              {i === activeTab && <View style={[styles.tabUnder, { backgroundColor: colors.primary }]} />}
+            </TouchableOpacity>
+          ))}
         </View>
-        <View style={styles.topActions}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.card }]}>
-            <Ionicons name="search" size={20} color={colors.foreground} />
+        <View style={styles.headerIcons}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
+            <Feather name="filter" size={17} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.card }]}>
-            <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
-            <View style={[styles.notifDot, { backgroundColor: "#EF4444" }]} />
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
+            <Ionicons name="trophy-outline" size={17} color="#F59E0B" />
           </TouchableOpacity>
-          <UserAvatar uri={user.avatar} size={38} online />
         </View>
       </View>
 
-      {/* Coins banner */}
-      <View style={[styles.coinsBanner, { backgroundColor: colors.primary + "22", borderColor: colors.primary + "55" }]}>
-        <Ionicons name="star" size={20} color={colors.accent} />
-        <Text style={[styles.coinsText, { color: colors.foreground }]}>
-          لديك <Text style={{ color: colors.accent, fontWeight: "800" }}>{user.coins.toLocaleString()}</Text> عملة
-        </Text>
-        <TouchableOpacity style={[styles.rechargeBtn, { backgroundColor: colors.primary }]}>
-          <Text style={styles.rechargeBtnText}>شحن</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Live rooms section */}
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الغرف المباشرة</Text>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/rooms")} style={styles.seeAll}>
-          <Text style={[styles.seeAllText, { color: colors.primary }]}>الكل</Text>
-          <Ionicons name="chevron-back" size={14} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
       <FlatList
-        horizontal
-        data={ROOMS.filter((r) => r.isLive).slice(0, 4)}
-        keyExtractor={(r) => r.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
-        renderItem={({ item }) => (
-          <View style={{ width: 260 }}>
-            <RoomCard room={item} />
-          </View>
-        )}
+        data={NEARBY_USERS}
+        keyExtractor={(u) => u.id}
+        contentContainerStyle={{
+          paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
+        }}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={[styles.sep, { backgroundColor: colors.border }]} />}
+        renderItem={({ item }) => <UserRow user={item} />}
       />
-
-      {/* Videos section */}
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الفيديوهات الرائجة</Text>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/videos")} style={styles.seeAll}>
-          <Text style={[styles.seeAllText, { color: colors.primary }]}>الكل</Text>
-          <Ionicons name="chevron-back" size={14} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        horizontal
-        data={VIDEOS.slice(0, 4)}
-        keyExtractor={(v) => v.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
-        renderItem={({ item }) => (
-          <View style={{ width: 160 }}>
-            <VideoCard video={item} />
-          </View>
-        )}
-      />
-
-      {/* Games section */}
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الألعاب</Text>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/games")} style={styles.seeAll}>
-          <Text style={[styles.seeAllText, { color: colors.primary }]}>الكل</Text>
-          <Ionicons name="chevron-back" size={14} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.gamesGrid}>
-        {GAMES.slice(0, 2).map((game) => (
-          <View key={game.id} style={{ flex: 1 }}>
-            <GameCard game={game} />
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topBar: {
+  header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  greeting: {
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: "800" as const,
-  },
-  topActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  notifDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  coinsBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  coinsText: {
-    flex: 1,
-    fontSize: 14,
-  },
-  rechargeBtn: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-  },
-  rechargeBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700" as const,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700" as const,
-  },
-  seeAll: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: "600" as const,
-  },
-  gamesGrid: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 16,
+    paddingBottom: 0,
     marginBottom: 8,
   },
+  tabs: { flexDirection: "row", gap: 24 },
+  tabBtn: { alignItems: "center", paddingBottom: 8 },
+  tabLabel: { fontSize: 17 },
+  tabUnder: { height: 3, width: "100%", borderRadius: 2, marginTop: 4 },
+  headerIcons: { flexDirection: "row", gap: 8, paddingBottom: 8 },
+  iconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  avatarContainer: { position: "relative" },
+  avatar: { width: 58, height: 58, borderRadius: 29 },
+  onlineDot: {
+    position: "absolute",
+    bottom: 1,
+    right: 1,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    backgroundColor: "#22C55E",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  userInfo: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  userName: { fontSize: 16, fontWeight: "700" as const },
+  flag: { fontSize: 14 },
+  badgesRow: { flexDirection: "row", gap: 6, alignItems: "center" },
+  lvBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    backgroundColor: "#EDE7F6",
+  },
+  lvText: { fontSize: 11, fontWeight: "700" as const, color: "#7C5CFC" },
+  vipBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    backgroundColor: "#FFF8E1",
+  },
+  vipText: { fontSize: 11, fontWeight: "700" as const, color: "#F59E0B" },
+  voiceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  voiceText: { fontSize: 11, fontWeight: "600" as const },
+  status: { fontSize: 13 },
+  chatBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sep: { height: StyleSheet.hairlineWidth },
 });

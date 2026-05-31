@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   FlatList,
+  ImageBackground,
   Platform,
   StyleSheet,
   Text,
@@ -12,81 +13,70 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RoomCard } from "@/components/RoomCard";
 import { ROOMS } from "@/data/mockData";
 import { useColors } from "@/hooks/useColors";
+import { LinearGradient } from "expo-linear-gradient";
 
-const CATEGORIES = [
-  { id: "all", label: "الكل" },
-  { id: "chat", label: "دردشة" },
-  { id: "music", label: "موسيقى" },
-  { id: "gaming", label: "ألعاب" },
-  { id: "family", label: "عائلة" },
-];
+const TABS = ["موصى به", "أنا"];
 
-export default function RoomsScreen() {
+export default function ChatroomScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const [activeCategory, setActiveCategory] = useState("all");
-
-  const filtered = activeCategory === "all"
-    ? ROOMS
-    : ROOMS.filter((r) => r.category === activeCategory);
-
+  const [activeTab, setActiveTab] = useState(0);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <Text style={[styles.title, { color: colors.foreground }]}>الغرف</Text>
-        <TouchableOpacity style={[styles.createBtn, { backgroundColor: colors.primary }]}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.createText}>غرفة جديدة</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.categories, { borderBottomColor: colors.border }]}>
-        <FlatList
-          horizontal
-          data={CATEGORIES}
-          keyExtractor={(c) => c.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.catList}
-          renderItem={({ item }) => {
-            const active = item.id === activeCategory;
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.catItem,
-                  { borderColor: active ? colors.primary : "transparent",
-                    backgroundColor: active ? colors.primary + "22" : "transparent" },
-                ]}
-                onPress={() => setActiveCategory(item.id)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.catText, { color: active ? colors.primary : colors.mutedForeground }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: topPad + 8 }]}>
+        <View style={styles.tabs}>
+          {TABS.map((t, i) => (
+            <TouchableOpacity key={t} onPress={() => setActiveTab(i)} style={styles.tabBtn} activeOpacity={0.8}>
+              <Text style={[styles.tabLabel, { color: i === activeTab ? colors.foreground : colors.mutedForeground, fontWeight: i === activeTab ? "700" : "400" }]}>
+                {t}
+              </Text>
+              {i === activeTab && <View style={[styles.tabUnder, { backgroundColor: colors.primary }]} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
+            <Ionicons name="earth-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
+            <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: "#FFF8E1" }]}>
+            <Ionicons name="trophy-outline" size={18} color="#F59E0B" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
-        data={filtered}
+        data={ROOMS}
         keyExtractor={(r) => r.id}
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90 },
-        ]}
+        contentContainerStyle={{
+          paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
+        }}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <RoomCard room={item} />}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="mic-off" size={40} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              لا توجد غرف في هذه الفئة
-            </Text>
+        ListHeaderComponent={
+          <View style={styles.bannerContainer}>
+            <View style={styles.banner}>
+              <View style={styles.bannerContent}>
+                <Text style={styles.bannerTitle}>تمتع بالدردشة</Text>
+                <Text style={styles.bannerSub}>في نبضة</Text>
+              </View>
+              <View style={styles.bannerDots}>
+                {[0, 1, 2].map((d) => (
+                  <View
+                    key={d}
+                    style={[styles.dot, d === 0 && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
         }
+        renderItem={({ item }) => <RoomCard room={item} />}
+        ItemSeparatorComponent={() => null}
       />
     </View>
   );
@@ -96,57 +86,55 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingBottom: 14,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "800" as const,
-  },
-  createBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  createText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600" as const,
-  },
-  categories: {
-    borderBottomWidth: 1,
     marginBottom: 8,
   },
-  catList: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  catItem: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderWidth: 1,
-  },
-  catText: {
-    fontSize: 14,
-    fontWeight: "600" as const,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  empty: {
+  tabs: { flexDirection: "row", gap: 24 },
+  tabBtn: { alignItems: "center", paddingBottom: 8 },
+  tabLabel: { fontSize: 17 },
+  tabUnder: { height: 3, width: "100%", borderRadius: 2, marginTop: 4 },
+  headerIcons: { flexDirection: "row", gap: 8, paddingBottom: 8 },
+  iconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
-    gap: 12,
-    paddingTop: 60,
+    justifyContent: "center",
   },
-  emptyText: {
-    fontSize: 15,
+  bannerContainer: { paddingHorizontal: 16, paddingBottom: 8 },
+  banner: {
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#7C5CFC",
+    height: 100,
+    justifyContent: "flex-end",
+    padding: 16,
+  },
+  bannerContent: {},
+  bannerTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "800" as const,
+  },
+  bannerSub: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 14,
+  },
+  bannerDots: {
+    flexDirection: "row",
+    gap: 5,
+    marginTop: 10,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  dotActive: {
+    backgroundColor: "#fff",
+    width: 18,
   },
 });

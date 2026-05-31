@@ -26,12 +26,12 @@ export function GameCard({ game }: { game: Game }) {
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={[styles.card, { backgroundColor: colors.card }]}
       onPress={handlePlay}
       activeOpacity={0.85}
     >
-      <View style={[styles.iconContainer, { backgroundColor: game.color + "33" }]}>
-        <Ionicons name={game.icon as any} size={32} color={game.color} />
+      <View style={[styles.iconContainer, { backgroundColor: game.color + "22" }]}>
+        <Ionicons name={game.icon as any} size={30} color={game.color} />
       </View>
       <Text style={[styles.name, { color: colors.foreground }]}>{game.name}</Text>
       <Text style={[styles.desc, { color: colors.mutedForeground }]} numberOfLines={2}>
@@ -39,9 +39,9 @@ export function GameCard({ game }: { game: Game }) {
       </Text>
       <View style={styles.footer}>
         <View style={styles.players}>
-          <Ionicons name="people" size={13} color={colors.mutedForeground} />
+          <Ionicons name="people" size={12} color={colors.mutedForeground} />
           <Text style={[styles.playersText, { color: colors.mutedForeground }]}>
-            {game.players}
+            {game.players.toLocaleString()}
           </Text>
         </View>
         <TouchableOpacity
@@ -60,48 +60,32 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
     gap: 8,
     flex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  name: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-  },
-  desc: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
+  name: { fontSize: 15, fontWeight: "700" as const },
+  desc: { fontSize: 12, lineHeight: 17 },
   footer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 4,
   },
-  players: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  playersText: {
-    fontSize: 12,
-  },
-  playBtn: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-  },
-  playBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700" as const,
-  },
+  players: { flexDirection: "row", alignItems: "center", gap: 3 },
+  playersText: { fontSize: 11 },
+  playBtn: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  playBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" as const },
 });
