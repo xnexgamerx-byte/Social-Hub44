@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './authMe';
 export * from './claimTaskInput';
 export * from './coinPackage';
 export * from './coinPackageInput';
@@ -13,7 +14,6 @@ export * from './coinPackageUpdate';
 export * from './dailyTask';
 export * from './dailyTaskInput';
 export * from './dailyTaskUpdate';
-export * from './ensureWalletInput';
 export * from './equipInput';
 export * from './error';
 export * from './healthStatus';

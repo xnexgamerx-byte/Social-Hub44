@@ -10,6 +10,7 @@ import {
   ListDailyTasksResponseItem,
   UpdateDailyTaskResponse,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../lib/authz";
 
 const router: IRouter = Router();
 
@@ -21,7 +22,7 @@ router.get("/daily-tasks", async (_req, res): Promise<void> => {
   res.json(ListDailyTasksResponse.parse(rows));
 });
 
-router.post("/daily-tasks", async (req, res): Promise<void> => {
+router.post("/daily-tasks", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateDailyTaskBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -31,7 +32,7 @@ router.post("/daily-tasks", async (req, res): Promise<void> => {
   res.status(201).json(ListDailyTasksResponseItem.parse(row));
 });
 
-router.patch("/daily-tasks/:id", async (req, res): Promise<void> => {
+router.patch("/daily-tasks/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = UpdateDailyTaskParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -54,7 +55,7 @@ router.patch("/daily-tasks/:id", async (req, res): Promise<void> => {
   res.json(UpdateDailyTaskResponse.parse(row));
 });
 
-router.delete("/daily-tasks/:id", async (req, res): Promise<void> => {
+router.delete("/daily-tasks/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = DeleteDailyTaskParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

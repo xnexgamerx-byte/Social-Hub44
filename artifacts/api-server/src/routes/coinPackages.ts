@@ -10,6 +10,7 @@ import {
   ListCoinPackagesResponseItem,
   UpdateCoinPackageResponse,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../lib/authz";
 
 const router: IRouter = Router();
 
@@ -21,7 +22,7 @@ router.get("/coin-packages", async (_req, res): Promise<void> => {
   res.json(ListCoinPackagesResponse.parse(rows));
 });
 
-router.post("/coin-packages", async (req, res): Promise<void> => {
+router.post("/coin-packages", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateCoinPackageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -34,7 +35,7 @@ router.post("/coin-packages", async (req, res): Promise<void> => {
   res.status(201).json(ListCoinPackagesResponseItem.parse(row));
 });
 
-router.patch("/coin-packages/:id", async (req, res): Promise<void> => {
+router.patch("/coin-packages/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = UpdateCoinPackageParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -57,7 +58,7 @@ router.patch("/coin-packages/:id", async (req, res): Promise<void> => {
   res.json(UpdateCoinPackageResponse.parse(row));
 });
 
-router.delete("/coin-packages/:id", async (req, res): Promise<void> => {
+router.delete("/coin-packages/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = DeleteCoinPackageParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

@@ -1,17 +1,22 @@
+import { useAuth, useUser } from "@clerk/expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ensureWallet as ensureWalletReq,
+  getGetAuthMeQueryKey,
   getGetWalletQueryKey,
   getGetWalletQueryOptions,
   getListUserItemsQueryKey,
   getListUserItemsQueryOptions,
   useClaimTask,
   useEquipItem,
+  useGetAuthMe,
   usePurchaseItem,
   useRechargeWallet,
 } from "@workspace/api-client-react";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+
+const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=3";
 
 export interface AppUser {
   id: string;
@@ -29,22 +34,6 @@ export interface AppUser {
   isAdmin: boolean;
 }
 
-const DEFAULT_USER: AppUser = {
-  id: "u1",
-  name: "أحمد خالد",
-  username: "@ahmed_k",
-  avatar: "https://i.pravatar.cc/150?img=3",
-  level: 24,
-  coins: 3850,
-  vPoints: 160,
-  vipLevel: 0,
-  vipType: null,
-  followers: 1240,
-  following: 380,
-  bio: "أحب الموسيقى والألعاب والتواصل مع الناس",
-  isAdmin: true,
-};
-
 export interface ActionResult {
   ok: boolean;
   error?: string;
@@ -57,6 +46,8 @@ interface LocalVip {
 
 interface AppContextValue {
   user: AppUser;
+  isAdmin: boolean;
+  isAdminLoading: boolean;
   walletReady: boolean;
   likedVideos: Set<string>;
   toggleLikeVideo: (id: string) => void;
@@ -74,10 +65,28 @@ interface AppContextValue {
   refreshWallet: () => void;
 }
 
+const EMPTY_USER: AppUser = {
+  id: "",
+  name: "",
+  username: "",
+  avatar: FALLBACK_AVATAR,
+  level: 1,
+  coins: 0,
+  vPoints: 0,
+  vipLevel: 0,
+  vipType: null,
+  followers: 0,
+  following: 0,
+  bio: "",
+  isAdmin: false,
+};
+
 const noopAsync = async (): Promise<ActionResult> => ({ ok: false });
 
 const AppContext = createContext<AppContextValue>({
-  user: DEFAULT_USER,
+  user: EMPTY_USER,
+  isAdmin: false,
+  isAdminLoading: true,
   walletReady: false,
   likedVideos: new Set(),
   toggleLikeVideo: () => {},
@@ -104,49 +113,53 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
-  const userId = DEFAULT_USER.id;
+  const { isSignedIn, userId: clerkUserId } = useAuth();
+  const { user: clerkUser } = useUser();
+  const userId = clerkUserId ?? null;
 
   const [vip, setVipState] = useState<LocalVip>({ vipLevel: 0, vipType: null });
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
   const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());
   const [walletReady, setWalletReady] = useState(false);
 
-  // One-time bootstrap: hydrate local-only state (likes, joins, vip) and migrate
-  // any legacy AsyncStorage balances into the backend wallet exactly once.
+  const authMeQ = useGetAuthMe({
+    query: { queryKey: getGetAuthMeQueryKey(), enabled: !!isSignedIn },
+  });
+  const isAdmin = authMeQ.data?.isAdmin ?? false;
+  const isAdminLoading = !!isSignedIn && authMeQ.isLoading;
+
+  // Hydrate device-local UI state (likes, joins, vip) and make sure the signed-in
+  // account has a backend wallet (seeded with a welcome balance on first run).
   useEffect(() => {
+    if (!userId) {
+      setWalletReady(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      const [liked, joined, legacyUser, migrated] = await Promise.all([
+      const [liked, joined, localVip] = await Promise.all([
         AsyncStorage.getItem("likedVideos"),
         AsyncStorage.getItem("joinedRooms"),
         AsyncStorage.getItem("userState"),
-        AsyncStorage.getItem("walletMigrated"),
       ]);
       if (cancelled) return;
       if (liked) setLikedVideos(new Set(JSON.parse(liked)));
       if (joined) setJoinedRooms(new Set(JSON.parse(joined)));
-
-      let initialCoins = DEFAULT_USER.coins;
-      let initialVPoints = DEFAULT_USER.vPoints;
-      if (legacyUser) {
+      if (localVip) {
         try {
-          const parsed = JSON.parse(legacyUser) as Partial<AppUser>;
-          if (typeof parsed.coins === "number") initialCoins = parsed.coins;
-          if (typeof parsed.vPoints === "number") initialVPoints = parsed.vPoints;
+          const parsed = JSON.parse(localVip) as Partial<LocalVip>;
           if (typeof parsed.vipLevel === "number" && parsed.vipType) {
             setVipState({ vipLevel: parsed.vipLevel, vipType: parsed.vipType });
           }
         } catch {
-          // ignore malformed legacy blob
+          // ignore malformed local vip blob
         }
       }
 
       try {
-        await ensureWalletReq(userId, {
-          initialCoins: migrated ? undefined : initialCoins,
-          initialVPoints: migrated ? undefined : initialVPoints,
-        });
-        await AsyncStorage.setItem("walletMigrated", "1");
+        // The welcome balance is granted server-side on first creation; the
+        // client cannot influence the opening balance.
+        await ensureWalletReq(userId);
       } catch {
         // Wallet ensure is best-effort; the query below will retry fetching.
       } finally {
@@ -162,18 +175,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   }, [qc, userId]);
 
   const walletQ = useQuery({
-    ...getGetWalletQueryOptions(userId),
-    enabled: walletReady,
+    ...getGetWalletQueryOptions(userId ?? "__none__"),
+    enabled: walletReady && !!userId,
   });
   const itemsQ = useQuery({
-    ...getListUserItemsQueryOptions(userId),
-    enabled: walletReady,
+    ...getListUserItemsQueryOptions(userId ?? "__none__"),
+    enabled: walletReady && !!userId,
   });
 
-  const invalidateWallet = () =>
-    qc.invalidateQueries({ queryKey: getGetWalletQueryKey(userId) });
-  const invalidateItems = () =>
-    qc.invalidateQueries({ queryKey: getListUserItemsQueryKey(userId) });
+  const invalidateWallet = () => {
+    if (userId) qc.invalidateQueries({ queryKey: getGetWalletQueryKey(userId) });
+  };
+  const invalidateItems = () => {
+    if (userId) qc.invalidateQueries({ queryKey: getListUserItemsQueryKey(userId) });
+  };
 
   const purchaseM = usePurchaseItem();
   const rechargeM = useRechargeWallet();
@@ -189,16 +204,29 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     [itemsQ.data],
   );
 
-  const user: AppUser = useMemo(
-    () => ({
-      ...DEFAULT_USER,
-      coins: walletQ.data?.coins ?? DEFAULT_USER.coins,
-      vPoints: walletQ.data?.vPoints ?? DEFAULT_USER.vPoints,
+  const user: AppUser = useMemo(() => {
+    const displayName =
+      clerkUser?.fullName ||
+      clerkUser?.firstName ||
+      clerkUser?.username ||
+      clerkUser?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+      "مستخدم";
+    const handle = clerkUser?.username
+      ? `@${clerkUser.username}`
+      : clerkUser?.primaryEmailAddress?.emailAddress ?? "";
+    return {
+      ...EMPTY_USER,
+      id: userId ?? "",
+      name: displayName,
+      username: handle,
+      avatar: clerkUser?.imageUrl || FALLBACK_AVATAR,
+      coins: walletQ.data?.coins ?? 0,
+      vPoints: walletQ.data?.vPoints ?? 0,
       vipLevel: vip.vipLevel,
       vipType: vip.vipType,
-    }),
-    [walletQ.data, vip],
-  );
+      isAdmin,
+    };
+  }, [clerkUser, userId, walletQ.data, vip, isAdmin]);
 
   const toggleLikeVideo = (id: string) => {
     setLikedVideos((prev) => {
@@ -221,6 +249,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   const buyItem = async (id: number): Promise<ActionResult> => {
+    if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
     try {
       await purchaseM.mutateAsync({ userId, data: { itemId: id } });
       invalidateWallet();
@@ -232,6 +261,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   const rechargePackage = async (packageId: number): Promise<ActionResult> => {
+    if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
     try {
       await rechargeM.mutateAsync({ userId, data: { packageId } });
       invalidateWallet();
@@ -242,6 +272,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   const claimTask = async (taskId: number): Promise<ActionResult> => {
+    if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
     try {
       await claimM.mutateAsync({ userId, data: { taskId } });
       invalidateWallet();
@@ -252,6 +283,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   const equipItem = async (itemId: number): Promise<ActionResult> => {
+    if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
     try {
       await equipM.mutateAsync({ userId, data: { itemId } });
       invalidateItems();
@@ -274,6 +306,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     <AppContext.Provider
       value={{
         user,
+        isAdmin,
+        isAdminLoading,
         walletReady: walletReady && walletQ.isSuccess,
         likedVideos,
         toggleLikeVideo,

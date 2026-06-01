@@ -18,6 +18,16 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * Returns the verified user id and whether they are an admin
+ * @summary Current authenticated user
+ */
+export const GetAuthMeResponse = zod.object({
+  "userId": zod.string(),
+  "isAdmin": zod.boolean()
+})
+
+
+/**
  * @summary List store items
  */
 export const ListStoreItemsResponseItem = zod.object({
@@ -413,15 +423,10 @@ export const GetWalletResponse = zod.object({
 
 
 /**
- * @summary Ensure a wallet exists, seeding it with initial balances on first create
+ * @summary Ensure a wallet exists, seeding a fixed server-side welcome balance on first create
  */
 export const EnsureWalletParams = zod.object({
   "userId": zod.coerce.string()
-})
-
-export const EnsureWalletBody = zod.object({
-  "initialCoins": zod.number().optional(),
-  "initialVPoints": zod.number().optional()
 })
 
 export const EnsureWalletResponse = zod.object({

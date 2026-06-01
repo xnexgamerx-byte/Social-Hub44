@@ -1,8 +1,10 @@
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
 import {
+  Alert,
   Image,
   Platform,
   ScrollView,
@@ -33,7 +35,21 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useApp();
+  const { signOut } = useAuth();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const confirmSignOut = () => {
+    Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج من حسابك؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "خروج",
+        style: "destructive",
+        onPress: () => {
+          void signOut();
+        },
+      },
+    ]);
+  };
 
   return (
     <ScrollView
@@ -52,7 +68,7 @@ export default function ProfileScreen() {
               <Ionicons name="construct-outline" size={22} color={colors.primary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity>
+          <TouchableOpacity onPress={confirmSignOut}>
             <Ionicons name="settings-outline" size={22} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>

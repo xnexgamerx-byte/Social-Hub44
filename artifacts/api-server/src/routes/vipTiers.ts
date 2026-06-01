@@ -10,6 +10,7 @@ import {
   ListVipTiersResponseItem,
   UpdateVipTierResponse,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../lib/authz";
 
 const router: IRouter = Router();
 
@@ -21,7 +22,7 @@ router.get("/vip-tiers", async (_req, res): Promise<void> => {
   res.json(ListVipTiersResponse.parse(tiers));
 });
 
-router.post("/vip-tiers", async (req, res): Promise<void> => {
+router.post("/vip-tiers", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateVipTierBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -31,7 +32,7 @@ router.post("/vip-tiers", async (req, res): Promise<void> => {
   res.status(201).json(ListVipTiersResponseItem.parse(tier));
 });
 
-router.patch("/vip-tiers/:id", async (req, res): Promise<void> => {
+router.patch("/vip-tiers/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = UpdateVipTierParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -54,7 +55,7 @@ router.patch("/vip-tiers/:id", async (req, res): Promise<void> => {
   res.json(UpdateVipTierResponse.parse(tier));
 });
 
-router.delete("/vip-tiers/:id", async (req, res): Promise<void> => {
+router.delete("/vip-tiers/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = DeleteVipTierParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

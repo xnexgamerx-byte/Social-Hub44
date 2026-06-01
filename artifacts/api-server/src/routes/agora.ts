@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { RtcTokenBuilder, RtcRole } from "agora-token";
+import { requireAuth } from "../lib/authz";
 
 const router: IRouter = Router();
 
@@ -14,7 +15,7 @@ const TOKEN_TTL_SECONDS = 3600;
  * the server side of the "Agora-ready" voice stage: the native client (built
  * outside Expo Go) calls it to join the real audio channel.
  */
-router.get("/agora/token", (req, res) => {
+router.get("/agora/token", requireAuth, (req, res) => {
   const appId = process.env["AGORA_APP_ID"];
   const appCertificate = process.env["AGORA_APP_CERTIFICATE"];
 

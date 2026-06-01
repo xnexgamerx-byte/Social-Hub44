@@ -31,7 +31,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -45,6 +45,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 type Tab = "store" | "packages" | "tasks" | "tiers" | "features";
@@ -83,6 +84,32 @@ export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 20 : insets.top;
   const [tab, setTab] = useState<Tab>("store");
+  const { isAdmin, isAdminLoading } = useApp();
+
+  // Authorization gate: only verified admins may view this screen. Non-admins
+  // are bounced back once the admin status has resolved.
+  useEffect(() => {
+    if (!isAdminLoading && !isAdmin) {
+      router.replace("/(tabs)");
+    }
+  }, [isAdmin, isAdminLoading]);
+
+  if (isAdminLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
+        ]}
+      >
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (!isAdmin) {
+    return <View style={[styles.container, { backgroundColor: colors.background }]} />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>

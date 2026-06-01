@@ -9,6 +9,11 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface AuthMe {
+  userId: string;
+  isAdmin: boolean;
+}
+
 export interface Error {
   error: string;
 }
@@ -172,11 +177,6 @@ export interface TaskClaim {
 export interface PurchaseResult {
   wallet: Wallet;
   item: UserItem;
-}
-
-export interface EnsureWalletInput {
-  initialCoins?: number;
-  initialVPoints?: number;
 }
 
 export interface RechargeInput {

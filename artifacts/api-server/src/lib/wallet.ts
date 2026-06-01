@@ -30,18 +30,23 @@ export function toWalletView(w: Wallet): WalletView {
 }
 
 /**
- * Ensure a wallet row exists for the user. On first creation it is seeded
- * with the provided initial balances (used to migrate local AsyncStorage
- * balances). If the wallet already exists, its balances are left untouched.
+ * Fixed, server-controlled welcome balance granted exactly once, when a user's
+ * wallet is first created. Clients can NEVER influence the starting balance —
+ * this is the only place a wallet's opening balance is defined, which prevents
+ * an authenticated user from minting funds by seeding their own balance.
  */
-export async function ensureWallet(
-  userId: string,
-  initialCoins = 0,
-  initialVPoints = 0,
-): Promise<Wallet> {
+export const WELCOME_COINS = 2000;
+export const WELCOME_VPOINTS = 0;
+
+/**
+ * Ensure a wallet row exists for the user. On first creation it is seeded with
+ * the fixed WELCOME_* balance above. If the wallet already exists, its balances
+ * are left untouched (first-write-wins via onConflictDoNothing).
+ */
+export async function ensureWallet(userId: string): Promise<Wallet> {
   await db
     .insert(walletsTable)
-    .values({ userId, coins: initialCoins, vPoints: initialVPoints })
+    .values({ userId, coins: WELCOME_COINS, vPoints: WELCOME_VPOINTS })
     .onConflictDoNothing({ target: walletsTable.userId });
 
   const [wallet] = await db

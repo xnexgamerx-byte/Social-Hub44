@@ -14,7 +14,6 @@ import {
   GetWalletParams,
   GetWalletResponse,
   EnsureWalletParams,
-  EnsureWalletBody,
   EnsureWalletResponse,
   ListWalletTransactionsParams,
   ListWalletTransactionsResponse,
@@ -43,8 +42,21 @@ import {
   InsufficientBalanceError,
   type Currency,
 } from "../lib/wallet";
+import { requireAuth, type AuthedRequest } from "../lib/authz";
 
 const router: IRouter = Router();
+
+// Every wallet route is scoped to a `:userId`. Require a valid session, then
+// reject any request whose verified user id does not match the path — a signed
+// in user can only ever read or mutate their own wallet.
+router.use(requireAuth);
+router.param("userId", (req, res, next, userId) => {
+  if ((req as AuthedRequest).userId !== userId) {
+    res.status(403).json({ error: "غير مصرح لك بالوصول" });
+    return;
+  }
+  next();
+});
 
 /** Thrown inside the purchase transaction when the user already owns the item. */
 class AlreadyOwnedError extends Error {
@@ -74,16 +86,9 @@ router.post("/wallet/:userId/ensure", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const body = EnsureWalletBody.safeParse(req.body);
-  if (!body.success) {
-    res.status(400).json({ error: body.error.message });
-    return;
-  }
-  const wallet = await ensureWallet(
-    params.data.userId,
-    body.data.initialCoins ?? 0,
-    body.data.initialVPoints ?? 0,
-  );
+  // No client-supplied balances: the welcome amount is a fixed server constant
+  // applied only on first wallet creation (see ensureWallet / WELCOME_COINS).
+  const wallet = await ensureWallet(params.data.userId);
   res.json(EnsureWalletResponse.parse(toWalletView(wallet)));
 });
 

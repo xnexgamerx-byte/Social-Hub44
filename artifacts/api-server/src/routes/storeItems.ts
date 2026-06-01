@@ -10,6 +10,7 @@ import {
   ListStoreItemsResponseItem,
   UpdateStoreItemResponse,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../lib/authz";
 
 const router: IRouter = Router();
 
@@ -21,7 +22,7 @@ router.get("/store-items", async (_req, res): Promise<void> => {
   res.json(ListStoreItemsResponse.parse(items));
 });
 
-router.post("/store-items", async (req, res): Promise<void> => {
+router.post("/store-items", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateStoreItemBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -34,7 +35,7 @@ router.post("/store-items", async (req, res): Promise<void> => {
   res.status(201).json(ListStoreItemsResponseItem.parse(item));
 });
 
-router.patch("/store-items/:id", async (req, res): Promise<void> => {
+router.patch("/store-items/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = UpdateStoreItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -57,7 +58,7 @@ router.patch("/store-items/:id", async (req, res): Promise<void> => {
   res.json(UpdateStoreItemResponse.parse(item));
 });
 
-router.delete("/store-items/:id", async (req, res): Promise<void> => {
+router.delete("/store-items/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = DeleteStoreItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

@@ -10,6 +10,7 @@ import {
   ListVipFeaturesResponseItem,
   UpdateVipFeatureResponse,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../lib/authz";
 
 const router: IRouter = Router();
 
@@ -21,7 +22,7 @@ router.get("/vip-features", async (_req, res): Promise<void> => {
   res.json(ListVipFeaturesResponse.parse(features));
 });
 
-router.post("/vip-features", async (req, res): Promise<void> => {
+router.post("/vip-features", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateVipFeatureBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -34,7 +35,7 @@ router.post("/vip-features", async (req, res): Promise<void> => {
   res.status(201).json(ListVipFeaturesResponseItem.parse(feature));
 });
 
-router.patch("/vip-features/:id", async (req, res): Promise<void> => {
+router.patch("/vip-features/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = UpdateVipFeatureParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -57,7 +58,7 @@ router.patch("/vip-features/:id", async (req, res): Promise<void> => {
   res.json(UpdateVipFeatureResponse.parse(feature));
 });
 
-router.delete("/vip-features/:id", async (req, res): Promise<void> => {
+router.delete("/vip-features/:id", requireAdmin, async (req, res): Promise<void> => {
   const params = DeleteVipFeatureParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

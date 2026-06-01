@@ -18,6 +18,8 @@ tags:
     description: Coin packages and daily task catalog operations
   - name: wallet
     description: Per-user wallet, ledger, ownership and spend/earn operations
+  - name: auth
+    description: Authentication and authorization operations
 paths:
   /healthz:
     get:
@@ -32,6 +34,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      tags: [auth]
+      summary: Current authenticated user
+      description: Returns the verified user id and whether they are an admin
+      responses:
+        "200":
+          description: Authenticated user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMe"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /store-items:
     get:
@@ -460,19 +482,13 @@ paths:
     post:
       operationId: ensureWallet
       tags: [wallet]
-      summary: Ensure a wallet exists, seeding it with initial balances on first create
+      summary: Ensure a wallet exists, seeding a fixed server-side welcome balance on first create
       parameters:
         - name: userId
           in: path
           required: true
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EnsureWalletInput"
       responses:
         "200":
           description: The wallet
@@ -684,6 +700,16 @@ components:
           type: string
       required:
         - status
+    AuthMe:
+      type: object
+      properties:
+        userId:
+          type: string
+        isAdmin:
+          type: boolean
+      required:
+        - userId
+        - isAdmin
     Error:
       type: object
       properties:
@@ -920,11 +946,6 @@ components:
           $ref: "#/components/schemas/Wallet"
         item:
           $ref: "#/components/schemas/UserItem"
-    EnsureWalletInput:
-      type: object
-      properties:
-        initialCoins: { type: integer }
-        initialVPoints: { type: integer }
     RechargeInput:
       type: object
       required:

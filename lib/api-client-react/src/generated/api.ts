@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AuthMe,
   ClaimTaskInput,
   CoinPackage,
   CoinPackageInput,
@@ -27,7 +28,6 @@ import type {
   DailyTask,
   DailyTaskInput,
   DailyTaskUpdate,
-  EnsureWalletInput,
   EquipInput,
   Error,
   HealthStatus,
@@ -127,6 +127,84 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAuthMeUrl = () => {
+
+
+
+
+  return `/api/auth/me`
+}
+
+/**
+ * Returns the verified user id and whether they are an admin
+ * @summary Current authenticated user
+ */
+export const getAuthMe = async ( options?: RequestInit): Promise<AuthMe> => {
+
+  return customFetch<AuthMe>(getGetAuthMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuthMeQueryKey = () => {
+    return [
+    `/api/auth/me`
+    ] as const;
+    }
+
+
+export const getGetAuthMeQueryOptions = <TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuthMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthMe>>> = ({ signal }) => getAuthMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuthMeQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthMe>>>
+export type GetAuthMeQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Current authenticated user
+ */
+
+export function useGetAuthMe<TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuthMeQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1675,18 +1753,16 @@ export const getEnsureWalletUrl = (userId: string,) => {
 }
 
 /**
- * @summary Ensure a wallet exists, seeding it with initial balances on first create
+ * @summary Ensure a wallet exists, seeding a fixed server-side welcome balance on first create
  */
-export const ensureWallet = async (userId: string,
-    ensureWalletInput: EnsureWalletInput, options?: RequestInit): Promise<Wallet> => {
+export const ensureWallet = async (userId: string, options?: RequestInit): Promise<Wallet> => {
 
   return customFetch<Wallet>(getEnsureWalletUrl(userId),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      ensureWalletInput,)
+    method: 'POST'
+
+
   }
 );}
 
@@ -1694,8 +1770,8 @@ export const ensureWallet = async (userId: string,
 
 
 export const getEnsureWalletMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ensureWallet>>, TError,{userId: string;data: BodyType<EnsureWalletInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof ensureWallet>>, TError,{userId: string;data: BodyType<EnsureWalletInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ensureWallet>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ensureWallet>>, TError,{userId: string}, TContext> => {
 
 const mutationKey = ['ensureWallet'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1707,10 +1783,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ensureWallet>>, {userId: string;data: BodyType<EnsureWalletInput>}> = (props) => {
-          const {userId,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ensureWallet>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
 
-          return  ensureWallet(userId,data,requestOptions)
+          return  ensureWallet(userId,requestOptions)
         }
 
 
@@ -1721,18 +1797,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EnsureWalletMutationResult = NonNullable<Awaited<ReturnType<typeof ensureWallet>>>
-    export type EnsureWalletMutationBody = BodyType<EnsureWalletInput>
+
     export type EnsureWalletMutationError = ErrorType<unknown>
 
     /**
- * @summary Ensure a wallet exists, seeding it with initial balances on first create
+ * @summary Ensure a wallet exists, seeding a fixed server-side welcome balance on first create
  */
 export const useEnsureWallet = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ensureWallet>>, TError,{userId: string;data: BodyType<EnsureWalletInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ensureWallet>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof ensureWallet>>,
         TError,
-        {userId: string;data: BodyType<EnsureWalletInput>},
+        {userId: string},
         TContext
       > => {
       return useMutation(getEnsureWalletMutationOptions(options));

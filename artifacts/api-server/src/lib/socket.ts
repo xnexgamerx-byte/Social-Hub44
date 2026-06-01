@@ -11,6 +11,7 @@ import { logger } from "./logger";
 import { joinGame, startGame, submitAnswer, leaveGame, markDisconnected } from "./gameSession";
 import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
 import { adjustWallet, InsufficientBalanceError } from "./wallet";
+import { verifySessionToken } from "./authz";
 
 interface JoinPayload {
   roomId: string;
@@ -79,7 +80,23 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     return io.sockets.adapter.rooms.get(channel)?.size ?? 0;
   }
 
+  // Authenticate the handshake: every socket must present a valid Clerk session
+  // token. The verified user id becomes the socket's identity for all
+  // money/identity-sensitive events; client-supplied userId fields are only
+  // ever used for display.
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth?.token as string | undefined;
+    const userId = token ? await verifySessionToken(token) : null;
+    if (!userId) {
+      next(new Error("unauthorized"));
+      return;
+    }
+    socket.data.userId = userId;
+    next();
+  });
+
   io.on("connection", (socket) => {
+    const authUserId = socket.data.userId as string;
     let joinedRoom: string | null = null;
     let joinedGame: string | null = null;
     let voiceUserId: string | null = null;
@@ -100,8 +117,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       io.to(channel).emit("room:presence", { roomId: previous, count: presenceCount(channel) });
     }
 
-    socket.on("room:join", async ({ roomId, userId, userName, userAvatar }: JoinPayload) => {
+    socket.on("room:join", async ({ roomId, userName, userAvatar }: JoinPayload) => {
       if (!roomId) return;
+      const userId = authUserId;
       if (joinedRoom && joinedRoom !== roomId) await leaveCurrentRoom();
       joinedRoom = roomId;
       const channel = roomChannel(roomId);
@@ -160,8 +178,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     });
 
     socket.on("gift:send", async (payload: GiftSendPayload) => {
-      const { roomId, userId, userName, itemId } = payload;
-      if (!roomId || !userId || !itemId) return;
+      const { roomId, userName, itemId } = payload;
+      const userId = authUserId;
+      if (!roomId || !itemId) return;
       if (!socket.rooms.has(roomChannel(roomId))) return;
 
       try {
@@ -211,8 +230,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       }
     });
 
-    socket.on("mic:join", ({ roomId, userId, userName, userAvatar }: MicJoinPayload) => {
-      if (!roomId || !userId) return;
+    socket.on("mic:join", ({ roomId, userName, userAvatar }: MicJoinPayload) => {
+      const userId = authUserId;
+      if (!roomId) return;
       // Must be in this room. Bind the seat to this socket's identity.
       if (roomId !== joinedRoom || !socket.rooms.has(roomChannel(roomId))) return;
       voiceUserId = userId;
@@ -228,17 +248,17 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       }
     });
 
-    socket.on("mic:leave", ({ roomId, userId }: MicLeavePayload) => {
+    socket.on("mic:leave", ({ roomId }: MicLeavePayload) => {
       // Only act on this socket's own seat in its current room.
-      if (roomId !== joinedRoom || userId !== voiceUserId) return;
-      leaveMic(io, roomId, userId);
+      if (roomId !== joinedRoom || !voiceUserId) return;
+      leaveMic(io, roomId, voiceUserId);
       voiceUserId = null;
     });
 
-    socket.on("mic:mute", ({ roomId, userId, muted }: MicMutePayload) => {
+    socket.on("mic:mute", ({ roomId, muted }: MicMutePayload) => {
       // Only act on this socket's own seat in its current room.
-      if (roomId !== joinedRoom || userId !== voiceUserId) return;
-      setMute(io, roomId, userId, !!muted);
+      if (roomId !== joinedRoom || !voiceUserId) return;
+      setMute(io, roomId, voiceUserId, !!muted);
     });
 
     socket.on("room:leave", () => {
@@ -246,8 +266,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     });
 
     socket.on("message:send", async (payload: SendPayload) => {
-      const { roomId, userId, userName, text } = payload;
-      if (!roomId || !userId || !text?.trim()) return;
+      const { roomId, userName, text } = payload;
+      const userId = authUserId;
+      if (!roomId || !text?.trim()) return;
       // Only allow posting to a room this socket has actually joined.
       if (!socket.rooms.has(roomChannel(roomId))) return;
       try {
@@ -270,8 +291,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
 
     let gameUserId: string | null = null;
 
-    socket.on("game:join", ({ gameId, userId, userName, userAvatar }: GameJoinPayload) => {
-      if (!gameId || !userId) return;
+    socket.on("game:join", ({ gameId, userName, userAvatar }: GameJoinPayload) => {
+      const userId = authUserId;
+      if (!gameId) return;
       joinedGame = gameId;
       gameUserId = userId;
       void socket.join(`game:${gameId}`);
@@ -283,13 +305,15 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       startGame(io, gameId);
     });
 
-    socket.on("game:answer", ({ gameId, userId, choice }: { gameId: string; userId: string; choice: number }) => {
-      if (!gameId || !userId) return;
+    socket.on("game:answer", ({ gameId, choice }: { gameId: string; choice: number }) => {
+      const userId = authUserId;
+      if (!gameId) return;
       submitAnswer(io, gameId, userId, choice);
     });
 
-    socket.on("game:leave", ({ gameId, userId }: { gameId: string; userId: string }) => {
-      if (!gameId || !userId) return;
+    socket.on("game:leave", ({ gameId }: { gameId: string }) => {
+      const userId = authUserId;
+      if (!gameId) return;
       leaveGame(io, gameId, userId);
       joinedGame = null;
       gameUserId = null;
