@@ -8,6 +8,7 @@ import agoraRouter from "./agora";
 import coinPackagesRouter from "./coinPackages";
 import dailyTasksRouter from "./dailyTasks";
 import walletRouter from "./wallet";
+import adminsRouter from "./admins";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(agoraRouter);
 router.use(coinPackagesRouter);
 router.use(dailyTasksRouter);
 router.use(walletRouter);
+router.use(adminsRouter);
 
 export default router;

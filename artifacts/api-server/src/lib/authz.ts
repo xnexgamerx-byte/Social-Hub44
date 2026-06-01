@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { verifyToken } from "@clerk/backend";
+import { eq } from "drizzle-orm";
+import { db, adminsTable } from "@workspace/db";
 import { logger } from "./logger";
 
 /**
@@ -12,7 +14,7 @@ export interface AuthedRequest extends Request {
 }
 
 /** Parse the ADMIN_EMAILS env var into a lowercase set of allowed admin emails. */
-function adminEmails(): Set<string> {
+export function adminEmails(): Set<string> {
   return new Set(
     (process.env.ADMIN_EMAILS ?? "")
       .split(",")
@@ -22,7 +24,7 @@ function adminEmails(): Set<string> {
 }
 
 /** Resolve the primary (or first) email address for a Clerk user id. */
-async function getUserEmail(userId: string): Promise<string | null> {
+export async function getUserEmail(userId: string): Promise<string | null> {
   const user = await clerkClient.users.getUser(userId);
   const primary =
     user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId) ??
@@ -30,19 +32,29 @@ async function getUserEmail(userId: string): Promise<string | null> {
   return primary?.emailAddress.toLowerCase() ?? null;
 }
 
+/** True when the email has been granted admin via the in-app admins table. */
+async function isDbAdminEmail(email: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: adminsTable.id })
+    .from(adminsTable)
+    .where(eq(adminsTable.email, email))
+    .limit(1);
+  return row != null;
+}
+
 /**
- * Returns true when the given Clerk user id maps to an email listed in
- * ADMIN_EMAILS. Secure by default: with no ADMIN_EMAILS configured, nobody
- * is an admin.
+ * Returns true when the given Clerk user id maps to an email that is either
+ * listed in ADMIN_EMAILS (bootstrap owner) or stored in the in-app admins
+ * table. Secure by default: an unresolvable email is never an admin.
  */
 export async function isAdminUserId(userId: string): Promise<boolean> {
-  const allowed = adminEmails();
-  if (allowed.size === 0) return false;
   try {
     const email = await getUserEmail(userId);
-    return email != null && allowed.has(email);
+    if (email == null) return false;
+    if (adminEmails().has(email)) return true;
+    return await isDbAdminEmail(email);
   } catch (err) {
-    logger.error({ err, userId }, "Failed to resolve admin email");
+    logger.error({ err, userId }, "Failed to resolve admin status");
     return false;
   }
 }

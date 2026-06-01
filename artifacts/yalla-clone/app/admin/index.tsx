@@ -11,10 +11,14 @@ import {
   getListVipFeaturesQueryOptions,
   getListVipTiersQueryKey,
   getListVipTiersQueryOptions,
+  getListAdminsQueryKey,
+  getListAdminsQueryOptions,
+  useCreateAdmin,
   useCreateCoinPackage,
   useCreateDailyTask,
   useCreateStoreItem,
   useCreateVipFeature,
+  useDeleteAdmin,
   useDeleteCoinPackage,
   useDeleteDailyTask,
   useDeleteStoreItem,
@@ -23,6 +27,7 @@ import {
   useUpdateDailyTask,
   useUpdateStoreItem,
   useUpdateVipTier,
+  type Admin,
   type CoinPackage,
   type DailyTask,
   type StoreItem,
@@ -48,7 +53,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
-type Tab = "store" | "packages" | "tasks" | "tiers" | "features";
+type Tab = "store" | "packages" | "tasks" | "tiers" | "features" | "admins";
 
 type ItemType =
   | "frame"
@@ -128,6 +133,7 @@ export default function AdminScreen() {
           { k: "tasks" as const, l: "المهام" },
           { k: "tiers" as const, l: "VIP" },
           { k: "features" as const, l: "المميزات" },
+          { k: "admins" as const, l: "المشرفون" },
         ]).map((t) => {
           const on = tab === t.k;
           return (
@@ -149,7 +155,116 @@ export default function AdminScreen() {
       {tab === "tasks" && <DailyTasksAdmin />}
       {tab === "tiers" && <TiersAdmin />}
       {tab === "features" && <FeaturesAdmin />}
+      {tab === "admins" && <AdminsAdmin />}
     </View>
+  );
+}
+
+function AdminsAdmin() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery(getListAdminsQueryOptions());
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminsQueryKey() });
+  const createM = useCreateAdmin({ mutation: { onSuccess: invalidate } });
+  const deleteM = useDeleteAdmin({ mutation: { onSuccess: invalidate } });
+
+  const [email, setEmail] = useState("");
+
+  const add = () => {
+    const e = email.trim().toLowerCase();
+    if (!e.includes("@") || e.length < 3) {
+      Alert.alert("خطأ", "أدخل بريداً إلكترونياً صالحاً");
+      return;
+    }
+    createM.mutate(
+      { data: { email: e } },
+      {
+        onSuccess: () => setEmail(""),
+        onError: (err) =>
+          Alert.alert("تعذّر الإضافة", (err as Error)?.message ?? "حدث خطأ"),
+      },
+    );
+  };
+
+  const confirmDelete = (a: Admin) => {
+    Alert.alert("إزالة مشرف", `إزالة صلاحية الإشراف عن "${a.email}"؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "إزالة",
+        style: "destructive",
+        onPress: () =>
+          deleteM.mutate(
+            { id: a.id },
+            {
+              onError: (err) =>
+                Alert.alert("تعذّرت الإزالة", (err as Error)?.message ?? "حدث خطأ"),
+            },
+          ),
+      },
+    ]);
+  };
+
+  return (
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 20 : insets.bottom) + 30 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={[styles.formCard, { backgroundColor: colors.card }]}>
+        <Text style={[styles.formTitle, { color: colors.foreground }]}>إضافة مشرف</Text>
+        <Text style={[styles.note, { color: colors.mutedForeground, marginTop: 0 }]}>
+          أدخل بريد الحساب لمنحه صلاحية الإشراف الكاملة.
+        </Text>
+        <Field label="البريد الإلكتروني" value={email} onChange={setEmail} colors={colors} />
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          onPress={add}
+          disabled={createM.isPending}
+        >
+          {createM.isPending ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.addBtnText}>إضافة مشرف</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+      ) : (
+        (data ?? []).map((a) => (
+          <View
+            key={`${a.source}-${a.id}-${a.email}`}
+            style={[styles.listItem, { backgroundColor: colors.card }]}
+          >
+            <View style={[styles.swatch, { backgroundColor: colors.primary }]}>
+              <Ionicons
+                name={a.removable ? "shield-checkmark" : "ribbon"}
+                size={18}
+                color="#fff"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.itemName, { color: colors.foreground }]}>{a.email}</Text>
+              <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
+                {a.removable
+                  ? a.addedBy
+                    ? `أضافه ${a.addedBy}`
+                    : "مشرف"
+                  : "المالك"}
+              </Text>
+            </View>
+            {a.removable ? (
+              <TouchableOpacity onPress={() => confirmDelete(a)} style={styles.delBtn}>
+                <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.mutedForeground} />
+            )}
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 

@@ -28,6 +28,41 @@ export const GetAuthMeResponse = zod.object({
 
 
 /**
+ * Returns the bootstrap (env) owners and in-app granted admins
+ * @summary List admins
+ */
+export const ListAdminsResponseItem = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "userId": zod.string(),
+  "addedBy": zod.string(),
+  "source": zod.string(),
+  "removable": zod.boolean()
+})
+export const ListAdminsResponse = zod.array(ListAdminsResponseItem)
+
+
+/**
+ * @summary Grant admin access to an email
+ */
+export const createAdminBodyEmailMin = 3;
+
+
+
+export const CreateAdminBody = zod.object({
+  "email": zod.string().min(createAdminBodyEmailMin)
+})
+
+
+/**
+ * @summary Revoke admin access
+ */
+export const DeleteAdminParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List store items
  */
 export const ListStoreItemsResponseItem = zod.object({

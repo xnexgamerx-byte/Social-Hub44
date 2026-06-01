@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './admin';
+export * from './adminInput';
 export * from './authMe';
 export * from './claimTaskInput';
 export * from './coinPackage';

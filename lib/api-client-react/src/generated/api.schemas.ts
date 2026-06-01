@@ -14,6 +14,20 @@ export interface AuthMe {
   isAdmin: boolean;
 }
 
+export interface Admin {
+  id: number;
+  email: string;
+  userId: string;
+  addedBy: string;
+  source: string;
+  removable: boolean;
+}
+
+export interface AdminInput {
+  /** @minLength 3 */
+  email: string;
+}
+
 export interface Error {
   error: string;
 }

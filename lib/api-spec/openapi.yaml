@@ -55,6 +55,71 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /admins:
+    get:
+      operationId: listAdmins
+      tags: [auth]
+      summary: List admins
+      description: Returns the bootstrap (env) owners and in-app granted admins
+      responses:
+        "200":
+          description: List of admins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Admin"
+    post:
+      operationId: createAdmin
+      tags: [auth]
+      summary: Grant admin access to an email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminInput"
+      responses:
+        "201":
+          description: Created admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+        "400":
+          description: Invalid email or already an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admins/{id}:
+    delete:
+      operationId: deleteAdmin
+      tags: [auth]
+      summary: Revoke admin access
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Cannot remove yourself
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /store-items:
     get:
       operationId: listStoreItems
@@ -710,6 +775,28 @@ components:
       required:
         - userId
         - isAdmin
+    Admin:
+      type: object
+      required:
+        - id
+        - email
+        - userId
+        - addedBy
+        - source
+        - removable
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        userId: { type: string }
+        addedBy: { type: string }
+        source: { type: string }
+        removable: { type: boolean }
+    AdminInput:
+      type: object
+      required:
+        - email
+      properties:
+        email: { type: string, minLength: 3 }
     Error:
       type: object
       properties:
