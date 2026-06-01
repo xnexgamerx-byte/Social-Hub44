@@ -23,3 +23,19 @@ timeoutMs = 20000
 
 [userenv.shared]
 ADMIN_EMAILS = "xsacexs@gmail.com"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 80
+
+[[ports]]
+localPort = 8082
+externalPort = 3000
+
+[[ports]]
+localPort = 22789
+externalPort = 3001
