@@ -13,6 +13,7 @@ import {
   useGetAuthMe,
   usePurchaseItem,
   useRechargeWallet,
+  useReconcileRecharges,
 } from "@workspace/api-client-react";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
@@ -58,7 +59,8 @@ interface AppContextValue {
   isOwned: (id: number) => boolean;
   isEquipped: (id: number) => boolean;
   buyItem: (id: number) => Promise<ActionResult>;
-  rechargePackage: (packageId: number) => Promise<ActionResult>;
+  rechargePackage: (packageId: number, rcPurchaseId: string) => Promise<ActionResult>;
+  reconcileRecharges: () => Promise<ActionResult>;
   claimTask: (taskId: number) => Promise<ActionResult>;
   equipItem: (itemId: number) => Promise<ActionResult>;
   setVip: (level: number, type: "vip" | "svip") => void;
@@ -98,6 +100,7 @@ const AppContext = createContext<AppContextValue>({
   isEquipped: () => false,
   buyItem: noopAsync,
   rechargePackage: noopAsync,
+  reconcileRecharges: noopAsync,
   claimTask: noopAsync,
   equipItem: noopAsync,
   setVip: () => {},
@@ -192,6 +195,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
   const purchaseM = usePurchaseItem();
   const rechargeM = useRechargeWallet();
+  const reconcileM = useReconcileRecharges();
   const claimM = useClaimTask();
   const equipM = useEquipItem();
 
@@ -260,14 +264,28 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const rechargePackage = async (packageId: number): Promise<ActionResult> => {
+  const rechargePackage = async (
+    packageId: number,
+    rcPurchaseId: string,
+  ): Promise<ActionResult> => {
     if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
     try {
-      await rechargeM.mutateAsync({ userId, data: { packageId } });
+      await rechargeM.mutateAsync({ userId, data: { packageId, rcPurchaseId } });
       invalidateWallet();
       return { ok: true };
     } catch (err) {
       return { ok: false, error: errorMessage(err, "تعذّر إتمام الشحن") };
+    }
+  };
+
+  const reconcileRecharges = async (): Promise<ActionResult> => {
+    if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
+    try {
+      await reconcileM.mutateAsync({ userId });
+      invalidateWallet();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: errorMessage(err, "تعذّر التحقق من المشتريات") };
     }
   };
 
@@ -319,6 +337,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         isEquipped: (id) => equippedItems.has(id),
         buyItem,
         rechargePackage,
+        reconcileRecharges,
         claimTask,
         equipItem,
         setVip,

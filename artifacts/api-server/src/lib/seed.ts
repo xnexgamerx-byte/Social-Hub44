@@ -162,12 +162,12 @@ function buildStoreItems(): InsertStoreItem[] {
 }
 
 const COIN_PACKAGES: InsertCoinPackage[] = [
-  { name: "باقة البداية", coins: 1000, bonus: 0, price: "$0.99", color: "#7C5CFC", icon: "logo-bitcoin", popular: false, active: true, sortOrder: 1 },
-  { name: "باقة فضية", coins: 5000, bonus: 250, price: "$4.99", color: "#42A5F5", icon: "logo-bitcoin", popular: false, active: true, sortOrder: 2 },
-  { name: "باقة ذهبية", coins: 12000, bonus: 1200, price: "$9.99", color: "#FFB300", icon: "logo-bitcoin", popular: true, active: true, sortOrder: 3 },
-  { name: "باقة ماسية", coins: 30000, bonus: 4500, price: "$24.99", color: "#26C6DA", icon: "diamond", popular: false, active: true, sortOrder: 4 },
-  { name: "باقة ملكية", coins: 70000, bonus: 14000, price: "$49.99", color: "#AB47BC", icon: "diamond", popular: false, active: true, sortOrder: 5 },
-  { name: "باقة أسطورية", coins: 160000, bonus: 40000, price: "$99.99", color: "#EC407A", icon: "flame", popular: false, active: true, sortOrder: 6 },
+  { name: "باقة البداية", coins: 1000, bonus: 0, price: "$0.99", productId: "coins_1000", color: "#7C5CFC", icon: "logo-bitcoin", popular: false, active: true, sortOrder: 1 },
+  { name: "باقة فضية", coins: 5000, bonus: 250, price: "$4.99", productId: "coins_5000", color: "#42A5F5", icon: "logo-bitcoin", popular: false, active: true, sortOrder: 2 },
+  { name: "باقة ذهبية", coins: 12000, bonus: 1200, price: "$9.99", productId: "coins_12000", color: "#FFB300", icon: "logo-bitcoin", popular: true, active: true, sortOrder: 3 },
+  { name: "باقة ماسية", coins: 30000, bonus: 4500, price: "$24.99", productId: "coins_30000", color: "#26C6DA", icon: "diamond", popular: false, active: true, sortOrder: 4 },
+  { name: "باقة ملكية", coins: 70000, bonus: 14000, price: "$49.99", productId: "coins_70000", color: "#AB47BC", icon: "diamond", popular: false, active: true, sortOrder: 5 },
+  { name: "باقة أسطورية", coins: 160000, bonus: 40000, price: "$99.99", productId: "coins_160000", color: "#EC407A", icon: "flame", popular: false, active: true, sortOrder: 6 },
 ];
 
 const DAILY_TASKS: InsertDailyTask[] = [

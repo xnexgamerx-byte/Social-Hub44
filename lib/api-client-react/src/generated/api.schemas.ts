@@ -102,6 +102,7 @@ export interface CoinPackage {
   coins: number;
   bonus: number;
   price: string;
+  productId: string;
   color: string;
   icon: string;
   popular: boolean;
@@ -114,6 +115,7 @@ export interface CoinPackageInput {
   coins: number;
   bonus?: number;
   price?: string;
+  productId?: string;
   color?: string;
   icon?: string;
   popular?: boolean;
@@ -126,6 +128,7 @@ export interface CoinPackageUpdate {
   coins?: number;
   bonus?: number;
   price?: string;
+  productId?: string;
   color?: string;
   icon?: string;
   popular?: boolean;
@@ -203,6 +206,7 @@ export interface PurchaseResult {
 
 export interface RechargeInput {
   packageId: number;
+  rcPurchaseId: string;
 }
 
 export interface PurchaseInput {

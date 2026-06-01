@@ -318,6 +318,7 @@ export const ListCoinPackagesResponseItem = zod.object({
   "coins": zod.number(),
   "bonus": zod.number(),
   "price": zod.string(),
+  "productId": zod.string(),
   "color": zod.string(),
   "icon": zod.string(),
   "popular": zod.boolean(),
@@ -335,6 +336,7 @@ export const CreateCoinPackageBody = zod.object({
   "coins": zod.number(),
   "bonus": zod.number().optional(),
   "price": zod.string().optional(),
+  "productId": zod.string().optional(),
   "color": zod.string().optional(),
   "icon": zod.string().optional(),
   "popular": zod.boolean().optional(),
@@ -355,6 +357,7 @@ export const UpdateCoinPackageBody = zod.object({
   "coins": zod.number().optional(),
   "bonus": zod.number().optional(),
   "price": zod.string().optional(),
+  "productId": zod.string().optional(),
   "color": zod.string().optional(),
   "icon": zod.string().optional(),
   "popular": zod.boolean().optional(),
@@ -368,6 +371,7 @@ export const UpdateCoinPackageResponse = zod.object({
   "coins": zod.number(),
   "bonus": zod.number(),
   "price": zod.string(),
+  "productId": zod.string(),
   "color": zod.string(),
   "icon": zod.string(),
   "popular": zod.boolean(),
@@ -514,10 +518,26 @@ export const RechargeWalletParams = zod.object({
 })
 
 export const RechargeWalletBody = zod.object({
-  "packageId": zod.number()
+  "packageId": zod.number(),
+  "rcPurchaseId": zod.string()
 })
 
 export const RechargeWalletResponse = zod.object({
+  "userId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
+
+
+/**
+ * Recovery path for purchases that were charged by the store but never credited (e.g. the app closed before the recharge call completed). Lists the customer's owned purchases at RevenueCat and idempotently credits any that map to an active coin package and have not been redeemed yet.
+ * @summary Credit any paid-but-uncredited coin purchases for this customer
+ */
+export const ReconcileRechargesParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const ReconcileRechargesResponse = zod.object({
   "userId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()

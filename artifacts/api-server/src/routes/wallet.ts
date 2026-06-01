@@ -5,6 +5,7 @@ import {
   walletsTable,
   walletTransactionsTable,
   coinPackagesTable,
+  rechargePurchasesTable,
   dailyTasksTable,
   dailyTaskClaimsTable,
   storeItemsTable,
@@ -20,6 +21,8 @@ import {
   RechargeWalletParams,
   RechargeWalletBody,
   RechargeWalletResponse,
+  ReconcileRechargesParams,
+  ReconcileRechargesResponse,
   PurchaseItemParams,
   PurchaseItemBody,
   PurchaseItemResponse,
@@ -43,6 +46,11 @@ import {
   type Currency,
 } from "../lib/wallet";
 import { requireAuth, type AuthedRequest } from "../lib/authz";
+import {
+  verifyPurchase,
+  listOwnedPurchases,
+  RevenueCatConfigError,
+} from "../lib/revenuecat";
 
 const router: IRouter = Router();
 
@@ -63,6 +71,14 @@ class AlreadyOwnedError extends Error {
   constructor() {
     super("تمتلك هذا العنصر بالفعل");
     this.name = "AlreadyOwnedError";
+  }
+}
+
+/** Thrown inside the recharge transaction when the RC purchase was already redeemed. */
+class AlreadyRedeemedError extends Error {
+  constructor() {
+    super("تم استخدام عملية الشراء هذه من قبل");
+    this.name = "AlreadyRedeemedError";
   }
 }
 
@@ -122,27 +138,194 @@ router.post("/wallet/:userId/recharge", async (req, res): Promise<void> => {
     res.status(400).json({ error: body.error.message });
     return;
   }
+  const userId = params.data.userId;
+  const { packageId, rcPurchaseId } = body.data;
+
   const [pkg] = await db
     .select()
     .from(coinPackagesTable)
-    .where(eq(coinPackagesTable.id, body.data.packageId))
+    .where(eq(coinPackagesTable.id, packageId))
     .limit(1);
   if (!pkg || !pkg.active) {
     res.status(404).json({ error: "باقة الشحن غير متوفرة" });
     return;
   }
-  await ensureWallet(params.data.userId);
+  if (!pkg.productId) {
+    req.log.error({ packageId }, "Coin package has no productId");
+    res.status(409).json({ error: "هذه الباقة غير مهيأة للشراء حالياً" });
+    return;
+  }
+
+  await ensureWallet(userId);
+
+  // Fast path: if this purchase was already redeemed, return the current wallet
+  // without re-verifying or re-crediting. The unique rcPurchaseId guarantees a
+  // purchase grants coins exactly once even under retries.
+  const [existing] = await db
+    .select()
+    .from(rechargePurchasesTable)
+    .where(eq(rechargePurchasesTable.rcPurchaseId, rcPurchaseId))
+    .limit(1);
+  if (existing) {
+    if (existing.userId !== userId) {
+      res.status(409).json({ error: "عملية الشراء هذه مرتبطة بحساب آخر" });
+      return;
+    }
+    const wallet = await ensureWallet(userId);
+    res.json(RechargeWalletResponse.parse(toWalletView(wallet)));
+    return;
+  }
+
+  // Verify the purchase with RevenueCat before crediting anything. A
+  // cancelled/failed/refunded or mismatched purchase grants nothing.
+  let verified;
+  try {
+    verified = await verifyPurchase({
+      userId,
+      rcPurchaseId,
+      expectedProductId: pkg.productId,
+    });
+  } catch (err) {
+    if (err instanceof RevenueCatConfigError) {
+      req.log.error({ err }, "RevenueCat verification unavailable");
+      res
+        .status(502)
+        .json({ error: "تعذّر التحقق من عملية الدفع، حاول لاحقاً" });
+      return;
+    }
+    throw err;
+  }
+  if (!verified) {
+    res.status(402).json({
+      error: "لم يتم تأكيد عملية الدفع. لم يتم خصم أي مبلغ ولم تُضف أي كوينز.",
+    });
+    return;
+  }
+  const confirmed = verified;
+
   const total = pkg.coins + pkg.bonus;
-  const wallet = await adjustWallet({
-    userId: params.data.userId,
-    currency: "coins",
-    amount: total,
-    type: "recharge",
-    description: `شحن ${pkg.name || pkg.coins + " كوينز"}`,
-    refId: String(pkg.id),
-  });
-  res.json(RechargeWalletResponse.parse(toWalletView(wallet)));
+  try {
+    // Record the redemption and credit coins atomically. The unique constraint
+    // on rcPurchaseId is the idempotency guard: a concurrent duplicate insert
+    // throws and rolls back, so the wallet is credited exactly once.
+    const wallet = await db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(rechargePurchasesTable)
+        .values({
+          userId,
+          rcPurchaseId: confirmed.rcPurchaseId,
+          packageId: pkg.id,
+          coinsGranted: total,
+        })
+        .onConflictDoNothing({ target: rechargePurchasesTable.rcPurchaseId })
+        .returning();
+      if (inserted.length === 0) {
+        throw new AlreadyRedeemedError();
+      }
+      return adjustWalletTx(tx, {
+        userId,
+        currency: "coins",
+        amount: total,
+        type: "recharge",
+        description: `شحن ${pkg.name || pkg.coins + " كوينز"}`,
+        refId: confirmed.rcPurchaseId,
+      });
+    });
+    res.json(RechargeWalletResponse.parse(toWalletView(wallet)));
+  } catch (err) {
+    if (err instanceof AlreadyRedeemedError) {
+      // Lost an idempotency race; the coins were granted by the winner.
+      const wallet = await ensureWallet(userId);
+      res.json(RechargeWalletResponse.parse(toWalletView(wallet)));
+      return;
+    }
+    throw err;
+  }
 });
+
+router.post(
+  "/wallet/:userId/recharge/reconcile",
+  async (req, res): Promise<void> => {
+    const params = ReconcileRechargesParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const userId = params.data.userId;
+    await ensureWallet(userId);
+
+    // Pull every owned purchase the store knows about for this customer, then
+    // credit any that map to an active coin package and have not been redeemed.
+    let owned;
+    try {
+      owned = await listOwnedPurchases(userId);
+    } catch (err) {
+      if (err instanceof RevenueCatConfigError) {
+        req.log.error({ err }, "RevenueCat reconcile lookup unavailable");
+        res
+          .status(502)
+          .json({ error: "تعذّر التحقق من عمليات الدفع، حاول لاحقاً" });
+        return;
+      }
+      throw err;
+    }
+
+    if (owned.length > 0) {
+      // Map active coin packages by their store productId so we know how many
+      // coins each owned purchase is worth.
+      const packages = await db
+        .select()
+        .from(coinPackagesTable)
+        .where(eq(coinPackagesTable.active, true));
+      const byProductId = new Map(
+        packages.filter((p) => p.productId).map((p) => [p.productId, p]),
+      );
+
+      for (const purchase of owned) {
+        const pkg = byProductId.get(purchase.productId);
+        if (!pkg) continue;
+        const total = pkg.coins + pkg.bonus;
+        try {
+          await db.transaction(async (tx) => {
+            const inserted = await tx
+              .insert(rechargePurchasesTable)
+              .values({
+                userId,
+                rcPurchaseId: purchase.rcPurchaseId,
+                packageId: pkg.id,
+                coinsGranted: total,
+              })
+              .onConflictDoNothing({
+                target: rechargePurchasesTable.rcPurchaseId,
+              })
+              .returning();
+            // Already redeemed (by this user or a prior reconcile/recharge) —
+            // skip crediting; the unique constraint keeps this exactly-once.
+            if (inserted.length === 0) return;
+            await adjustWalletTx(tx, {
+              userId,
+              currency: "coins",
+              amount: total,
+              type: "recharge",
+              description: `شحن ${pkg.name || pkg.coins + " كوينز"}`,
+              refId: purchase.rcPurchaseId,
+            });
+          });
+        } catch (err) {
+          // A purchase tied to another account collides on the unique id; log
+          // and continue reconciling the rest rather than failing the request.
+          req.log.warn(
+            { err, rcPurchaseId: purchase.rcPurchaseId, userId },
+            "Reconcile skipped a purchase",
+          );
+        }
+      }
+    }
+
+    const wallet = await ensureWallet(userId);
+    res.json(ReconcileRechargesResponse.parse(toWalletView(wallet)));
+  },
+);
 
 router.post("/wallet/:userId/purchase", async (req, res): Promise<void> => {
   const params = PurchaseItemParams.safeParse(req.params);

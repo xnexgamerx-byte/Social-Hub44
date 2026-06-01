@@ -4,6 +4,7 @@ export * from "./storeItems";
 export * from "./vipFeatures";
 export * from "./vipTiers";
 export * from "./coinPackages";
+export * from "./rechargePurchases";
 export * from "./dailyTasks";
 export * from "./wallets";
 export * from "./walletTransactions";

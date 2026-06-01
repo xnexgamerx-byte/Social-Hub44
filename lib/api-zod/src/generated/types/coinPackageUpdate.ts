@@ -11,6 +11,7 @@ export interface CoinPackageUpdate {
   coins?: number;
   bonus?: number;
   price?: string;
+  productId?: string;
   color?: string;
   icon?: string;
   popular?: boolean;

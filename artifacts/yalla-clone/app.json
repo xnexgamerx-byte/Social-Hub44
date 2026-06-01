@@ -14,9 +14,12 @@
       "backgroundColor": "#F5F3FF"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nabda.yalla"
     },
-    "android": {},
+    "android": {
+      "package": "com.nabda.yalla"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

@@ -627,6 +627,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /wallet/{userId}/recharge/reconcile:
+    post:
+      operationId: reconcileRecharges
+      tags: [wallet]
+      summary: Credit any paid-but-uncredited coin purchases for this customer
+      description: >-
+        Recovery path for purchases that were charged by the store but never
+        credited (e.g. the app closed before the recharge call completed). Lists
+        the customer's owned purchases at RevenueCat and idempotently credits any
+        that map to an active coin package and have not been redeemed yet.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated wallet after crediting any pending purchases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+        "502":
+          description: RevenueCat verification temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /wallet/{userId}/purchase:
     post:
       operationId: purchaseItem
@@ -915,6 +944,7 @@ components:
         - coins
         - bonus
         - price
+        - productId
         - color
         - icon
         - popular
@@ -926,6 +956,7 @@ components:
         coins: { type: integer }
         bonus: { type: integer }
         price: { type: string }
+        productId: { type: string }
         color: { type: string }
         icon: { type: string }
         popular: { type: boolean }
@@ -940,6 +971,7 @@ components:
         coins: { type: integer }
         bonus: { type: integer }
         price: { type: string }
+        productId: { type: string }
         color: { type: string }
         icon: { type: string }
         popular: { type: boolean }
@@ -952,6 +984,7 @@ components:
         coins: { type: integer }
         bonus: { type: integer }
         price: { type: string }
+        productId: { type: string }
         color: { type: string }
         icon: { type: string }
         popular: { type: boolean }
@@ -1067,8 +1100,10 @@ components:
       type: object
       required:
         - packageId
+        - rcPurchaseId
       properties:
         packageId: { type: integer }
+        rcPurchaseId: { type: string }
     PurchaseInput:
       type: object
       required:

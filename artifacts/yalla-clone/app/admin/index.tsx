@@ -700,6 +700,7 @@ function CoinPackagesAdmin() {
   const [coins, setCoins] = useState("1000");
   const [bonus, setBonus] = useState("0");
   const [price, setPrice] = useState("9.99");
+  const [productId, setProductId] = useState("");
   const [color, setColor] = useState("#F5C242");
   const [icon, setIcon] = useState("logo-bitcoin");
   const [popular, setPopular] = useState(false);
@@ -710,6 +711,7 @@ function CoinPackagesAdmin() {
     setCoins("1000");
     setBonus("0");
     setPrice("9.99");
+    setProductId("");
     setColor("#F5C242");
     setIcon("logo-bitcoin");
     setPopular(false);
@@ -721,6 +723,7 @@ function CoinPackagesAdmin() {
     setCoins(String(p.coins));
     setBonus(String(p.bonus));
     setPrice(p.price);
+    setProductId(p.productId);
     setColor(p.color);
     setIcon(p.icon);
     setPopular(p.popular);
@@ -733,6 +736,7 @@ function CoinPackagesAdmin() {
       coins: Number(coins) || 0,
       bonus: Number(bonus) || 0,
       price: price.trim() || "0",
+      productId: productId.trim(),
       color,
       icon,
       popular,
@@ -787,6 +791,12 @@ function CoinPackagesAdmin() {
             <Field label="اللون" value={color} onChange={setColor} colors={colors} />
           </View>
         </View>
+        <Field
+          label="معرّف المنتج (RevenueCat)"
+          value={productId}
+          onChange={setProductId}
+          colors={colors}
+        />
         <Field label="الأيقونة" value={icon} onChange={setIcon} colors={colors} />
         <View style={styles.popularRow}>
           <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginBottom: 0 }]}>

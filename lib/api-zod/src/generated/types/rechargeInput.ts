@@ -8,4 +8,5 @@
 
 export interface RechargeInput {
   packageId: number;
+  rcPurchaseId: string;
 }

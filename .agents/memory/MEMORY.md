@@ -1,1 +1,2 @@
 - [Yalla-clone Expo app](yalla-clone-expo.md) — dark Arabic social app with rooms/videos/games; frontend-only, AsyncStorage, forced dark mode.
+- [RevenueCat coin IAP](revenuecat-iap.md) — real consumable IAP; verify-before-credit + idempotent ledger; native-only (no web/Expo Go); refund-after-credit unhandled.

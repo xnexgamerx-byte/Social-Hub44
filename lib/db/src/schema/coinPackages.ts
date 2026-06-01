@@ -18,6 +18,9 @@ export const coinPackagesTable = pgTable("coin_packages", {
   bonus: integer("bonus").notNull().default(0),
   // display price label, e.g. "$0.99" or "9.99 ر.س"
   price: text("price").notNull().default(""),
+  // RevenueCat product store identifier this package maps to (e.g. "coins_1000").
+  // The real price is configured/charged in RevenueCat keyed on this id.
+  productId: text("product_id").notNull().default(""),
   color: text("color").notNull().default("#7C3AED"),
   icon: text("icon").notNull().default("logo-bitcoin"),
   // highlights the package as "الأكثر شعبية"

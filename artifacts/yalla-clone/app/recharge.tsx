@@ -8,10 +8,11 @@ import {
 } from "@workspace/api-client-react";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -22,6 +23,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
+import {
+  MissingTransactionIdError,
+  PurchaseCancelledError,
+  useRevenueCat,
+} from "@/lib/revenuecat";
 
 type RechargeTab = "packages" | "history";
 
@@ -69,9 +75,16 @@ const GOLD = "#F5C242";
 const TEXT = "#FFFFFF";
 const MUTED = "#9A91B5";
 
+type ResultModal = {
+  kind: "success" | "error";
+  title: string;
+  message: string;
+};
+
 export default function RechargeScreen() {
   const insets = useSafeAreaInsets();
-  const { user, rechargePackage } = useApp();
+  const { user, rechargePackage, reconcileRecharges } = useApp();
+  const { purchaseByProductId, isPurchasesSupported } = useRevenueCat();
   const { data, isLoading } = useQuery(getListCoinPackagesQueryOptions());
   const packages = useMemo(
     () =>
@@ -89,18 +102,99 @@ export default function RechargeScreen() {
 
   const [selected, setSelected] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmPkg, setConfirmPkg] = useState<CoinPackage | null>(null);
+  const [result, setResult] = useState<ResultModal | null>(null);
   const topPad = Platform.OS === "web" ? 20 : insets.top;
 
-  const handleRecharge = async (pkg: CoinPackage) => {
+  // Recovery: when the screen opens, ask the server to credit any purchase that
+  // was paid for but never recorded (e.g. the app closed mid-flow). This is
+  // idempotent — already-credited purchases are skipped — and silent on success.
+  useEffect(() => {
+    if (!isPurchasesSupported) return;
+    void reconcileRecharges();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The native purchase sheet handles the actual payment, so we gate the flow
+  // behind an in-app confirmation modal (custom, not Alert) before launching it.
+  const requestRecharge = (pkg: CoinPackage) => {
     if (busy) return;
+    if (!isPurchasesSupported) {
+      setResult({
+        kind: "error",
+        title: "الشراء غير متاح",
+        message:
+          "عمليات الشراء داخل التطبيق متاحة فقط على تطبيق الجوال. الرجاء استخدام تطبيق آيفون أو أندرويد.",
+      });
+      return;
+    }
+    setConfirmPkg(pkg);
+  };
+
+  const confirmRecharge = async () => {
+    const pkg = confirmPkg;
+    if (!pkg || busy) return;
+    setConfirmPkg(null);
     setBusy(true);
-    const res = await rechargePackage(pkg.id);
-    setBusy(false);
-    if (res.ok) {
-      const total = pkg.coins + pkg.bonus;
-      Alert.alert("تم الشحن", `تمت إضافة ${total.toLocaleString()} كوينز إلى رصيدك`);
-    } else {
-      Alert.alert("خطأ", res.error ?? "تعذّر إتمام الشحن");
+    try {
+      // 1) Launch the real RevenueCat purchase. Throws on cancel/failure.
+      const { rcPurchaseId } = await purchaseByProductId(pkg.productId);
+      // 2) Coins are credited only after the server verifies this purchase.
+      const res = await rechargePackage(pkg.id, rcPurchaseId);
+      if (res.ok) {
+        const total = pkg.coins + pkg.bonus;
+        setResult({
+          kind: "success",
+          title: "تم الشحن",
+          message: `تمت إضافة ${total.toLocaleString()} كوينز إلى رصيدك`,
+        });
+      } else {
+        setResult({
+          kind: "error",
+          title: "تعذّر إتمام الشحن",
+          message:
+            res.error ??
+            "تم الدفع لكن تعذّر تأكيد العملية. لن تُخصم منك أي رسوم إضافية، وسيتم إضافة الكوينز عند التحقق.",
+        });
+      }
+    } catch (err) {
+      if (err instanceof PurchaseCancelledError) {
+        setResult({
+          kind: "error",
+          title: "تم إلغاء العملية",
+          message: "تم إلغاء عملية الشراء ولم تتم إضافة أي كوينز.",
+        });
+      } else if (err instanceof MissingTransactionIdError) {
+        // The store charged the card but didn't hand us a transaction id. The
+        // payment is real, so reconcile from the server to credit it instead of
+        // reporting a failure.
+        const recovered = await reconcileRecharges();
+        setResult(
+          recovered.ok
+            ? {
+                kind: "success",
+                title: "تم الشحن",
+                message: "تم تأكيد عملية الدفع وإضافة الكوينز إلى رصيدك.",
+              }
+            : {
+                kind: "error",
+                title: "جارٍ تأكيد الدفع",
+                message:
+                  "تمت عملية الدفع وسيتم إضافة الكوينز تلقائياً عند التحقق. حدّث الصفحة بعد قليل.",
+              },
+        );
+      } else {
+        setResult({
+          kind: "error",
+          title: "فشل الشراء",
+          message:
+            err instanceof Error
+              ? err.message
+              : "تعذّر إتمام عملية الشراء. لم تتم إضافة أي كوينز.",
+        });
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -277,7 +371,7 @@ export default function RechargeScreen() {
             disabled={busy}
             onPress={() => {
               const pkg = packages.find((p) => p.id === selected);
-              if (pkg) handleRecharge(pkg);
+              if (pkg) requestRecharge(pkg);
             }}
           >
             {busy ? (
@@ -291,6 +385,82 @@ export default function RechargeScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      <Modal
+        visible={confirmPkg !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmPkg(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="card" size={28} color={GOLD} />
+            </View>
+            <Text style={styles.modalTitle}>تأكيد الشراء</Text>
+            {confirmPkg && (
+              <Text style={styles.modalMessage}>
+                {`سيتم شراء "${confirmPkg.name}" مقابل ${confirmPkg.price}\nوستُضاف ${(
+                  confirmPkg.coins + confirmPkg.bonus
+                ).toLocaleString()} كوينز بعد تأكيد الدفع.`}
+              </Text>
+            )}
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setConfirmPkg(null)}
+              >
+                <Text style={styles.modalBtnCancelText}>إلغاء</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnConfirm]}
+                onPress={confirmRecharge}
+              >
+                <Text style={styles.modalBtnConfirmText}>تأكيد الدفع</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={result !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResult(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View
+              style={[
+                styles.modalIconWrap,
+                {
+                  backgroundColor:
+                    result?.kind === "success" ? "#10331F" : "#3A1E1E",
+                },
+              ]}
+            >
+              <Ionicons
+                name={
+                  result?.kind === "success"
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
+                size={30}
+                color={result?.kind === "success" ? "#22C55E" : "#EF4444"}
+              />
+            </View>
+            <Text style={styles.modalTitle}>{result?.title}</Text>
+            <Text style={styles.modalMessage}>{result?.message}</Text>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnConfirm, { width: "100%" }]}
+              onPress={() => setResult(null)}
+            >
+              <Text style={styles.modalBtnConfirmText}>حسناً</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -449,4 +619,46 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   confirmText: { color: "#3A2E00", fontSize: 16, fontWeight: "800" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: CARD,
+    borderRadius: 22,
+    padding: 22,
+    alignItems: "center",
+  },
+  modalIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#2E2640",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  modalTitle: { color: TEXT, fontSize: 18, fontWeight: "800", marginBottom: 8 },
+  modalMessage: {
+    color: MUTED,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalBtnRow: { flexDirection: "row", gap: 10, width: "100%" },
+  modalBtn: {
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  modalBtnCancel: { backgroundColor: "#2E2640" },
+  modalBtnCancelText: { color: MUTED, fontSize: 15, fontWeight: "700" },
+  modalBtnConfirm: { backgroundColor: GOLD },
+  modalBtnConfirmText: { color: "#3A2E00", fontSize: 15, fontWeight: "800" },
 });

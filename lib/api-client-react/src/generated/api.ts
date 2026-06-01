@@ -2263,6 +2263,77 @@ export const useRechargeWallet = <TError = ErrorType<Error>,
       return useMutation(getRechargeWalletMutationOptions(options));
     }
 
+export const getReconcileRechargesUrl = (userId: string,) => {
+
+
+
+
+  return `/api/wallet/${userId}/recharge/reconcile`
+}
+
+/**
+ * Recovery path for purchases that were charged by the store but never credited (e.g. the app closed before the recharge call completed). Lists the customer's owned purchases at RevenueCat and idempotently credits any that map to an active coin package and have not been redeemed yet.
+ * @summary Credit any paid-but-uncredited coin purchases for this customer
+ */
+export const reconcileRecharges = async (userId: string, options?: RequestInit): Promise<Wallet> => {
+
+  return customFetch<Wallet>(getReconcileRechargesUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getReconcileRechargesMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reconcileRecharges>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reconcileRecharges>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['reconcileRecharges'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reconcileRecharges>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  reconcileRecharges(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReconcileRechargesMutationResult = NonNullable<Awaited<ReturnType<typeof reconcileRecharges>>>
+
+    export type ReconcileRechargesMutationError = ErrorType<Error>
+
+    /**
+ * @summary Credit any paid-but-uncredited coin purchases for this customer
+ */
+export const useReconcileRecharges = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reconcileRecharges>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reconcileRecharges>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+      return useMutation(getReconcileRechargesMutationOptions(options));
+    }
+
 export const getPurchaseItemUrl = (userId: string,) => {
 
 
