@@ -75,13 +75,22 @@ export default function ProfileScreen() {
       </View>
 
       {/* Identity */}
-      <TouchableOpacity style={[styles.identityRow]} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.identityRow]}
+        activeOpacity={0.8}
+        onPress={() => router.push("/profile-edit")}
+      >
         <View style={[styles.avatarWrapper, { borderColor: colors.primary }]}>
           <Image source={{ uri: user.avatar }} style={styles.avatar} />
         </View>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
           <Text style={[styles.name, { color: colors.foreground }]}>{user.name}</Text>
           <Text style={[styles.username, { color: colors.mutedForeground }]}>{user.username}</Text>
+          {!!user.bio && (
+            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={2}>
+              {user.bio}
+            </Text>
+          )}
           <View style={styles.badgeRow}>
             <View style={[styles.lvBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.lvBadgeText}>Lv {user.level}</Text>
@@ -240,6 +249,7 @@ const styles = StyleSheet.create({
   avatar: { width: "100%", height: "100%" },
   name: { fontSize: 19, fontWeight: "800" as const, marginBottom: 2 },
   username: { fontSize: 13, marginBottom: 6 },
+  bio: { fontSize: 12, lineHeight: 17, marginBottom: 6, textAlign: "right" },
   badgeRow: { flexDirection: "row", gap: 6 },
   lvBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   lvBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" as const },

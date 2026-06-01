@@ -224,6 +224,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       name: displayName,
       username: handle,
       avatar: clerkUser?.imageUrl || FALLBACK_AVATAR,
+      bio: (clerkUser?.unsafeMetadata?.bio as string | undefined) || "",
       coins: walletQ.data?.coins ?? 0,
       vPoints: walletQ.data?.vPoints ?? 0,
       vipLevel: vip.vipLevel,
