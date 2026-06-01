@@ -54,8 +54,10 @@ export function useRoomGifts(
   onWalletUpdate?: (coins: number, vPoints: number) => void,
   onGiftError?: (message: string) => void,
 ) {
-  const [gift, setGift] = useState<GiftEvent | null>(null);
-  const [entrance, setEntrance] = useState<EntranceEvent | null>(null);
+  // FIFO queues so a rapid burst of gifts/entrances plays one-at-a-time instead
+  // of overwriting each other. The head of each queue is the one on screen.
+  const [giftQueue, setGiftQueue] = useState<GiftEvent[]>([]);
+  const [entranceQueue, setEntranceQueue] = useState<EntranceEvent[]>([]);
   const roomRef = useRef(roomId);
   roomRef.current = roomId;
   const walletCb = useRef(onWalletUpdate);
@@ -69,11 +71,11 @@ export function useRoomGifts(
 
     const onGiftNew = (data: Omit<GiftEvent, "key"> & { roomId: string }) => {
       if (data.roomId !== roomRef.current) return;
-      setGift({ ...data, key: nextKey() });
+      setGiftQueue((q) => [...q, { ...data, key: nextKey() }]);
     };
     const onEntrance = (data: Omit<EntranceEvent, "key"> & { roomId: string }) => {
       if (data.roomId !== roomRef.current) return;
-      setEntrance({ ...data, key: nextKey() });
+      setEntranceQueue((q) => [...q, { ...data, key: nextKey() }]);
     };
     const onWallet = (data: { coins: number; vPoints: number }) => {
       walletCb.current?.(data.coins, data.vPoints);
@@ -95,6 +97,12 @@ export function useRoomGifts(
     };
   }, [roomId]);
 
+  // Clear the queues when leaving / switching rooms so stale effects don't play.
+  useEffect(() => {
+    setGiftQueue([]);
+    setEntranceQueue([]);
+  }, [roomId]);
+
   const sendGift = useCallback(
     ({ userId, userName, userAvatar, itemId, toName }: SendGiftArgs) => {
       const rid = roomRef.current;
@@ -111,12 +119,19 @@ export function useRoomGifts(
     [],
   );
 
+  // Drop the finished item from the head so the next queued one plays.
   const clearGift = useCallback((key: string) => {
-    setGift((prev) => (prev?.key === key ? null : prev));
+    setGiftQueue((q) => (q[0]?.key === key ? q.slice(1) : q));
   }, []);
   const clearEntrance = useCallback((key: string) => {
-    setEntrance((prev) => (prev?.key === key ? null : prev));
+    setEntranceQueue((q) => (q[0]?.key === key ? q.slice(1) : q));
   }, []);
 
-  return { gift, entrance, sendGift, clearGift, clearEntrance };
+  return {
+    gift: giftQueue[0] ?? null,
+    entrance: entranceQueue[0] ?? null,
+    sendGift,
+    clearGift,
+    clearEntrance,
+  };
 }
