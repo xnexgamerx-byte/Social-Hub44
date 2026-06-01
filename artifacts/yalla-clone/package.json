@@ -54,5 +54,8 @@
     "typescript": "~5.9.2",
     "zod": "catalog:",
     "zod-validation-error": "^3.4.0"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }

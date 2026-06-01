@@ -1,110 +1,123 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GAMES, TRIVIA_QUESTIONS } from "@/data/mockData";
+import { GAMES } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
-
-type GameState = "ready" | "playing" | "answered" | "finished";
+import { useGameSession, type GamePlayer } from "@/hooks/useGameSession";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user } = useApp();
   const game = GAMES.find((g) => g.id === id) ?? GAMES[0];
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const [gameState, setGameState] = useState<GameState>("ready");
-  const [qIndex, setQIndex] = useState(0);
+  const me = useMemo(
+    () => ({ userId: user.id, userName: user.name, userAvatar: user.avatar }),
+    [user.id, user.name, user.avatar],
+  );
+
+  const { phase, players, question, revealAnswer, gained, answeredCount, connected, start, answer } =
+    useGameSession(id, me);
+
   const [selected, setSelected] = useState<number | null>(null);
-  const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const progressAnim = useRef(new Animated.Value(1)).current;
+  const lastIndexRef = useRef(-1);
 
-  const question = TRIVIA_QUESTIONS[qIndex % TRIVIA_QUESTIONS.length];
-  const isLastQuestion = qIndex >= TRIVIA_QUESTIONS.length - 1;
-
-  const startTimer = () => {
-    setTimeLeft(15);
-    progressAnim.setValue(1);
-    Animated.timing(progressAnim, {
-      toValue: 0,
-      duration: 15000,
-      useNativeDriver: false,
-    }).start();
-    timerRef.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(timerRef.current!);
-          setGameState("answered");
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-  };
-
-  const startGame = () => {
-    setGameState("playing");
-    setQIndex(0);
-    setScore(0);
-    setSelected(null);
-    startTimer();
-  };
-
-  const handleAnswer = (idx: number) => {
-    if (gameState !== "playing") return;
-    clearInterval(timerRef.current!);
-    Haptics.impactAsync(
-      idx === question.answer
-        ? Haptics.ImpactFeedbackStyle.Light
-        : Haptics.ImpactFeedbackStyle.Heavy
-    );
-    setSelected(idx);
-    setGameState("answered");
-    if (idx === question.answer) {
-      setScore((s) => s + Math.ceil((timeLeft / 15) * 100));
-    }
-  };
-
-  const nextQuestion = () => {
-    if (isLastQuestion) {
-      setGameState("finished");
-      return;
-    }
-    setQIndex((i) => i + 1);
-    setSelected(null);
-    setGameState("playing");
-    startTimer();
-  };
-
+  // Reset local selection whenever a new question arrives.
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+    if (question && question.index !== lastIndexRef.current) {
+      lastIndexRef.current = question.index;
+      setSelected(null);
+    }
+  }, [question]);
+
+  // Server-driven countdown derived from the shared endsAt timestamp.
+  useEffect(() => {
+    if (phase !== "question" || !question) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((question.endsAt - Date.now()) / 1000));
+      setTimeLeft(remaining);
+    };
+    tick();
+    const interval = setInterval(tick, 250);
+    return () => clearInterval(interval);
+  }, [phase, question]);
+
+  const myScore = useMemo(
+    () => players.find((p) => p.userId === user.id)?.score ?? 0,
+    [players, user.id],
+  );
+
+  const handleAnswer = useCallback(
+    (idx: number) => {
+      if (phase !== "question" || selected !== null) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelected(idx);
+      answer(idx);
+    },
+    [phase, selected, answer],
+  );
 
   const getChoiceStyle = (idx: number) => {
-    if (gameState !== "answered") return [styles.choice, { backgroundColor: colors.card, borderColor: colors.border }];
-    if (idx === question.answer) return [styles.choice, { backgroundColor: "#22C55E22", borderColor: "#22C55E" }];
-    if (idx === selected && idx !== question.answer) return [styles.choice, { backgroundColor: "#EF444422", borderColor: "#EF4444" }];
+    if (phase !== "reveal" || revealAnswer === null) {
+      const picked = selected === idx;
+      return [
+        styles.choice,
+        {
+          backgroundColor: picked ? colors.primary + "22" : colors.card,
+          borderColor: picked ? colors.primary : colors.border,
+        },
+      ];
+    }
+    if (idx === revealAnswer) return [styles.choice, { backgroundColor: "#22C55E22", borderColor: "#22C55E" }];
+    if (idx === selected && idx !== revealAnswer) return [styles.choice, { backgroundColor: "#EF444422", borderColor: "#EF4444" }];
     return [styles.choice, { backgroundColor: colors.card, borderColor: colors.border }];
   };
 
   const getChoiceTextColor = (idx: number) => {
-    if (gameState !== "answered") return colors.foreground;
-    if (idx === question.answer) return "#22C55E";
-    if (idx === selected && idx !== question.answer) return "#EF4444";
+    if (phase !== "reveal" || revealAnswer === null) return colors.foreground;
+    if (idx === revealAnswer) return "#22C55E";
+    if (idx === selected && idx !== revealAnswer) return "#EF4444";
     return colors.mutedForeground;
   };
+
+  const renderLeaderboard = (list: GamePlayer[], compact = false) => (
+    <View style={styles.board}>
+      {list.map((p, i) => (
+        <View
+          key={p.userId}
+          style={[
+            styles.boardRow,
+            { backgroundColor: p.userId === user.id ? colors.primary + "18" : colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.boardRank, { color: i === 0 ? colors.accent : colors.mutedForeground }]}>
+            {i + 1}
+          </Text>
+          <UserAvatar uri={p.userAvatar} size={compact ? 28 : 36} />
+          <Text style={[styles.boardName, { color: colors.foreground }]} numberOfLines={1}>
+            {p.userName}
+            {p.userId === user.id ? " (أنت)" : ""}
+          </Text>
+          <Text style={[styles.boardScore, { color: colors.primary }]}>{p.score}</Text>
+        </View>
+      ))}
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -117,51 +130,69 @@ export default function GameScreen() {
         </View>
         <Text style={[styles.gameName, { color: colors.foreground }]}>{game.name}</Text>
         <View style={[styles.scoreBadge, { backgroundColor: colors.primary + "22" }]}>
-          <Ionicons name="star" size={14} color={colors.accent} />
-          <Text style={[styles.scoreVal, { color: colors.primary }]}>{score}</Text>
+          <Ionicons name="people" size={14} color={colors.primary} />
+          <Text style={[styles.scoreVal, { color: colors.primary }]}>{players.length}</Text>
         </View>
       </View>
 
-      {gameState === "ready" && (
-        <View style={styles.center}>
+      {phase === "lobby" && (
+        <ScrollView contentContainerStyle={styles.lobby}>
           <View style={[styles.readyIcon, { backgroundColor: game.color + "22" }]}>
-            <Ionicons name={game.icon as any} size={64} color={game.color} />
+            <Ionicons name={game.icon as any} size={56} color={game.color} />
           </View>
           <Text style={[styles.readyTitle, { color: colors.foreground }]}>{game.name}</Text>
-          <Text style={[styles.readyDesc, { color: colors.mutedForeground }]}>
-            {TRIVIA_QUESTIONS.length} سؤال — 15 ثانية لكل سؤال
-          </Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.onlineDot, { backgroundColor: connected ? "#22C55E" : colors.mutedForeground }]} />
+            <Text style={[styles.readyDesc, { color: colors.mutedForeground }]}>
+              {connected ? `${players.length} لاعب في الغرفة` : "جارٍ الاتصال..."}
+            </Text>
+          </View>
+
+          {renderLeaderboard(players)}
+
           <TouchableOpacity
-            style={[styles.startBtn, { backgroundColor: game.color }]}
-            onPress={startGame}
+            style={[styles.startBtn, { backgroundColor: game.color, opacity: connected ? 1 : 0.5 }]}
+            onPress={start}
+            disabled={!connected}
             activeOpacity={0.85}
           >
             <Text style={styles.startBtnText}>ابدأ اللعبة</Text>
           </TouchableOpacity>
-        </View>
+          <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+            ادعُ أصدقاءك لنفس اللعبة وتنافسوا في الوقت الفعلي
+          </Text>
+        </ScrollView>
       )}
 
-      {(gameState === "playing" || gameState === "answered") && (
+      {(phase === "question" || phase === "reveal") && question && (
         <View style={styles.gameArea}>
           <View style={styles.progressRow}>
             <Text style={[styles.progressText, { color: colors.mutedForeground }]}>
-              {qIndex + 1} / {TRIVIA_QUESTIONS.length}
+              {question.index + 1} / {question.total}
             </Text>
-            <View style={[styles.timerChip, { backgroundColor: timeLeft <= 5 ? "#EF444422" : colors.muted, borderColor: timeLeft <= 5 ? "#EF4444" : colors.border }]}>
-              <Ionicons name="time" size={13} color={timeLeft <= 5 ? "#EF4444" : colors.mutedForeground} />
-              <Text style={[styles.timerText, { color: timeLeft <= 5 ? "#EF4444" : colors.mutedForeground }]}>
-                {timeLeft}
-              </Text>
+            <View style={styles.metaRight}>
+              <View style={[styles.scoreBadge, { backgroundColor: colors.primary + "22" }]}>
+                <Ionicons name="star" size={13} color={colors.accent} />
+                <Text style={[styles.scoreVal, { color: colors.primary }]}>{myScore}</Text>
+              </View>
+              {phase === "question" && (
+                <View style={[styles.timerChip, { backgroundColor: timeLeft <= 5 ? "#EF444422" : colors.muted, borderColor: timeLeft <= 5 ? "#EF4444" : colors.border }]}>
+                  <Ionicons name="time" size={13} color={timeLeft <= 5 ? "#EF4444" : colors.mutedForeground} />
+                  <Text style={[styles.timerText, { color: timeLeft <= 5 ? "#EF4444" : colors.mutedForeground }]}>
+                    {timeLeft}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
           <View style={styles.progressBar}>
-            <Animated.View
+            <View
               style={[
                 styles.progressFill,
                 {
                   backgroundColor: timeLeft <= 5 ? "#EF4444" : colors.primary,
-                  width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+                  width: `${Math.min(100, (timeLeft / (question.durationMs / 1000)) * 100)}%`,
                 },
               ]}
             />
@@ -177,7 +208,7 @@ export default function GameScreen() {
                 key={idx}
                 style={getChoiceStyle(idx)}
                 onPress={() => handleAnswer(idx)}
-                disabled={gameState === "answered"}
+                disabled={phase === "reveal" || selected !== null}
                 activeOpacity={0.8}
               >
                 <View style={[styles.choiceNum, { backgroundColor: colors.muted }]}>
@@ -186,50 +217,53 @@ export default function GameScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.choiceText, { color: getChoiceTextColor(idx) }]}>{choice}</Text>
-                {gameState === "answered" && idx === question.answer && (
+                {phase === "reveal" && idx === revealAnswer && (
                   <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
                 )}
-                {gameState === "answered" && idx === selected && idx !== question.answer && (
+                {phase === "reveal" && idx === selected && idx !== revealAnswer && (
                   <Ionicons name="close-circle" size={20} color="#EF4444" />
                 )}
               </TouchableOpacity>
             ))}
           </View>
 
-          {gameState === "answered" && (
-            <View style={styles.feedback}>
-              <Text style={[styles.feedbackText, { color: selected === question.answer ? "#22C55E" : "#EF4444" }]}>
-                {selected === question.answer ? "أحسنت! إجابة صحيحة" : "إجابة خاطئة"}
+          {phase === "question" && (
+            <Text style={[styles.answeredText, { color: colors.mutedForeground }]}>
+              {selected !== null ? "تم إرسال إجابتك ✓ — بانتظار البقية" : "اختر إجابتك بسرعة!"}
+              {`  •  ${answeredCount}/${players.length} أجابوا`}
+            </Text>
+          )}
+
+          {phase === "reveal" && (
+            <View style={styles.revealBox}>
+              <Text style={[styles.feedbackText, { color: selected === revealAnswer ? "#22C55E" : "#EF4444" }]}>
+                {selected === null
+                  ? "انتهى الوقت!"
+                  : selected === revealAnswer
+                    ? `أحسنت! +${gained[user.id] ?? 0} نقطة`
+                    : "إجابة خاطئة"}
               </Text>
-              <TouchableOpacity
-                style={[styles.nextBtn, { backgroundColor: colors.primary }]}
-                onPress={nextQuestion}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.nextBtnText}>{isLastQuestion ? "النتيجة النهائية" : "السؤال التالي"}</Text>
-                <Ionicons name="arrow-back" size={18} color="#fff" />
-              </TouchableOpacity>
+              {renderLeaderboard(players, true)}
             </View>
           )}
         </View>
       )}
 
-      {gameState === "finished" && (
-        <View style={styles.center}>
+      {phase === "ended" && (
+        <ScrollView contentContainerStyle={styles.lobby}>
           <View style={[styles.trophyCircle, { backgroundColor: colors.accent + "22" }]}>
-            <Ionicons name="trophy" size={64} color={colors.accent} />
+            <Ionicons name="trophy" size={56} color={colors.accent} />
           </View>
           <Text style={[styles.finishedTitle, { color: colors.foreground }]}>انتهت اللعبة!</Text>
-          <View style={[styles.finalScoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.finalScoreLabel, { color: colors.mutedForeground }]}>نتيجتك</Text>
-            <Text style={[styles.finalScoreVal, { color: colors.primary }]}>{score}</Text>
-            <Text style={[styles.finalScoreMax, { color: colors.mutedForeground }]}>
-              من {TRIVIA_QUESTIONS.length * 100} نقطة
+          {players[0] && (
+            <Text style={[styles.winnerText, { color: colors.primary }]}>
+              🏆 الفائز: {players[0].userName}
             </Text>
-          </View>
+          )}
+          {renderLeaderboard(players)}
           <TouchableOpacity
             style={[styles.startBtn, { backgroundColor: game.color }]}
-            onPress={startGame}
+            onPress={start}
             activeOpacity={0.85}
           >
             <Text style={styles.startBtnText}>العب مجدداً</Text>
@@ -237,7 +271,7 @@ export default function GameScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
             <Text style={[styles.backLinkText, { color: colors.mutedForeground }]}>العودة للألعاب</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -271,29 +305,45 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   scoreVal: { fontSize: 15, fontWeight: "800" as const },
-  center: {
-    flex: 1,
+  metaRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  lobby: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    gap: 16,
   },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4 },
   readyIcon: {
-    width: 120,
-    height: 120,
+    width: 110,
+    height: 110,
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
   },
-  readyTitle: { fontSize: 26, fontWeight: "800" as const, textAlign: "center" as const },
-  readyDesc: { fontSize: 14, textAlign: "center" as const, lineHeight: 22 },
+  readyTitle: { fontSize: 24, fontWeight: "800" as const, textAlign: "center" as const },
+  readyDesc: { fontSize: 14, textAlign: "center" as const },
+  hint: { fontSize: 12, textAlign: "center" as const, lineHeight: 18 },
   startBtn: {
     borderRadius: 28,
     paddingHorizontal: 48,
     paddingVertical: 16,
-    marginTop: 8,
+    marginTop: 4,
   },
   startBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" as const },
+  board: { width: "100%", gap: 8 },
+  boardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  boardRank: { fontSize: 15, fontWeight: "800" as const, width: 20, textAlign: "center" as const },
+  boardName: { flex: 1, fontSize: 14, fontWeight: "600" as const },
+  boardScore: { fontSize: 16, fontWeight: "800" as const },
   gameArea: { flex: 1, paddingHorizontal: 16, paddingTop: 20, gap: 16 },
   progressRow: {
     flexDirection: "row",
@@ -349,36 +399,18 @@ const styles = StyleSheet.create({
   },
   choiceNumText: { fontSize: 13, fontWeight: "700" as const },
   choiceText: { flex: 1, fontSize: 15, fontWeight: "500" as const },
-  feedback: { gap: 12, alignItems: "center" },
+  answeredText: { fontSize: 13, textAlign: "center" as const },
+  revealBox: { gap: 14, alignItems: "center" },
   feedbackText: { fontSize: 16, fontWeight: "700" as const },
-  nextBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 24,
-    paddingHorizontal: 28,
-    paddingVertical: 13,
-  },
-  nextBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" as const },
   trophyCircle: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: "center",
     justifyContent: "center",
   },
-  finishedTitle: { fontSize: 28, fontWeight: "800" as const },
-  finalScoreCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 24,
-    alignItems: "center",
-    width: "100%",
-    gap: 6,
-  },
-  finalScoreLabel: { fontSize: 14 },
-  finalScoreVal: { fontSize: 52, fontWeight: "900" as const },
-  finalScoreMax: { fontSize: 13 },
+  finishedTitle: { fontSize: 26, fontWeight: "800" as const },
+  winnerText: { fontSize: 16, fontWeight: "700" as const },
   backLink: { marginTop: 4 },
   backLinkText: { fontSize: 14 },
 });

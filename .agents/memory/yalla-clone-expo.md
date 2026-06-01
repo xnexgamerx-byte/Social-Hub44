@@ -13,6 +13,9 @@ description: Architecture and key decisions for the نبضة mobile app (chat ro
 - **Frontend-only original first build:** AsyncStorage for all persistence (now partially superseded above).
 - **Dark mode forced:** `userInterfaceStyle: "dark"` in app.json; colors.ts has matching `light` and `dark` keys both set to dark purple palette.
 - **Color palette:** primary `#7C3AED`, accent `#F59E0B`, background `#0A0A12`, card `#141426`.
+- **Real-time layer = Socket.io on the existing api-server**, NOT Firebase/Supabase. Server attaches Socket.io to an `http.Server` (index.ts) at path **`/api/socket.io`** so the shared mTLS proxy (routes `/api`) forwards WS upgrades. Mobile client connects to `https://${EXPO_PUBLIC_DOMAIN}` with that path, `transports:["websocket"]`. Verified WS upgrade works through the proxy.
+- **Chat:** messages persisted to Postgres `messages` table (roomId/userId/userName/userAvatar/text). On `room:join` server emits last 50 as `room:history`; new ones broadcast as `message:new`; presence via `room:presence`. Client hook `hooks/useRoomChat.ts` stores chronological, room screen reverses for the inverted list.
+- **Multiplayer trivia is SERVER-AUTHORITATIVE** (`lib/gameSession.ts` + `lib/trivia.ts` on api-server). Server runs the loop (question→reveal→advance), broadcasts synced `game:question {endsAt}`, `game:reveal`, `game:end`; clients only render + submit `game:answer`. Speed-based scoring computed server-side at reveal. Client hook `hooks/useGameSession.ts`; countdown derived from shared `endsAt` timestamp. Questions live on the SERVER now (client `TRIVIA_QUESTIONS` no longer drives gameplay).
 - **Inverted FlatList for chat** in `app/room/[id].tsx` — never use scrollToEnd().
 - **KeyboardAvoidingView** from `react-native-keyboard-controller` (not RN built-in).
 - **NativeTabs** on iOS 26+ with liquid glass; classic BlurView Tabs fallback.

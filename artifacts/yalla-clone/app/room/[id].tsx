@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -18,22 +18,12 @@ import { LiveBadge } from "@/components/LiveBadge";
 import { ROOMS } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useRoomChat, type ChatMessage } from "@/hooks/useRoomChat";
 
-interface Message {
-  id: string;
-  user: string;
-  avatar: string;
-  text: string;
-  time: string;
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
-
-const INITIAL_MESSAGES: Message[] = [
-  { id: "m1", user: "سارة", avatar: "https://i.pravatar.cc/150?img=5", text: "أهلاً بالجميع في الغرفة!", time: "21:00" },
-  { id: "m2", user: "محمد", avatar: "https://i.pravatar.cc/150?img=12", text: "مرحباً سارة، كيف حالك؟", time: "21:01" },
-  { id: "m3", user: "نور", avatar: "https://i.pravatar.cc/150?img=40", text: "الجو حلو الليلة", time: "21:02" },
-  { id: "m4", user: "فارس", avatar: "https://i.pravatar.cc/150?img=21", text: "صحيح، أحب هالغرفة", time: "21:03" },
-  { id: "m5", user: "ريم", avatar: "https://i.pravatar.cc/150?img=44", text: "هلا وغلا بالجميع", time: "21:04" },
-];
 
 const MOCK_SPEAKERS = [
   { id: "s1", name: "سارة", avatar: "https://i.pravatar.cc/150?img=5", speaking: true },
@@ -51,28 +41,26 @@ export default function RoomDetailScreen() {
   const { user } = useApp();
   const room = ROOMS.find((r) => r.id === id) ?? ROOMS[0];
 
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { messages, presence, connected, sendMessage: emitMessage } = useRoomChat(id);
   const [text, setText] = useState("");
   const [micOn, setMicOn] = useState(false);
   const flatRef = useRef<FlatList>(null);
 
-  const NOW = new Date();
-  const timeStr = `${NOW.getHours()}:${String(NOW.getMinutes()).padStart(2, "0")}`;
+  // Inverted list expects newest-first; chat stores chronological order.
+  const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
   const sendMessage = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      user: user.name,
-      avatar: user.avatar,
+    emitMessage({
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
       text: trimmed,
-      time: timeStr,
-    };
-    setMessages((prev) => [newMsg, ...prev]);
+    });
     setText("");
-  }, [text, user, timeStr]);
+  }, [text, user, emitMessage]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -94,8 +82,9 @@ export default function RoomDetailScreen() {
           </Text>
           <View style={styles.headerSub}>
             {room.isLive && <LiveBadge small />}
+            <View style={[styles.onlineDot, { backgroundColor: connected ? "#22C55E" : colors.mutedForeground }]} />
             <Text style={[styles.listenerCount, { color: colors.mutedForeground }]}>
-              {room.listenerCount} مستمع
+              {presence > 0 ? `${presence} متصل الآن` : `${room.listenerCount} مستمع`}
             </Text>
           </View>
         </View>
@@ -129,21 +118,28 @@ export default function RoomDetailScreen() {
       {/* Chat messages - inverted FlatList */}
       <FlatList
         ref={flatRef}
-        data={messages}
-        keyExtractor={(m) => m.id}
+        data={orderedMessages}
+        keyExtractor={(m: ChatMessage) => String(m.id)}
         inverted
         style={styles.chatList}
         contentContainerStyle={styles.chatContent}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              {connected ? "كن أول من يكتب رسالة 👋" : "جارٍ الاتصال..."}
+            </Text>
+          </View>
+        }
+        renderItem={({ item }: { item: ChatMessage }) => (
           <View style={styles.msgRow}>
-            <UserAvatar uri={item.avatar} size={32} />
+            <UserAvatar uri={item.userAvatar} size={32} />
             <View style={styles.msgBody}>
               <View style={styles.msgMeta}>
-                <Text style={[styles.msgUser, { color: colors.primary }]}>{item.user}</Text>
-                <Text style={[styles.msgTime, { color: colors.mutedForeground }]}>{item.time}</Text>
+                <Text style={[styles.msgUser, { color: colors.primary }]}>{item.userName}</Text>
+                <Text style={[styles.msgTime, { color: colors.mutedForeground }]}>{formatTime(item.createdAt)}</Text>
               </View>
               <View style={[styles.msgBubble, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.msgText, { color: colors.foreground }]}>{item.text}</Text>
@@ -211,6 +207,9 @@ const styles = StyleSheet.create({
   headerSub: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   roomName: { fontSize: 16, fontWeight: "700" as const },
   listenerCount: { fontSize: 12 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4 },
+  emptyChat: { paddingVertical: 40, alignItems: "center", transform: [{ scaleY: -1 }] },
+  emptyText: { fontSize: 14 },
   shareBtn: {
     width: 36,
     height: 36,
