@@ -32,6 +32,10 @@ description: Architecture and key decisions for the نبضة mobile app (chat ro
 - **Admin audit trail:** append-only `admin_audit` table (action grant|revoke, targetEmail, actorEmail, createdAt; NO FK to `admins` so history survives deletes). POST/DELETE /admins write the admin mutation + audit row in ONE `db.transaction` (grant/revoke must never apply without its history entry). GET /admins/audit (requireAdmin, latest 100 desc). actorEmail is best-effort ("" if Clerk email lookup fails) — don't fail the action over a transient lookup since the requester is already admin-gated.
 - **CoinPackage.price is a string** ("$9.99") not a number. DailyTask.reward is coins.
 
+## Testing
+
+- **api-server has Vitest** (`pnpm --filter @workspace/api-server run test`, registered as the `test` validation step). Pattern for route/authz tests: `vi.mock("@clerk/express")` with a `vi.hoisted` identity state (controls `getAuth().userId`, `clerkClient.users.getUser/getUserList`) so tests drive real `requireAdmin`/route/DB logic without Clerk network; mount the router on a bare `express()` app and drive it with `supertest`. Tests hit the REAL dev Postgres — isolate rows with a unique `TAG = vitest_${Date.now()}` email suffix and `LIKE %TAG%` cleanup in afterEach/afterAll. **Do NOT call `pool.end()` per test file** — each Vitest file runs in its own forked worker torn down on completion, so ending the shared `@workspace/db` pool would break future test files. Config `vitest.config.ts` runs serially (`fileParallelism:false`, `sequence.concurrent:false`) since files share the DB. Test files live in `src/**/*.test.ts` (typechecked by `src` tsconfig; not bundled since esbuild entry is only `src/index.ts`).
+
 ## Gotchas (durable)
 
 - [Metro stale resolution after codegen](metro-stale-codegen-cache.md) — Metro caches "module not found" for freshly codegen'd files and persists it across workflow restarts.
