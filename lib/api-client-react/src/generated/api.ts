@@ -21,6 +21,7 @@ import type {
 
 import type {
   Admin,
+  AdminAuditEvent,
   AdminInput,
   AuthMe,
   ClaimTaskInput,
@@ -437,6 +438,84 @@ export const useDeleteAdmin = <TError = ErrorType<Error>,
       > => {
       return useMutation(getDeleteAdminMutationOptions(options));
     }
+
+export const getListAdminAuditUrl = () => {
+
+
+
+
+  return `/api/admins/audit`
+}
+
+/**
+ * Returns the most recent admin grant and revoke actions
+ * @summary List admin grant/revoke history
+ */
+export const listAdminAudit = async ( options?: RequestInit): Promise<AdminAuditEvent[]> => {
+
+  return customFetch<AdminAuditEvent[]>(getListAdminAuditUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAuditQueryKey = () => {
+    return [
+    `/api/admins/audit`
+    ] as const;
+    }
+
+
+export const getListAdminAuditQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAudit>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAuditQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAudit>>> = ({ signal }) => listAdminAudit({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAudit>>>
+export type ListAdminAuditQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List admin grant/revoke history
+ */
+
+export function useListAdminAudit<TData = Awaited<ReturnType<typeof listAdminAudit>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAuditQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListStoreItemsUrl = () => {
 

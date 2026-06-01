@@ -13,6 +13,8 @@ import {
   getListVipTiersQueryOptions,
   getListAdminsQueryKey,
   getListAdminsQueryOptions,
+  getListAdminAuditQueryKey,
+  getListAdminAuditQueryOptions,
   useCreateAdmin,
   useCreateCoinPackage,
   useCreateDailyTask,
@@ -28,6 +30,7 @@ import {
   useUpdateStoreItem,
   useUpdateVipTier,
   type Admin,
+  type AdminAuditEvent,
   type CoinPackage,
   type DailyTask,
   type StoreItem,
@@ -165,7 +168,13 @@ function AdminsAdmin() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery(getListAdminsQueryOptions());
-  const invalidate = () => qc.invalidateQueries({ queryKey: getListAdminsQueryKey() });
+  const { data: audit, isLoading: auditLoading } = useQuery(
+    getListAdminAuditQueryOptions(),
+  );
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: getListAdminsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListAdminAuditQueryKey() });
+  };
   const createM = useCreateAdmin({ mutation: { onSuccess: invalidate } });
   const deleteM = useDeleteAdmin({ mutation: { onSuccess: invalidate } });
 
@@ -264,8 +273,62 @@ function AdminsAdmin() {
           </View>
         ))
       )}
+
+      <Text style={[styles.formTitle, { color: colors.foreground, marginTop: 24, marginBottom: 8 }]}>
+        سجل التغييرات
+      </Text>
+      <Text style={[styles.note, { color: colors.mutedForeground, marginTop: 0, marginBottom: 8 }]}>
+        من منح أو أزال صلاحية الإشراف ومتى.
+      </Text>
+      {auditLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 12 }} />
+      ) : (audit ?? []).length === 0 ? (
+        <Text style={[styles.note, { color: colors.mutedForeground }]}>لا يوجد سجل بعد.</Text>
+      ) : (
+        (audit ?? []).map((ev: AdminAuditEvent) => {
+          const granted = ev.action === "grant";
+          return (
+            <View key={ev.id} style={[styles.listItem, { backgroundColor: colors.card }]}>
+              <View
+                style={[
+                  styles.swatch,
+                  { backgroundColor: granted ? colors.primary : colors.destructive },
+                ]}
+              >
+                <Ionicons
+                  name={granted ? "add-circle" : "remove-circle"}
+                  size={18}
+                  color="#fff"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemName, { color: colors.foreground }]}>
+                  {granted ? "منح إشراف" : "إزالة إشراف"}: {ev.targetEmail}
+                </Text>
+                <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
+                  {ev.actorEmail ? `بواسطة ${ev.actorEmail} · ` : ""}
+                  {formatAuditTime(ev.createdAt)}
+                </Text>
+              </View>
+            </View>
+          );
+        })
+      )}
     </ScrollView>
   );
+}
+
+function formatAuditTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat("ar", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(d);
+  } catch {
+    return d.toLocaleString();
+  }
 }
 
 function StoreAdmin() {

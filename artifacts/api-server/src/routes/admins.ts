@@ -1,12 +1,13 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
-import { db, adminsTable } from "@workspace/db";
+import { db, adminsTable, adminAuditTable } from "@workspace/db";
 import {
   ListAdminsResponse,
   ListAdminsResponseItem,
   CreateAdminBody,
   DeleteAdminParams,
+  ListAdminAuditResponse,
 } from "@workspace/api-zod";
 import {
   requireAdmin,
@@ -77,16 +78,24 @@ router.post("/admins", requireAdmin, async (req, res): Promise<void> => {
   );
   const userId = await resolveUserId(email);
 
-  const inserted = await db
-    .insert(adminsTable)
-    .values({ email, userId, addedBy: addedBy ?? "" })
-    .onConflictDoNothing({ target: adminsTable.email })
-    .returning();
-  if (inserted.length === 0) {
+  // Insert the admin and its audit record atomically: a grant must never be
+  // applied without a corresponding history entry (and vice versa).
+  const row = await db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(adminsTable)
+      .values({ email, userId, addedBy: addedBy ?? "" })
+      .onConflictDoNothing({ target: adminsTable.email })
+      .returning();
+    if (inserted.length === 0) return null;
+    await tx
+      .insert(adminAuditTable)
+      .values({ action: "grant", targetEmail: email, actorEmail: addedBy ?? "" });
+    return inserted[0];
+  });
+  if (!row) {
     res.status(400).json({ error: "هذا الحساب مشرف بالفعل" });
     return;
   }
-  const row = inserted[0];
   res.status(201).json(
     ListAdminsResponseItem.parse({
       id: row.id,
@@ -122,8 +131,35 @@ router.delete("/admins/:id", requireAdmin, async (req, res): Promise<void> => {
     res.status(400).json({ error: "لا يمكنك إزالة نفسك" });
     return;
   }
-  await db.delete(adminsTable).where(eq(adminsTable.id, params.data.id));
+  // Delete the admin and record the revoke atomically.
+  await db.transaction(async (tx) => {
+    await tx.delete(adminsTable).where(eq(adminsTable.id, params.data.id));
+    await tx.insert(adminAuditTable).values({
+      action: "revoke",
+      targetEmail: row.email,
+      actorEmail: requesterEmail ?? "",
+    });
+  });
   res.sendStatus(204);
+});
+
+router.get("/admins/audit", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(adminAuditTable)
+    .orderBy(desc(adminAuditTable.createdAt))
+    .limit(100);
+  res.json(
+    ListAdminAuditResponse.parse(
+      rows.map((r) => ({
+        id: r.id,
+        action: r.action,
+        targetEmail: r.targetEmail,
+        actorEmail: r.actorEmail,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    ),
+  );
 });
 
 export default router;

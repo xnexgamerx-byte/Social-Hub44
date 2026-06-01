@@ -7,6 +7,7 @@
  */
 
 export * from './admin';
+export * from './adminAuditEvent';
 export * from './adminInput';
 export * from './authMe';
 export * from './claimTaskInput';

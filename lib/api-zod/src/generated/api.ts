@@ -63,6 +63,20 @@ export const DeleteAdminParams = zod.object({
 
 
 /**
+ * Returns the most recent admin grant and revoke actions
+ * @summary List admin grant/revoke history
+ */
+export const ListAdminAuditResponseItem = zod.object({
+  "id": zod.number(),
+  "action": zod.string(),
+  "targetEmail": zod.string(),
+  "actorEmail": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListAdminAuditResponse = zod.array(ListAdminAuditResponseItem)
+
+
+/**
  * @summary List store items
  */
 export const ListStoreItemsResponseItem = zod.object({

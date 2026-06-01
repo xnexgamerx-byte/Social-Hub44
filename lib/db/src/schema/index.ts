@@ -10,3 +10,4 @@ export * from "./walletTransactions";
 export * from "./userItems";
 export * from "./dailyTaskClaims";
 export * from "./admins";
+export * from "./adminAudit";

@@ -28,6 +28,14 @@ export interface AdminInput {
   email: string;
 }
 
+export interface AdminAuditEvent {
+  id: number;
+  action: string;
+  targetEmail: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
 export interface Error {
   error: string;
 }
