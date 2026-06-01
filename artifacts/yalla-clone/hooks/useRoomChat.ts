@@ -52,6 +52,9 @@ export function useRoomChat(roomId: string | undefined) {
     socket.on("disconnect", onDisconnect);
 
     return () => {
+      // Tell the server we left so our mic seat is freed and presence updates
+      // immediately, instead of waiting for a disconnect.
+      if (socket.connected) socket.emit("room:leave");
       socket.off("connect", join);
       socket.off("room:history", onHistory);
       socket.off("message:new", onNew);

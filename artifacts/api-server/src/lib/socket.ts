@@ -65,8 +65,25 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     let joinedGame: string | null = null;
     let voiceUserId: string | null = null;
 
+    // Deterministically leave the socket's current room: free its mic seat,
+    // leave the channel, and refresh presence. Prevents ghost seats when a
+    // user switches rooms or disconnects.
+    async function leaveCurrentRoom(): Promise<void> {
+      if (!joinedRoom) return;
+      const previous = joinedRoom;
+      const channel = roomChannel(previous);
+      if (voiceUserId) {
+        leaveMic(io, previous, voiceUserId);
+        voiceUserId = null;
+      }
+      joinedRoom = null;
+      await socket.leave(channel);
+      io.to(channel).emit("room:presence", { roomId: previous, count: presenceCount(channel) });
+    }
+
     socket.on("room:join", async ({ roomId }: JoinPayload) => {
       if (!roomId) return;
+      if (joinedRoom && joinedRoom !== roomId) await leaveCurrentRoom();
       joinedRoom = roomId;
       const channel = roomChannel(roomId);
       await socket.join(channel);
@@ -90,7 +107,8 @@ export function attachSocketServer(httpServer: HttpServer): Server {
 
     socket.on("mic:join", ({ roomId, userId, userName, userAvatar }: MicJoinPayload) => {
       if (!roomId || !userId) return;
-      if (!socket.rooms.has(roomChannel(roomId))) return;
+      // Must be in this room. Bind the seat to this socket's identity.
+      if (roomId !== joinedRoom || !socket.rooms.has(roomChannel(roomId))) return;
       voiceUserId = userId;
       const ok = joinMic(io, roomId, {
         userId,
@@ -98,18 +116,27 @@ export function attachSocketServer(httpServer: HttpServer): Server {
         userAvatar: userAvatar ?? "",
         muted: false,
       });
-      if (!ok) socket.emit("mic:full", { roomId });
+      if (!ok) {
+        voiceUserId = null;
+        socket.emit("mic:full", { roomId });
+      }
     });
 
     socket.on("mic:leave", ({ roomId, userId }: MicLeavePayload) => {
-      if (!roomId || !userId) return;
+      // Only act on this socket's own seat in its current room.
+      if (roomId !== joinedRoom || userId !== voiceUserId) return;
       leaveMic(io, roomId, userId);
       voiceUserId = null;
     });
 
     socket.on("mic:mute", ({ roomId, userId, muted }: MicMutePayload) => {
-      if (!roomId || !userId) return;
+      // Only act on this socket's own seat in its current room.
+      if (roomId !== joinedRoom || userId !== voiceUserId) return;
       setMute(io, roomId, userId, !!muted);
+    });
+
+    socket.on("room:leave", () => {
+      void leaveCurrentRoom();
     });
 
     socket.on("message:send", async (payload: SendPayload) => {

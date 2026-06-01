@@ -47,6 +47,10 @@ export function useRoomVoice(roomId: string | undefined, me: Me) {
     return () => {
       socket.off("mic:state", onState);
       socket.off("mic:full", onFull);
+      // Drop the previous room's stage so a new room never shows ghost seats
+      // before its snapshot arrives.
+      setSeats([]);
+      setStageFull(false);
     };
   }, [roomId]);
 
