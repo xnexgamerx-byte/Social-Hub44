@@ -11,8 +11,10 @@ export interface StoreItemUpdate {
   name?: string;
   /** @minLength 1 */
   category?: string;
+  itemType?: string;
   section?: string;
   imageUrl?: string;
+  mediaUrl?: string;
   color?: string;
   icon?: string;
   price?: number;

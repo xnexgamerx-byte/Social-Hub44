@@ -17,8 +17,10 @@ export interface StoreItem {
   id: number;
   name: string;
   category: string;
+  itemType: string;
   section: string;
   imageUrl: string;
+  mediaUrl: string;
   color: string;
   icon: string;
   price: number;
@@ -34,8 +36,10 @@ export interface StoreItemInput {
   name: string;
   /** @minLength 1 */
   category: string;
+  itemType?: string;
   section?: string;
   imageUrl?: string;
+  mediaUrl?: string;
   color?: string;
   icon?: string;
   price?: number;
@@ -51,8 +55,10 @@ export interface StoreItemUpdate {
   name?: string;
   /** @minLength 1 */
   category?: string;
+  itemType?: string;
   section?: string;
   imageUrl?: string;
+  mediaUrl?: string;
   color?: string;
   icon?: string;
   price?: number;
@@ -61,6 +67,132 @@ export interface StoreItemUpdate {
   durationDays?: number;
   active?: boolean;
   sortOrder?: number;
+}
+
+export interface CoinPackage {
+  id: number;
+  name: string;
+  coins: number;
+  bonus: number;
+  price: string;
+  color: string;
+  icon: string;
+  popular: boolean;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface CoinPackageInput {
+  name?: string;
+  coins: number;
+  bonus?: number;
+  price?: string;
+  color?: string;
+  icon?: string;
+  popular?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface CoinPackageUpdate {
+  name?: string;
+  coins?: number;
+  bonus?: number;
+  price?: string;
+  color?: string;
+  icon?: string;
+  popular?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface DailyTask {
+  id: number;
+  label: string;
+  description: string;
+  reward: number;
+  icon: string;
+  color: string;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface DailyTaskInput {
+  /** @minLength 1 */
+  label: string;
+  description?: string;
+  reward?: number;
+  icon?: string;
+  color?: string;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface DailyTaskUpdate {
+  /** @minLength 1 */
+  label?: string;
+  description?: string;
+  reward?: number;
+  icon?: string;
+  color?: string;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface Wallet {
+  userId: string;
+  coins: number;
+  vPoints: number;
+}
+
+export interface WalletTransaction {
+  id: number;
+  userId: string;
+  currency: string;
+  amount: number;
+  balanceAfter: number;
+  type: string;
+  description: string;
+  refId: string;
+  createdAt: string;
+}
+
+export interface UserItem {
+  id: number;
+  userId: string;
+  itemId: number;
+  equipped: boolean;
+}
+
+export interface TaskClaim {
+  taskId: number;
+  claimedOn: string;
+}
+
+export interface PurchaseResult {
+  wallet: Wallet;
+  item: UserItem;
+}
+
+export interface EnsureWalletInput {
+  initialCoins?: number;
+  initialVPoints?: number;
+}
+
+export interface RechargeInput {
+  packageId: number;
+}
+
+export interface PurchaseInput {
+  itemId: number;
+}
+
+export interface ClaimTaskInput {
+  taskId: number;
+}
+
+export interface EquipInput {
+  itemId: number;
 }
 
 export interface VipFeature {

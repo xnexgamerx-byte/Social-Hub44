@@ -18,12 +18,20 @@ interface SendArgs {
   text: string;
 }
 
-export function useRoomChat(roomId: string | undefined) {
+interface RoomMe {
+  userId: string;
+  userName: string;
+  userAvatar: string;
+}
+
+export function useRoomChat(roomId: string | undefined, me?: RoomMe) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [presence, setPresence] = useState(0);
   const [connected, setConnected] = useState(false);
   const roomRef = useRef(roomId);
   roomRef.current = roomId;
+  const meRef = useRef(me);
+  meRef.current = me;
 
   useEffect(() => {
     if (!roomId) return;
@@ -31,7 +39,12 @@ export function useRoomChat(roomId: string | undefined) {
 
     const join = () => {
       setConnected(true);
-      socket.emit("room:join", { roomId });
+      socket.emit("room:join", {
+        roomId,
+        userId: meRef.current?.userId,
+        userName: meRef.current?.userName,
+        userAvatar: meRef.current?.userAvatar,
+      });
     };
 
     const onHistory = (rows: ChatMessage[]) => setMessages(rows);

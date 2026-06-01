@@ -17,9 +17,9 @@ import { useColors } from "@/hooks/useColors";
 
 const TOOLS = [
   { icon: "people" as const, label: "العائلة", color: "#7C5CFC", route: null },
-  { icon: "checkbox" as const, label: "المهام", color: "#22C55E", route: null },
+  { icon: "checkbox" as const, label: "المهام", color: "#22C55E", route: "/tasks" as const },
   { icon: "eye" as const, label: "الزوار", color: "#06B6D4", route: null },
-  { icon: "diamond" as const, label: "ماسات", color: "#FF6B9D", route: null },
+  { icon: "diamond" as const, label: "ماسات", color: "#FF6B9D", route: "/vip" as const },
 ];
 
 const GAMES_SHORTCUTS = [
@@ -99,8 +99,8 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Recharge banner */}
-      <TouchableOpacity activeOpacity={0.9} onPress={() => router.push("/store")}>
+      {/* Coins recharge banner — economy centerpiece */}
+      <TouchableOpacity activeOpacity={0.9} onPress={() => router.push("/recharge")}>
         <LinearGradient
           colors={["#7C5CFC", "#A78BFA"]}
           start={{ x: 0, y: 0 }}
@@ -108,10 +108,10 @@ export default function ProfileScreen() {
           style={styles.recharge}
         >
           <View style={styles.rechargeLeft}>
-            <Ionicons name="diamond" size={26} color="#fff" />
+            <Ionicons name="logo-bitcoin" size={26} color="#F5C242" />
             <View>
-              <Text style={styles.rechargeTitle}>شحن الرصيد</Text>
-              <Text style={styles.rechargeSub}>رصيدك: {user.vPoints.toLocaleString()}</Text>
+              <Text style={styles.rechargeTitle}>شحن كوينزات</Text>
+              <Text style={styles.rechargeSub}>رصيدك: {user.coins.toLocaleString()} كوينز</Text>
             </View>
           </View>
           <View style={styles.rechargeBtn}>
@@ -151,7 +151,12 @@ export default function ProfileScreen() {
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>الأدوات العامة</Text>
       <View style={[styles.toolsCard, { backgroundColor: colors.card }]}>
         {TOOLS.map((t) => (
-          <TouchableOpacity key={t.label} style={styles.toolItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            key={t.label}
+            style={styles.toolItem}
+            activeOpacity={0.7}
+            onPress={() => t.route && router.push(t.route)}
+          >
             <View style={[styles.toolIcon, { backgroundColor: t.color + "1A" }]}>
               <Ionicons name={t.icon} size={22} color={t.color} />
             </View>

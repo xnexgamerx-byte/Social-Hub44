@@ -14,9 +14,13 @@ export const storeItemsTable = pgTable("store_items", {
   name: text("name").notNull(),
   // إطارات | الدخوليات | الخلفيات | رمز | بطاقة الإسترجاع
   category: text("category").notNull(),
+  // first-class item kind: frame | entrance | gift | background | symbol | recovery | other
+  itemType: text("item_type").notNull().default("frame"),
   // vip | svip | coins | pieces
   section: text("section").notNull().default("vip"),
   imageUrl: text("image_url").notNull().default(""),
+  // animation/media URL (Lottie JSON, GIF, or remote video) for entrances/gifts previews
+  mediaUrl: text("media_url").notNull().default(""),
   // gradient/icon fallback rendering hints
   color: text("color").notNull().default("#7C5CFC"),
   icon: text("icon").notNull().default("ellipse"),

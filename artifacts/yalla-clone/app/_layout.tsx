@@ -38,6 +38,8 @@ function RootLayoutNav() {
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen name="store" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="recharge" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="tasks" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="vip" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="games" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="admin/index" options={{ headerShown: false, presentation: "card" }} />

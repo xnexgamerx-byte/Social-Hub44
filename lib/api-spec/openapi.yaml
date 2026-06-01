@@ -14,6 +14,10 @@ tags:
     description: Store item operations
   - name: vip
     description: VIP tier and feature operations
+  - name: economy
+    description: Coin packages and daily task catalog operations
+  - name: wallet
+    description: Per-user wallet, ledger, ownership and spend/earn operations
 paths:
   /healthz:
     get:
@@ -272,6 +276,405 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /coin-packages:
+    get:
+      operationId: listCoinPackages
+      tags: [economy]
+      summary: List coin packages
+      responses:
+        "200":
+          description: List of coin packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoinPackage"
+    post:
+      operationId: createCoinPackage
+      tags: [economy]
+      summary: Create a coin package
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoinPackageInput"
+      responses:
+        "201":
+          description: Created coin package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoinPackage"
+  /coin-packages/{id}:
+    patch:
+      operationId: updateCoinPackage
+      tags: [economy]
+      summary: Update a coin package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoinPackageUpdate"
+      responses:
+        "200":
+          description: Updated coin package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoinPackage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteCoinPackage
+      tags: [economy]
+      summary: Delete a coin package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /daily-tasks:
+    get:
+      operationId: listDailyTasks
+      tags: [economy]
+      summary: List daily tasks
+      responses:
+        "200":
+          description: List of daily tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyTask"
+    post:
+      operationId: createDailyTask
+      tags: [economy]
+      summary: Create a daily task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailyTaskInput"
+      responses:
+        "201":
+          description: Created daily task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyTask"
+  /daily-tasks/{id}:
+    patch:
+      operationId: updateDailyTask
+      tags: [economy]
+      summary: Update a daily task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailyTaskUpdate"
+      responses:
+        "200":
+          description: Updated daily task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyTask"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteDailyTask
+      tags: [economy]
+      summary: Delete a daily task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /wallet/{userId}:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get a user's wallet (auto-creates if missing)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+  /wallet/{userId}/ensure:
+    post:
+      operationId: ensureWallet
+      tags: [wallet]
+      summary: Ensure a wallet exists, seeding it with initial balances on first create
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnsureWalletInput"
+      responses:
+        "200":
+          description: The wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+  /wallet/{userId}/transactions:
+    get:
+      operationId: listWalletTransactions
+      tags: [wallet]
+      summary: List a user's wallet transaction history
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction history (newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WalletTransaction"
+  /wallet/{userId}/recharge:
+    post:
+      operationId: rechargeWallet
+      tags: [wallet]
+      summary: Recharge coins by purchasing a coin package
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RechargeInput"
+      responses:
+        "200":
+          description: Updated wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+        "404":
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /wallet/{userId}/purchase:
+    post:
+      operationId: purchaseItem
+      tags: [wallet]
+      summary: Buy a store item, spending from the wallet and granting ownership
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseInput"
+      responses:
+        "200":
+          description: Result of purchase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseResult"
+        "400":
+          description: Insufficient balance or already owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /wallet/{userId}/claim-task:
+    post:
+      operationId: claimTask
+      tags: [wallet]
+      summary: Claim a daily task reward, crediting the wallet
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimTaskInput"
+      responses:
+        "200":
+          description: Updated wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+        "400":
+          description: Already claimed today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /wallet/{userId}/items:
+    get:
+      operationId: listUserItems
+      tags: [wallet]
+      summary: List a user's owned items
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Owned items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserItem"
+  /wallet/{userId}/equip:
+    post:
+      operationId: equipItem
+      tags: [wallet]
+      summary: Equip an owned item (unequips others of the same type)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipInput"
+      responses:
+        "200":
+          description: Updated owned items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserItem"
+        "400":
+          description: Item not owned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /wallet/{userId}/task-claims:
+    get:
+      operationId: listTaskClaims
+      tags: [wallet]
+      summary: List the user's task claims for today
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Today's task claims
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskClaim"
+
 components:
   schemas:
     HealthStatus:
@@ -295,8 +698,10 @@ components:
         - id
         - name
         - category
+        - itemType
         - section
         - imageUrl
+        - mediaUrl
         - color
         - icon
         - price
@@ -309,8 +714,10 @@ components:
         id: { type: integer }
         name: { type: string }
         category: { type: string }
+        itemType: { type: string }
         section: { type: string }
         imageUrl: { type: string }
+        mediaUrl: { type: string }
         color: { type: string }
         icon: { type: string }
         price: { type: integer }
@@ -327,8 +734,10 @@ components:
       properties:
         name: { type: string, minLength: 1 }
         category: { type: string, minLength: 1 }
+        itemType: { type: string }
         section: { type: string }
         imageUrl: { type: string }
+        mediaUrl: { type: string }
         color: { type: string }
         icon: { type: string }
         price: { type: integer }
@@ -342,8 +751,10 @@ components:
       properties:
         name: { type: string, minLength: 1 }
         category: { type: string, minLength: 1 }
+        itemType: { type: string }
         section: { type: string }
         imageUrl: { type: string }
+        mediaUrl: { type: string }
         color: { type: string }
         icon: { type: string }
         price: { type: integer }
@@ -352,6 +763,192 @@ components:
         durationDays: { type: integer }
         active: { type: boolean }
         sortOrder: { type: integer }
+
+    CoinPackage:
+      type: object
+      required:
+        - id
+        - name
+        - coins
+        - bonus
+        - price
+        - color
+        - icon
+        - popular
+        - active
+        - sortOrder
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        coins: { type: integer }
+        bonus: { type: integer }
+        price: { type: string }
+        color: { type: string }
+        icon: { type: string }
+        popular: { type: boolean }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    CoinPackageInput:
+      type: object
+      required:
+        - coins
+      properties:
+        name: { type: string }
+        coins: { type: integer }
+        bonus: { type: integer }
+        price: { type: string }
+        color: { type: string }
+        icon: { type: string }
+        popular: { type: boolean }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    CoinPackageUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        coins: { type: integer }
+        bonus: { type: integer }
+        price: { type: string }
+        color: { type: string }
+        icon: { type: string }
+        popular: { type: boolean }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+
+    DailyTask:
+      type: object
+      required:
+        - id
+        - label
+        - description
+        - reward
+        - icon
+        - color
+        - active
+        - sortOrder
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        description: { type: string }
+        reward: { type: integer }
+        icon: { type: string }
+        color: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    DailyTaskInput:
+      type: object
+      required:
+        - label
+      properties:
+        label: { type: string, minLength: 1 }
+        description: { type: string }
+        reward: { type: integer }
+        icon: { type: string }
+        color: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    DailyTaskUpdate:
+      type: object
+      properties:
+        label: { type: string, minLength: 1 }
+        description: { type: string }
+        reward: { type: integer }
+        icon: { type: string }
+        color: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+
+    Wallet:
+      type: object
+      required:
+        - userId
+        - coins
+        - vPoints
+      properties:
+        userId: { type: string }
+        coins: { type: integer }
+        vPoints: { type: integer }
+    WalletTransaction:
+      type: object
+      required:
+        - id
+        - userId
+        - currency
+        - amount
+        - balanceAfter
+        - type
+        - description
+        - refId
+        - createdAt
+      properties:
+        id: { type: integer }
+        userId: { type: string }
+        currency: { type: string }
+        amount: { type: integer }
+        balanceAfter: { type: integer }
+        type: { type: string }
+        description: { type: string }
+        refId: { type: string }
+        createdAt: { type: string }
+    UserItem:
+      type: object
+      required:
+        - id
+        - userId
+        - itemId
+        - equipped
+      properties:
+        id: { type: integer }
+        userId: { type: string }
+        itemId: { type: integer }
+        equipped: { type: boolean }
+    TaskClaim:
+      type: object
+      required:
+        - taskId
+        - claimedOn
+      properties:
+        taskId: { type: integer }
+        claimedOn: { type: string }
+    PurchaseResult:
+      type: object
+      required:
+        - wallet
+        - item
+      properties:
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+        item:
+          $ref: "#/components/schemas/UserItem"
+    EnsureWalletInput:
+      type: object
+      properties:
+        initialCoins: { type: integer }
+        initialVPoints: { type: integer }
+    RechargeInput:
+      type: object
+      required:
+        - packageId
+      properties:
+        packageId: { type: integer }
+    PurchaseInput:
+      type: object
+      required:
+        - itemId
+      properties:
+        itemId: { type: integer }
+    ClaimTaskInput:
+      type: object
+      required:
+        - taskId
+      properties:
+        taskId: { type: integer }
+    EquipInput:
+      type: object
+      required:
+        - itemId
+      properties:
+        itemId: { type: integer }
 
     VipFeature:
       type: object

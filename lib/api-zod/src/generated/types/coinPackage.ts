@@ -6,20 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface StoreItem {
+export interface CoinPackage {
   id: number;
   name: string;
-  category: string;
-  itemType: string;
-  section: string;
-  imageUrl: string;
-  mediaUrl: string;
+  coins: number;
+  bonus: number;
+  price: string;
   color: string;
   icon: string;
-  price: number;
-  currency: string;
-  vipRequired: number;
-  durationDays: number;
+  popular: boolean;
   active: boolean;
   sortOrder: number;
 }

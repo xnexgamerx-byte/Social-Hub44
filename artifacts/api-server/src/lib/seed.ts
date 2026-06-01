@@ -4,9 +4,13 @@ import {
   storeItemsTable,
   vipFeaturesTable,
   vipTiersTable,
+  coinPackagesTable,
+  dailyTasksTable,
   type InsertStoreItem,
   type InsertVipFeature,
   type InsertVipTier,
+  type InsertCoinPackage,
+  type InsertDailyTask,
 } from "@workspace/db";
 import { logger } from "./logger";
 
@@ -108,24 +112,38 @@ function buildStoreItems(): InsertStoreItem[] {
     { name: "بطاقة استرجاع 7 أيام", color: "#66BB6A", icon: "refresh", price: 2000, vip: 0 },
     { name: "بطاقة استرجاع 30 يوم", color: "#43A047", icon: "refresh-circle", price: 6000, vip: 0 },
   ];
+  // Gifts are bought with coins and sent live into rooms.
+  const gifts = [
+    { name: "وردة", color: "#EF5350", icon: "rose", price: 10, vip: 0 },
+    { name: "قلب", color: "#EC407A", icon: "heart", price: 50, vip: 0 },
+    { name: "آيس كريم", color: "#FF8A65", icon: "ice-cream", price: 99, vip: 0 },
+    { name: "تاج", color: "#FFCA28", icon: "diamond", price: 500, vip: 0 },
+    { name: "صاروخ", color: "#42A5F5", icon: "rocket", price: 1000, vip: 0 },
+    { name: "أسد", color: "#FFA726", icon: "paw", price: 5000, vip: 0 },
+    { name: "قصر", color: "#AB47BC", icon: "business", price: 20000, vip: 0 },
+  ];
 
   const items: InsertStoreItem[] = [];
   let order = 0;
   const push = (
     arr: { name: string; color: string; icon: string; price: number; vip: number }[],
     category: string,
+    itemType: string,
     durationDays: number,
+    currency = "V",
   ) => {
     for (const it of arr) {
       items.push({
         name: it.name,
         category,
-        section: it.vip >= 8 ? "svip" : "vip",
+        itemType,
+        section: currency === "coins" ? "coins" : it.vip >= 8 ? "svip" : "vip",
         imageUrl: "",
+        mediaUrl: "",
         color: it.color,
         icon: it.icon,
         price: it.price,
-        currency: "V",
+        currency,
         vipRequired: it.vip,
         durationDays,
         active: true,
@@ -134,13 +152,32 @@ function buildStoreItems(): InsertStoreItem[] {
     }
   };
 
-  push(frames, "إطارات", 3);
-  push(entrances, "الدخوليات", 3);
-  push(backgrounds, "الخلفيات", 7);
-  push(symbols, "رمز", 7);
-  push(recovery, "بطاقة الإسترجاع", 7);
+  push(gifts, "الهدايا", "gift", 0, "coins");
+  push(frames, "إطارات", "frame", 3);
+  push(entrances, "الدخوليات", "entrance", 3);
+  push(backgrounds, "الخلفيات", "background", 7);
+  push(symbols, "رمز", "symbol", 7);
+  push(recovery, "بطاقة الإسترجاع", "recovery", 7);
   return items;
 }
+
+const COIN_PACKAGES: InsertCoinPackage[] = [
+  { name: "باقة البداية", coins: 1000, bonus: 0, price: "$0.99", color: "#7C5CFC", icon: "logo-bitcoin", popular: false, active: true, sortOrder: 1 },
+  { name: "باقة فضية", coins: 5000, bonus: 250, price: "$4.99", color: "#42A5F5", icon: "logo-bitcoin", popular: false, active: true, sortOrder: 2 },
+  { name: "باقة ذهبية", coins: 12000, bonus: 1200, price: "$9.99", color: "#FFB300", icon: "logo-bitcoin", popular: true, active: true, sortOrder: 3 },
+  { name: "باقة ماسية", coins: 30000, bonus: 4500, price: "$24.99", color: "#26C6DA", icon: "diamond", popular: false, active: true, sortOrder: 4 },
+  { name: "باقة ملكية", coins: 70000, bonus: 14000, price: "$49.99", color: "#AB47BC", icon: "diamond", popular: false, active: true, sortOrder: 5 },
+  { name: "باقة أسطورية", coins: 160000, bonus: 40000, price: "$99.99", color: "#EC407A", icon: "flame", popular: false, active: true, sortOrder: 6 },
+];
+
+const DAILY_TASKS: InsertDailyTask[] = [
+  { label: "تسجيل الدخول اليومي", description: "سجّل دخولك كل يوم واحصل على مكافأة", reward: 100, icon: "log-in", color: "#22C55E", active: true, sortOrder: 1 },
+  { label: "ادخل غرفة دردشة", description: "انضم لأي غرفة دردشة صوتية", reward: 150, icon: "mic", color: "#7C5CFC", active: true, sortOrder: 2 },
+  { label: "أرسل هدية", description: "أرسل هدية واحدة لأي مستخدم", reward: 200, icon: "gift", color: "#EC407A", active: true, sortOrder: 3 },
+  { label: "شاهد 3 فيديوهات", description: "تصفّح وشاهد ثلاثة فيديوهات", reward: 120, icon: "play-circle", color: "#FF8A65", active: true, sortOrder: 4 },
+  { label: "العب لعبة", description: "العب جولة واحدة في الألعاب", reward: 180, icon: "game-controller", color: "#42A5F5", active: true, sortOrder: 5 },
+  { label: "شارك التطبيق", description: "ادعُ صديقاً لتجربة نبضة", reward: 300, icon: "share-social", color: "#FFB300", active: true, sortOrder: 6 },
+];
 
 export async function seedIfEmpty(): Promise<void> {
   try {
@@ -163,14 +200,37 @@ export async function seedIfEmpty(): Promise<void> {
       logger.info({ n: tiers.length }, "Seeded VIP tiers");
     }
 
-    const [{ count: itemCount }] = await db
-      .select({ count: sql<number>`count(*)::int` })
+    const existingTypes = await db
+      .selectDistinct({ itemType: storeItemsTable.itemType })
       .from(storeItemsTable);
+    const presentTypes = new Set<string | undefined>();
+    for (const r of existingTypes) {
+      presentTypes.add(r.itemType);
+    }
+    const missingItems = buildStoreItems().filter(
+      (it) => !presentTypes.has(it.itemType),
+    );
+    if (missingItems.length > 0) {
+      await db.insert(storeItemsTable).values(missingItems);
+      logger.info({ n: missingItems.length }, "Seeded store items");
+    }
 
-    if (itemCount === 0) {
-      const items = buildStoreItems();
-      await db.insert(storeItemsTable).values(items);
-      logger.info({ n: items.length }, "Seeded store items");
+    const [{ count: packageCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(coinPackagesTable);
+
+    if (packageCount === 0) {
+      await db.insert(coinPackagesTable).values(COIN_PACKAGES);
+      logger.info({ n: COIN_PACKAGES.length }, "Seeded coin packages");
+    }
+
+    const [{ count: taskCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(dailyTasksTable);
+
+    if (taskCount === 0) {
+      await db.insert(dailyTasksTable).values(DAILY_TASKS);
+      logger.info({ n: DAILY_TASKS.length }, "Seeded daily tasks");
     }
   } catch (err) {
     logger.error({ err }, "Seeding failed");

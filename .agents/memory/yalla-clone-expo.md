@@ -21,5 +21,18 @@ description: Architecture and key decisions for the نبضة mobile app (chat ro
 - **KeyboardAvoidingView** from `react-native-keyboard-controller` (not RN built-in).
 - **NativeTabs** on iOS 26+ with liquid glass; classic BlurView Tabs fallback.
 
+## Coins economy (SUGO-style)
+
+- **Two currencies:** `coins` (كوينزات, gold) — bought via coin packages, spent on live gifts; `vPoints`/`V` (diamonds, purple) — earned, spent on frames/entrances/etc. Wallet is backend-authoritative (`wallets` table) with a `wallet_transactions` ledger; `lib/wallet.ts` does atomic adjust+ledger. AppContext reads coins/vPoints from the wallet via React Query; `vip` stays local in AsyncStorage.
+- **store_items.itemType** drives behavior: `gift` (priced in coins, sent live into rooms), `entrance` (equipped, plays on room join), `frame`/`background`/`symbol`/`recovery` (cosmetic). Gifts/entrances are seeded store items, NOT separate tables.
+- **Live gifts + entrances over Socket.io:** client emits `gift:send {roomId,userId,itemId,...}`; server deducts coins, broadcasts `gift:new` + `wallet:update` (or `gift:error`). On `room:join` server broadcasts `room:entrance` using the joiner's equipped entrance. Client hook `hooks/useRoomGifts.ts` + overlays `GiftOverlay`/`EntranceOverlay` (call `onDone(event.key)`), picker `GiftPicker`. `useRoomChat(id, me)` must pass `{userId,userName,userAvatar}` so the server knows who joined.
+- **Admin** (`app/admin/index.tsx`) has 5 tabs: store (with itemType selector + mediaUrl), packages (coin packages CRUD), tasks (daily tasks CRUD), VIP tiers, features.
+- **CoinPackage.price is a string** ("$9.99") not a number. DailyTask.reward is coins.
+
+## Gotchas (durable)
+
+- [Metro stale resolution after codegen](metro-stale-codegen-cache.md) — Metro caches "module not found" for freshly codegen'd files and persists it across workflow restarts.
+- **Seed must be idempotent per item-type, not all-or-nothing.** `seed.ts` originally guarded store_items insert on `count===0`; once frames were seeded, later-added gift/entrance types never inserted. Fix: backfill only itemTypes not already present (`selectDistinct(itemType)` → insert missing). Same trap applies any time you add new seed rows to an already-populated table.
+
 **Why:** Social entertainment apps need dark, rich palettes; AsyncStorage avoids backend complexity for MVP.
 **How to apply:** Adding new screens should respect dark palette from colors.ts via useColors() hook.

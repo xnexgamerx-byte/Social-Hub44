@@ -24,8 +24,10 @@ export const ListStoreItemsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "category": zod.string(),
+  "itemType": zod.string(),
   "section": zod.string(),
   "imageUrl": zod.string(),
+  "mediaUrl": zod.string(),
   "color": zod.string(),
   "icon": zod.string(),
   "price": zod.number(),
@@ -48,8 +50,10 @@ export const ListStoreItemsResponse = zod.array(ListStoreItemsResponseItem)
 export const CreateStoreItemBody = zod.object({
   "name": zod.string().min(1),
   "category": zod.string().min(1),
+  "itemType": zod.string().optional(),
   "section": zod.string().optional(),
   "imageUrl": zod.string().optional(),
+  "mediaUrl": zod.string().optional(),
   "color": zod.string().optional(),
   "icon": zod.string().optional(),
   "price": zod.number().optional(),
@@ -75,8 +79,10 @@ export const UpdateStoreItemParams = zod.object({
 export const UpdateStoreItemBody = zod.object({
   "name": zod.string().min(1).optional(),
   "category": zod.string().min(1).optional(),
+  "itemType": zod.string().optional(),
   "section": zod.string().optional(),
   "imageUrl": zod.string().optional(),
+  "mediaUrl": zod.string().optional(),
   "color": zod.string().optional(),
   "icon": zod.string().optional(),
   "price": zod.number().optional(),
@@ -91,8 +97,10 @@ export const UpdateStoreItemResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "category": zod.string(),
+  "itemType": zod.string(),
   "section": zod.string(),
   "imageUrl": zod.string(),
+  "mediaUrl": zod.string(),
   "color": zod.string(),
   "icon": zod.string(),
   "price": zod.number(),
@@ -240,5 +248,319 @@ export const UpdateVipFeatureResponse = zod.object({
 export const DeleteVipFeatureParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
+/**
+ * @summary List coin packages
+ */
+export const ListCoinPackagesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "coins": zod.number(),
+  "bonus": zod.number(),
+  "price": zod.string(),
+  "color": zod.string(),
+  "icon": zod.string(),
+  "popular": zod.boolean(),
+  "active": zod.boolean(),
+  "sortOrder": zod.number()
+})
+export const ListCoinPackagesResponse = zod.array(ListCoinPackagesResponseItem)
+
+
+/**
+ * @summary Create a coin package
+ */
+export const CreateCoinPackageBody = zod.object({
+  "name": zod.string().optional(),
+  "coins": zod.number(),
+  "bonus": zod.number().optional(),
+  "price": zod.string().optional(),
+  "color": zod.string().optional(),
+  "icon": zod.string().optional(),
+  "popular": zod.boolean().optional(),
+  "active": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+
+/**
+ * @summary Update a coin package
+ */
+export const UpdateCoinPackageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCoinPackageBody = zod.object({
+  "name": zod.string().optional(),
+  "coins": zod.number().optional(),
+  "bonus": zod.number().optional(),
+  "price": zod.string().optional(),
+  "color": zod.string().optional(),
+  "icon": zod.string().optional(),
+  "popular": zod.boolean().optional(),
+  "active": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+export const UpdateCoinPackageResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "coins": zod.number(),
+  "bonus": zod.number(),
+  "price": zod.string(),
+  "color": zod.string(),
+  "icon": zod.string(),
+  "popular": zod.boolean(),
+  "active": zod.boolean(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Delete a coin package
+ */
+export const DeleteCoinPackageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List daily tasks
+ */
+export const ListDailyTasksResponseItem = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "description": zod.string(),
+  "reward": zod.number(),
+  "icon": zod.string(),
+  "color": zod.string(),
+  "active": zod.boolean(),
+  "sortOrder": zod.number()
+})
+export const ListDailyTasksResponse = zod.array(ListDailyTasksResponseItem)
+
+
+/**
+ * @summary Create a daily task
+ */
+
+
+
+export const CreateDailyTaskBody = zod.object({
+  "label": zod.string().min(1),
+  "description": zod.string().optional(),
+  "reward": zod.number().optional(),
+  "icon": zod.string().optional(),
+  "color": zod.string().optional(),
+  "active": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+
+/**
+ * @summary Update a daily task
+ */
+export const UpdateDailyTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateDailyTaskBody = zod.object({
+  "label": zod.string().min(1).optional(),
+  "description": zod.string().optional(),
+  "reward": zod.number().optional(),
+  "icon": zod.string().optional(),
+  "color": zod.string().optional(),
+  "active": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+export const UpdateDailyTaskResponse = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "description": zod.string(),
+  "reward": zod.number(),
+  "icon": zod.string(),
+  "color": zod.string(),
+  "active": zod.boolean(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Delete a daily task
+ */
+export const DeleteDailyTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get a user's wallet (auto-creates if missing)
+ */
+export const GetWalletParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const GetWalletResponse = zod.object({
+  "userId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
+
+
+/**
+ * @summary Ensure a wallet exists, seeding it with initial balances on first create
+ */
+export const EnsureWalletParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const EnsureWalletBody = zod.object({
+  "initialCoins": zod.number().optional(),
+  "initialVPoints": zod.number().optional()
+})
+
+export const EnsureWalletResponse = zod.object({
+  "userId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
+
+
+/**
+ * @summary List a user's wallet transaction history
+ */
+export const ListWalletTransactionsParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const ListWalletTransactionsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "currency": zod.string(),
+  "amount": zod.number(),
+  "balanceAfter": zod.number(),
+  "type": zod.string(),
+  "description": zod.string(),
+  "refId": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListWalletTransactionsResponse = zod.array(ListWalletTransactionsResponseItem)
+
+
+/**
+ * @summary Recharge coins by purchasing a coin package
+ */
+export const RechargeWalletParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const RechargeWalletBody = zod.object({
+  "packageId": zod.number()
+})
+
+export const RechargeWalletResponse = zod.object({
+  "userId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
+
+
+/**
+ * @summary Buy a store item, spending from the wallet and granting ownership
+ */
+export const PurchaseItemParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const PurchaseItemBody = zod.object({
+  "itemId": zod.number()
+})
+
+export const PurchaseItemResponse = zod.object({
+  "wallet": zod.object({
+  "userId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+}),
+  "item": zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "itemId": zod.number(),
+  "equipped": zod.boolean()
+})
+})
+
+
+/**
+ * @summary Claim a daily task reward, crediting the wallet
+ */
+export const ClaimTaskParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const ClaimTaskBody = zod.object({
+  "taskId": zod.number()
+})
+
+export const ClaimTaskResponse = zod.object({
+  "userId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
+
+
+/**
+ * @summary List a user's owned items
+ */
+export const ListUserItemsParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const ListUserItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "itemId": zod.number(),
+  "equipped": zod.boolean()
+})
+export const ListUserItemsResponse = zod.array(ListUserItemsResponseItem)
+
+
+/**
+ * @summary Equip an owned item (unequips others of the same type)
+ */
+export const EquipItemParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const EquipItemBody = zod.object({
+  "itemId": zod.number()
+})
+
+export const EquipItemResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "itemId": zod.number(),
+  "equipped": zod.boolean()
+})
+export const EquipItemResponse = zod.array(EquipItemResponseItem)
+
+
+/**
+ * @summary List the user's task claims for today
+ */
+export const ListTaskClaimsParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const ListTaskClaimsResponseItem = zod.object({
+  "taskId": zod.number(),
+  "claimedOn": zod.string()
+})
+export const ListTaskClaimsResponse = zod.array(ListTaskClaimsResponseItem)
 
 

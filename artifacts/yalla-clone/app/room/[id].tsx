@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   FlatList,
   Platform,
   StyleSheet,
@@ -15,10 +16,14 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UserAvatar } from "@/components/UserAvatar";
 import { LiveBadge } from "@/components/LiveBadge";
+import { EntranceOverlay } from "@/components/EntranceOverlay";
+import { GiftOverlay } from "@/components/GiftOverlay";
+import { GiftPicker, type GiftItem } from "@/components/GiftPicker";
 import { ROOMS } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { useRoomChat, type ChatMessage } from "@/hooks/useRoomChat";
+import { useRoomGifts } from "@/hooks/useRoomGifts";
 import { useRoomVoice } from "@/hooks/useRoomVoice";
 
 const AMBER = "#F59E0B";
@@ -32,17 +37,41 @@ export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useApp();
+  const { user, refreshWallet } = useApp();
   const room = ROOMS.find((r) => r.id === id) ?? ROOMS[0];
 
-  const { messages, presence, connected, sendMessage: emitMessage } = useRoomChat(id);
+  const { messages, presence, connected, sendMessage: emitMessage } = useRoomChat(id, {
+    userId: user.id,
+    userName: user.name,
+    userAvatar: user.avatar,
+  });
   const { seats, onMic, muted, stageFull, takeMic, leaveMic, setMuted } = useRoomVoice(id, {
     userId: user.id,
     userName: user.name,
     userAvatar: user.avatar,
   });
+  const { gift, entrance, sendGift, clearGift, clearEntrance } = useRoomGifts(
+    id,
+    useCallback(() => refreshWallet(), [refreshWallet]),
+    useCallback((message: string) => Alert.alert("الهدية", message), []),
+  );
   const [text, setText] = useState("");
+  const [giftOpen, setGiftOpen] = useState(false);
   const flatRef = useRef<FlatList>(null);
+
+  const handleSendGift = useCallback(
+    (item: GiftItem) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      sendGift({
+        userId: user.id,
+        userName: user.name,
+        userAvatar: user.avatar,
+        itemId: item.id,
+      });
+      setGiftOpen(false);
+    },
+    [sendGift, user],
+  );
 
   const onMicPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -207,18 +236,33 @@ export default function RoomDetailScreen() {
           />
         </View>
 
-        <TouchableOpacity
-          style={[styles.sendBtn, { backgroundColor: text.trim() ? colors.primary : colors.muted }]}
-          onPress={sendMessage}
-          disabled={!text.trim()}
-        >
-          <Ionicons name="send" size={18} color={text.trim() ? "#fff" : colors.mutedForeground} style={{ transform: [{ scaleX: -1 }] }} />
-        </TouchableOpacity>
+        {text.trim() ? (
+          <TouchableOpacity
+            style={[styles.sendBtn, { backgroundColor: colors.primary }]}
+            onPress={sendMessage}
+          >
+            <Ionicons name="send" size={18} color="#fff" style={{ transform: [{ scaleX: -1 }] }} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[styles.giftBtn]} onPress={() => setGiftOpen(true)}>
+            <Ionicons name="gift" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={[styles.leaveBtn, { backgroundColor: "#EF444422" }]} onPress={() => router.back()}>
           <Text style={styles.leaveText}>خروج</Text>
         </TouchableOpacity>
       </View>
+
+      {entrance && <EntranceOverlay event={entrance} onDone={clearEntrance} />}
+      {gift && <GiftOverlay event={gift} onDone={clearGift} />}
+
+      <GiftPicker
+        visible={giftOpen}
+        coins={user.coins}
+        onClose={() => setGiftOpen(false)}
+        onSend={handleSendGift}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -337,6 +381,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  giftBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F59E0B",
   },
   leaveBtn: {
     borderRadius: 20,

@@ -1,18 +1,30 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
+  getListCoinPackagesQueryKey,
+  getListCoinPackagesQueryOptions,
+  getListDailyTasksQueryKey,
+  getListDailyTasksQueryOptions,
   getListStoreItemsQueryKey,
   getListStoreItemsQueryOptions,
   getListVipFeaturesQueryKey,
   getListVipFeaturesQueryOptions,
   getListVipTiersQueryKey,
   getListVipTiersQueryOptions,
+  useCreateCoinPackage,
+  useCreateDailyTask,
   useCreateStoreItem,
   useCreateVipFeature,
+  useDeleteCoinPackage,
+  useDeleteDailyTask,
   useDeleteStoreItem,
   useDeleteVipFeature,
+  useUpdateCoinPackage,
+  useUpdateDailyTask,
   useUpdateStoreItem,
   useUpdateVipTier,
+  type CoinPackage,
+  type DailyTask,
   type StoreItem,
   type VipFeature,
   type VipTier,
@@ -35,7 +47,36 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 
-type Tab = "store" | "tiers" | "features";
+type Tab = "store" | "packages" | "tasks" | "tiers" | "features";
+
+type ItemType =
+  | "frame"
+  | "entrance"
+  | "gift"
+  | "background"
+  | "symbol"
+  | "recovery"
+  | "other";
+
+const ITEM_TYPE_LABEL: Record<string, string> = {
+  frame: "إطار",
+  gift: "هدية",
+  entrance: "دخولية",
+  background: "خلفية",
+  symbol: "رمز",
+  recovery: "استرجاع",
+  other: "أخرى",
+};
+
+const ITEM_TYPES: { k: ItemType; l: string }[] = [
+  { k: "frame", l: "إطار" },
+  { k: "gift", l: "هدية" },
+  { k: "entrance", l: "دخولية" },
+  { k: "background", l: "خلفية" },
+  { k: "symbol", l: "رمز" },
+  { k: "recovery", l: "استرجاع" },
+  { k: "other", l: "أخرى" },
+];
 
 export default function AdminScreen() {
   const colors = useColors();
@@ -56,7 +97,9 @@ export default function AdminScreen() {
       <View style={[styles.tabs, { backgroundColor: colors.secondary }]}>
         {([
           { k: "store" as const, l: "المتجر" },
-          { k: "tiers" as const, l: "مستويات VIP" },
+          { k: "packages" as const, l: "الباقات" },
+          { k: "tasks" as const, l: "المهام" },
+          { k: "tiers" as const, l: "VIP" },
           { k: "features" as const, l: "المميزات" },
         ]).map((t) => {
           const on = tab === t.k;
@@ -75,6 +118,8 @@ export default function AdminScreen() {
       </View>
 
       {tab === "store" && <StoreAdmin />}
+      {tab === "packages" && <CoinPackagesAdmin />}
+      {tab === "tasks" && <DailyTasksAdmin />}
       {tab === "tiers" && <TiersAdmin />}
       {tab === "features" && <FeaturesAdmin />}
     </View>
@@ -91,32 +136,74 @@ function StoreAdmin() {
   const updateM = useUpdateStoreItem({ mutation: { onSuccess: invalidate } });
   const deleteM = useDeleteStoreItem({ mutation: { onSuccess: invalidate } });
 
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("إطارات");
   const [price, setPrice] = useState("1000");
   const [color, setColor] = useState("#7C3AED");
   const [icon, setIcon] = useState("gift");
   const [vip, setVip] = useState("0");
+  const [itemType, setItemType] = useState<ItemType>("frame");
+  const [mediaUrl, setMediaUrl] = useState("");
 
-  const add = () => {
-    if (!name.trim()) return;
-    createM.mutate({
-      data: {
-        name: name.trim(),
-        category,
-        section: Number(vip) >= 8 ? "svip" : "vip",
-        imageUrl: "",
-        color,
-        icon,
-        price: Number(price) || 0,
-        currency: "V",
-        vipRequired: Number(vip) || 0,
-        durationDays: 3,
-        active: true,
-        sortOrder: 99,
-      },
-    });
+  const resetForm = () => {
+    setEditingId(null);
     setName("");
+    setCategory("إطارات");
+    setPrice("1000");
+    setColor("#7C3AED");
+    setIcon("gift");
+    setVip("0");
+    setItemType("frame");
+    setMediaUrl("");
+  };
+
+  const startEdit = (item: StoreItem) => {
+    setEditingId(item.id);
+    setName(item.name);
+    setCategory(item.category);
+    setPrice(String(item.price));
+    setColor(item.color);
+    setIcon(item.icon);
+    setVip(String(item.vipRequired));
+    setItemType(
+      ITEM_TYPES.some((t) => t.k === item.itemType)
+        ? (item.itemType as ItemType)
+        : "other",
+    );
+    setMediaUrl(item.mediaUrl ?? "");
+  };
+
+  const submit = () => {
+    if (!name.trim()) return;
+    const payload = {
+      name: name.trim(),
+      category,
+      itemType,
+      section: Number(vip) >= 8 ? "svip" : "vip",
+      mediaUrl: mediaUrl.trim(),
+      color,
+      icon,
+      price: Number(price) || 0,
+      currency: itemType === "gift" ? "coins" : "V",
+      vipRequired: Number(vip) || 0,
+    };
+    if (editingId !== null) {
+      updateM.mutate({ id: editingId, data: payload }, { onSuccess: resetForm });
+    } else {
+      createM.mutate(
+        {
+          data: {
+            ...payload,
+            imageUrl: "",
+            durationDays: itemType === "gift" ? 0 : 3,
+            active: true,
+            sortOrder: 99,
+          },
+        },
+        { onSuccess: resetForm },
+      );
+    }
   };
 
   const confirmDelete = (item: StoreItem) => {
@@ -132,9 +219,40 @@ function StoreAdmin() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.formCard, { backgroundColor: colors.card }]}>
-        <Text style={[styles.formTitle, { color: colors.foreground }]}>إضافة عنصر</Text>
+        <View style={styles.formHeaderRow}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>
+            {editingId !== null ? "تعديل عنصر" : "إضافة عنصر"}
+          </Text>
+          {editingId !== null && (
+            <TouchableOpacity onPress={resetForm}>
+              <Text style={[styles.cancelEdit, { color: colors.mutedForeground }]}>إلغاء</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>النوع</Text>
+        <View style={styles.typeRow}>
+          {ITEM_TYPES.map((t) => {
+            const on = itemType === t.k;
+            return (
+              <TouchableOpacity
+                key={t.k}
+                onPress={() => setItemType(t.k)}
+                style={[
+                  styles.typeChip,
+                  { borderColor: colors.border },
+                  on && { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
+              >
+                <Text style={[styles.typeChipText, { color: on ? "#fff" : colors.mutedForeground }]}>
+                  {t.l}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         <Field label="الاسم" value={name} onChange={setName} colors={colors} />
         <Field label="الفئة" value={category} onChange={setCategory} colors={colors} />
+        <Field label="رابط الوسائط (اختياري)" value={mediaUrl} onChange={setMediaUrl} colors={colors} />
         <View style={styles.fieldRow}>
           <View style={{ flex: 1 }}>
             <Field label="السعر" value={price} onChange={setPrice} keyboard="numeric" colors={colors} />
@@ -153,13 +271,13 @@ function StoreAdmin() {
         </View>
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={add}
-          disabled={createM.isPending}
+          onPress={submit}
+          disabled={createM.isPending || updateM.isPending}
         >
-          {createM.isPending ? (
+          {createM.isPending || updateM.isPending ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.addBtnText}>إضافة</Text>
+            <Text style={styles.addBtnText}>{editingId !== null ? "حفظ التعديل" : "إضافة"}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -168,14 +286,21 @@ function StoreAdmin() {
         <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
       ) : (
         (data ?? []).map((item) => (
-          <View key={item.id} style={[styles.listItem, { backgroundColor: colors.card }]}>
+          <View
+            key={item.id}
+            style={[
+              styles.listItem,
+              { backgroundColor: colors.card },
+              editingId === item.id && { borderWidth: 1, borderColor: colors.primary },
+            ]}
+          >
             <View style={[styles.swatch, { backgroundColor: item.color }]}>
               <Ionicons name={(item.icon as never) || "gift"} size={18} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.itemName, { color: colors.foreground }]}>{item.name}</Text>
               <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
-                {item.category} · {item.price} · VIP{item.vipRequired}
+                {ITEM_TYPE_LABEL[item.itemType] ?? item.itemType} · {item.price} {item.currency} · VIP{item.vipRequired}
               </Text>
             </View>
             <Switch
@@ -184,6 +309,9 @@ function StoreAdmin() {
                 updateM.mutate({ id: item.id, data: { active: v } })
               }
             />
+            <TouchableOpacity onPress={() => startEdit(item)} style={styles.delBtn}>
+              <Ionicons name="create-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.delBtn}>
               <Ionicons name="trash-outline" size={20} color={colors.destructive} />
             </TouchableOpacity>
@@ -352,6 +480,307 @@ function FeaturesAdmin() {
   );
 }
 
+function CoinPackagesAdmin() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery(getListCoinPackagesQueryOptions());
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListCoinPackagesQueryKey() });
+  const createM = useCreateCoinPackage({ mutation: { onSuccess: invalidate } });
+  const updateM = useUpdateCoinPackage({ mutation: { onSuccess: invalidate } });
+  const deleteM = useDeleteCoinPackage({ mutation: { onSuccess: invalidate } });
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [name, setName] = useState("");
+  const [coins, setCoins] = useState("1000");
+  const [bonus, setBonus] = useState("0");
+  const [price, setPrice] = useState("9.99");
+  const [color, setColor] = useState("#F5C242");
+  const [icon, setIcon] = useState("logo-bitcoin");
+  const [popular, setPopular] = useState(false);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setCoins("1000");
+    setBonus("0");
+    setPrice("9.99");
+    setColor("#F5C242");
+    setIcon("logo-bitcoin");
+    setPopular(false);
+  };
+
+  const startEdit = (p: CoinPackage) => {
+    setEditingId(p.id);
+    setName(p.name);
+    setCoins(String(p.coins));
+    setBonus(String(p.bonus));
+    setPrice(p.price);
+    setColor(p.color);
+    setIcon(p.icon);
+    setPopular(p.popular);
+  };
+
+  const submit = () => {
+    if (!coins.trim()) return;
+    const payload = {
+      name: name.trim(),
+      coins: Number(coins) || 0,
+      bonus: Number(bonus) || 0,
+      price: price.trim() || "0",
+      color,
+      icon,
+      popular,
+    };
+    if (editingId !== null) {
+      updateM.mutate({ id: editingId, data: payload }, { onSuccess: resetForm });
+    } else {
+      createM.mutate(
+        { data: { ...payload, active: true, sortOrder: 99 } },
+        { onSuccess: resetForm },
+      );
+    }
+  };
+
+  const confirmDelete = (p: CoinPackage) => {
+    Alert.alert("حذف", `حذف باقة "${p.coins} كوينز"؟`, [
+      { text: "إلغاء", style: "cancel" },
+      { text: "حذف", style: "destructive", onPress: () => deleteM.mutate({ id: p.id }) },
+    ]);
+  };
+
+  return (
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 20 : insets.bottom) + 30 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={[styles.formCard, { backgroundColor: colors.card }]}>
+        <View style={styles.formHeaderRow}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>
+            {editingId !== null ? "تعديل باقة" : "إضافة باقة كوينزات"}
+          </Text>
+          {editingId !== null && (
+            <TouchableOpacity onPress={resetForm}>
+              <Text style={[styles.cancelEdit, { color: colors.mutedForeground }]}>إلغاء</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Field label="الاسم (اختياري)" value={name} onChange={setName} colors={colors} />
+        <View style={styles.fieldRow}>
+          <View style={{ flex: 1 }}>
+            <Field label="الكوينزات" value={coins} onChange={setCoins} keyboard="numeric" colors={colors} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field label="مكافأة" value={bonus} onChange={setBonus} keyboard="numeric" colors={colors} />
+          </View>
+        </View>
+        <View style={styles.fieldRow}>
+          <View style={{ flex: 1 }}>
+            <Field label="السعر ($)" value={price} onChange={setPrice} colors={colors} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field label="اللون" value={color} onChange={setColor} colors={colors} />
+          </View>
+        </View>
+        <Field label="الأيقونة" value={icon} onChange={setIcon} colors={colors} />
+        <View style={styles.popularRow}>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginBottom: 0 }]}>
+            الأكثر شيوعاً
+          </Text>
+          <Switch value={popular} onValueChange={setPopular} />
+        </View>
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          onPress={submit}
+          disabled={createM.isPending || updateM.isPending}
+        >
+          {createM.isPending || updateM.isPending ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.addBtnText}>{editingId !== null ? "حفظ التعديل" : "إضافة"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+      ) : (
+        (data ?? []).map((p) => (
+          <View
+            key={p.id}
+            style={[
+              styles.listItem,
+              { backgroundColor: colors.card },
+              editingId === p.id && { borderWidth: 1, borderColor: colors.primary },
+            ]}
+          >
+            <View style={[styles.swatch, { backgroundColor: p.color }]}>
+              <Ionicons name={(p.icon as never) || "logo-bitcoin"} size={18} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.itemName, { color: colors.foreground }]}>
+                {p.coins.toLocaleString()} كوينز{p.bonus > 0 ? ` +${p.bonus}` : ""}
+              </Text>
+              <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
+                ${p.price}{p.popular ? " · الأكثر شيوعاً" : ""}
+              </Text>
+            </View>
+            <Switch
+              value={p.active}
+              onValueChange={(v) => updateM.mutate({ id: p.id, data: { active: v } })}
+            />
+            <TouchableOpacity onPress={() => startEdit(p)} style={styles.delBtn}>
+              <Ionicons name="create-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => confirmDelete(p)} style={styles.delBtn}>
+              <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
+function DailyTasksAdmin() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery(getListDailyTasksQueryOptions());
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListDailyTasksQueryKey() });
+  const createM = useCreateDailyTask({ mutation: { onSuccess: invalidate } });
+  const updateM = useUpdateDailyTask({ mutation: { onSuccess: invalidate } });
+  const deleteM = useDeleteDailyTask({ mutation: { onSuccess: invalidate } });
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [label, setLabel] = useState("");
+  const [description, setDescription] = useState("");
+  const [reward, setReward] = useState("100");
+  const [color, setColor] = useState("#22C55E");
+  const [icon, setIcon] = useState("checkbox");
+
+  const resetForm = () => {
+    setEditingId(null);
+    setLabel("");
+    setDescription("");
+    setReward("100");
+    setColor("#22C55E");
+    setIcon("checkbox");
+  };
+
+  const startEdit = (t: DailyTask) => {
+    setEditingId(t.id);
+    setLabel(t.label);
+    setDescription(t.description);
+    setReward(String(t.reward));
+    setColor(t.color);
+    setIcon(t.icon);
+  };
+
+  const submit = () => {
+    if (!label.trim()) return;
+    const payload = {
+      label: label.trim(),
+      description: description.trim(),
+      reward: Number(reward) || 0,
+      color,
+      icon,
+    };
+    if (editingId !== null) {
+      updateM.mutate({ id: editingId, data: payload }, { onSuccess: resetForm });
+    } else {
+      createM.mutate(
+        { data: { ...payload, active: true, sortOrder: 99 } },
+        { onSuccess: resetForm },
+      );
+    }
+  };
+
+  const confirmDelete = (t: DailyTask) => {
+    Alert.alert("حذف", `حذف "${t.label}"؟`, [
+      { text: "إلغاء", style: "cancel" },
+      { text: "حذف", style: "destructive", onPress: () => deleteM.mutate({ id: t.id }) },
+    ]);
+  };
+
+  return (
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 20 : insets.bottom) + 30 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={[styles.formCard, { backgroundColor: colors.card }]}>
+        <View style={styles.formHeaderRow}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>
+            {editingId !== null ? "تعديل مهمة" : "إضافة مهمة يومية"}
+          </Text>
+          {editingId !== null && (
+            <TouchableOpacity onPress={resetForm}>
+              <Text style={[styles.cancelEdit, { color: colors.mutedForeground }]}>إلغاء</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Field label="العنوان" value={label} onChange={setLabel} colors={colors} />
+        <Field label="الوصف" value={description} onChange={setDescription} colors={colors} />
+        <View style={styles.fieldRow}>
+          <View style={{ flex: 1 }}>
+            <Field label="المكافأة (كوينز)" value={reward} onChange={setReward} keyboard="numeric" colors={colors} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field label="اللون" value={color} onChange={setColor} colors={colors} />
+          </View>
+        </View>
+        <Field label="الأيقونة" value={icon} onChange={setIcon} colors={colors} />
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          onPress={submit}
+          disabled={createM.isPending || updateM.isPending}
+        >
+          {createM.isPending || updateM.isPending ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.addBtnText}>{editingId !== null ? "حفظ التعديل" : "إضافة"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+      ) : (
+        (data ?? []).map((t) => (
+          <View
+            key={t.id}
+            style={[
+              styles.listItem,
+              { backgroundColor: colors.card },
+              editingId === t.id && { borderWidth: 1, borderColor: colors.primary },
+            ]}
+          >
+            <View style={[styles.swatch, { backgroundColor: t.color }]}>
+              <Ionicons name={(t.icon as never) || "checkbox"} size={18} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.itemName, { color: colors.foreground }]}>{t.label}</Text>
+              <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
+                {t.reward} كوينز{t.description ? ` · ${t.description}` : ""}
+              </Text>
+            </View>
+            <Switch
+              value={t.active}
+              onValueChange={(v) => updateM.mutate({ id: t.id, data: { active: v } })}
+            />
+            <TouchableOpacity onPress={() => startEdit(t)} style={styles.delBtn}>
+              <Ionicons name="create-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => confirmDelete(t)} style={styles.delBtn}>
+              <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
 function Field({
   label,
   value,
@@ -400,9 +829,32 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10 },
   tabText: { fontSize: 13, fontWeight: "700" as const },
   formCard: { marginHorizontal: 16, borderRadius: 16, padding: 16, marginBottom: 16 },
-  formTitle: { fontSize: 15, fontWeight: "800" as const, marginBottom: 12, textAlign: "right" },
+  formHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  cancelEdit: { fontSize: 13, fontWeight: "700" as const },
+  popularRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginVertical: 8,
+  },
+  formTitle: { fontSize: 15, fontWeight: "800" as const, textAlign: "right" },
   field: { marginBottom: 10 },
   fieldRow: { flexDirection: "row", gap: 10 },
+  typeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  typeChip: {
+    flexGrow: 1,
+    flexBasis: "30%",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  typeChipText: { fontSize: 13, fontWeight: "700" as const },
   fieldLabel: { fontSize: 12, marginBottom: 4, textAlign: "right" },
   input: {
     borderWidth: 1,

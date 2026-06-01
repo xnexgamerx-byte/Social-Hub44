@@ -1,13 +1,32 @@
 import type { Server as HttpServer } from "node:http";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { Server } from "socket.io";
-import { db, messagesTable } from "@workspace/db";
+import {
+  db,
+  messagesTable,
+  storeItemsTable,
+  userItemsTable,
+} from "@workspace/db";
 import { logger } from "./logger";
 import { joinGame, startGame, submitAnswer, leaveGame, markDisconnected } from "./gameSession";
 import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
+import { adjustWallet, InsufficientBalanceError } from "./wallet";
 
 interface JoinPayload {
   roomId: string;
+  userId?: string;
+  userName?: string;
+  userAvatar?: string;
+}
+
+interface GiftSendPayload {
+  roomId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  itemId: number;
+  toUserId?: string;
+  toName?: string;
 }
 
 interface SendPayload {
@@ -81,7 +100,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       io.to(channel).emit("room:presence", { roomId: previous, count: presenceCount(channel) });
     }
 
-    socket.on("room:join", async ({ roomId }: JoinPayload) => {
+    socket.on("room:join", async ({ roomId, userId, userName, userAvatar }: JoinPayload) => {
       if (!roomId) return;
       if (joinedRoom && joinedRoom !== roomId) await leaveCurrentRoom();
       joinedRoom = roomId;
@@ -103,6 +122,93 @@ export function attachSocketServer(httpServer: HttpServer): Server {
 
       io.to(channel).emit("room:presence", { roomId, count: presenceCount(channel) });
       emitSnapshot(socket, roomId);
+
+      // Play the joining user's equipped entrance effect for everyone in the room.
+      if (userId) {
+        try {
+          const [entrance] = await db
+            .select({
+              name: storeItemsTable.name,
+              color: storeItemsTable.color,
+              icon: storeItemsTable.icon,
+              mediaUrl: storeItemsTable.mediaUrl,
+            })
+            .from(userItemsTable)
+            .innerJoin(storeItemsTable, eq(userItemsTable.itemId, storeItemsTable.id))
+            .where(
+              and(
+                eq(userItemsTable.userId, userId),
+                eq(userItemsTable.equipped, true),
+                eq(storeItemsTable.itemType, "entrance"),
+              ),
+            )
+            .limit(1);
+
+          if (entrance) {
+            io.to(channel).emit("room:entrance", {
+              roomId,
+              userId,
+              userName: userName ?? "",
+              userAvatar: userAvatar ?? "",
+              entrance,
+            });
+          }
+        } catch (err) {
+          logger.error({ err, roomId, userId }, "Failed to resolve entrance effect");
+        }
+      }
+    });
+
+    socket.on("gift:send", async (payload: GiftSendPayload) => {
+      const { roomId, userId, userName, itemId } = payload;
+      if (!roomId || !userId || !itemId) return;
+      if (!socket.rooms.has(roomChannel(roomId))) return;
+
+      try {
+        const [item] = await db
+          .select()
+          .from(storeItemsTable)
+          .where(eq(storeItemsTable.id, itemId))
+          .limit(1);
+        if (!item || !item.active || item.itemType !== "gift") {
+          socket.emit("gift:error", { message: "الهدية غير متوفرة" });
+          return;
+        }
+
+        const wallet = await adjustWallet({
+          userId,
+          currency: "coins",
+          amount: -item.price,
+          type: "gift_sent",
+          description: `هدية ${item.name}${payload.toName ? ` إلى ${payload.toName}` : ""}`,
+          refId: String(item.id),
+        });
+
+        io.to(roomChannel(roomId)).emit("gift:new", {
+          roomId,
+          fromUserId: userId,
+          fromName: userName,
+          fromAvatar: payload.userAvatar ?? "",
+          toName: payload.toName ?? "",
+          gift: {
+            id: item.id,
+            name: item.name,
+            color: item.color,
+            icon: item.icon,
+            mediaUrl: item.mediaUrl,
+            price: item.price,
+          },
+        });
+
+        socket.emit("wallet:update", { userId, coins: wallet.coins, vPoints: wallet.vPoints });
+      } catch (err) {
+        if (err instanceof InsufficientBalanceError) {
+          socket.emit("gift:error", { message: "رصيد الكوينزات غير كافٍ" });
+          return;
+        }
+        logger.error({ err, roomId, userId }, "Failed to send gift");
+        socket.emit("gift:error", { message: "تعذّر إرسال الهدية" });
+      }
     });
 
     socket.on("mic:join", ({ roomId, userId, userName, userAvatar }: MicJoinPayload) => {

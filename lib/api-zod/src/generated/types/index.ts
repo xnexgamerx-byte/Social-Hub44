@@ -6,14 +6,30 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './claimTaskInput';
+export * from './coinPackage';
+export * from './coinPackageInput';
+export * from './coinPackageUpdate';
+export * from './dailyTask';
+export * from './dailyTaskInput';
+export * from './dailyTaskUpdate';
+export * from './ensureWalletInput';
+export * from './equipInput';
 export * from './error';
 export * from './healthStatus';
+export * from './purchaseInput';
+export * from './purchaseResult';
+export * from './rechargeInput';
 export * from './storeItem';
 export * from './storeItemInput';
 export * from './storeItemUpdate';
+export * from './taskClaim';
+export * from './userItem';
 export * from './vipFeature';
 export * from './vipFeatureInput';
 export * from './vipFeatureUpdate';
 export * from './vipTier';
 export * from './vipTierInput';
 export * from './vipTierUpdate';
+export * from './wallet';
+export * from './walletTransaction';
