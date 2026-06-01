@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { db, messagesTable } from "@workspace/db";
 import { logger } from "./logger";
 import { joinGame, startGame, submitAnswer, leaveGame, markDisconnected } from "./gameSession";
+import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
 
 interface JoinPayload {
   roomId: string;
@@ -22,6 +23,24 @@ interface GameJoinPayload {
   userId: string;
   userName: string;
   userAvatar?: string;
+}
+
+interface MicJoinPayload {
+  roomId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+}
+
+interface MicLeavePayload {
+  roomId: string;
+  userId: string;
+}
+
+interface MicMutePayload {
+  roomId: string;
+  userId: string;
+  muted: boolean;
 }
 
 const MAX_HISTORY = 50;
@@ -44,6 +63,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
   io.on("connection", (socket) => {
     let joinedRoom: string | null = null;
     let joinedGame: string | null = null;
+    let voiceUserId: string | null = null;
 
     socket.on("room:join", async ({ roomId }: JoinPayload) => {
       if (!roomId) return;
@@ -65,6 +85,31 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       }
 
       io.to(channel).emit("room:presence", { roomId, count: presenceCount(channel) });
+      emitSnapshot(socket, roomId);
+    });
+
+    socket.on("mic:join", ({ roomId, userId, userName, userAvatar }: MicJoinPayload) => {
+      if (!roomId || !userId) return;
+      if (!socket.rooms.has(roomChannel(roomId))) return;
+      voiceUserId = userId;
+      const ok = joinMic(io, roomId, {
+        userId,
+        userName,
+        userAvatar: userAvatar ?? "",
+        muted: false,
+      });
+      if (!ok) socket.emit("mic:full", { roomId });
+    });
+
+    socket.on("mic:leave", ({ roomId, userId }: MicLeavePayload) => {
+      if (!roomId || !userId) return;
+      leaveMic(io, roomId, userId);
+      voiceUserId = null;
+    });
+
+    socket.on("mic:mute", ({ roomId, userId, muted }: MicMutePayload) => {
+      if (!roomId || !userId) return;
+      setMute(io, roomId, userId, !!muted);
     });
 
     socket.on("message:send", async (payload: SendPayload) => {
@@ -119,6 +164,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
 
     socket.on("disconnect", () => {
       if (joinedRoom) {
+        if (voiceUserId) leaveMic(io, joinedRoom, voiceUserId);
         const channel = roomChannel(joinedRoom);
         io.to(channel).emit("room:presence", { roomId: joinedRoom, count: presenceCount(channel) });
       }

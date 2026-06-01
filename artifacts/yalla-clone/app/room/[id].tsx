@@ -19,20 +19,14 @@ import { ROOMS } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { useRoomChat, type ChatMessage } from "@/hooks/useRoomChat";
+import { useRoomVoice } from "@/hooks/useRoomVoice";
+
+const AMBER = "#F59E0B";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
-
-const MOCK_SPEAKERS = [
-  { id: "s1", name: "سارة", avatar: "https://i.pravatar.cc/150?img=5", speaking: true },
-  { id: "s2", name: "محمد", avatar: "https://i.pravatar.cc/150?img=12", speaking: false },
-  { id: "s3", name: "فارس", avatar: "https://i.pravatar.cc/150?img=21", speaking: false },
-  { id: "s4", name: "نور", avatar: "https://i.pravatar.cc/150?img=40", speaking: true },
-  { id: "s5", name: "ريم", avatar: "https://i.pravatar.cc/150?img=44", speaking: false },
-  { id: "s6", name: "عمر", avatar: "https://i.pravatar.cc/150?img=50", speaking: false },
-];
 
 export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,9 +36,25 @@ export default function RoomDetailScreen() {
   const room = ROOMS.find((r) => r.id === id) ?? ROOMS[0];
 
   const { messages, presence, connected, sendMessage: emitMessage } = useRoomChat(id);
+  const { seats, onMic, muted, stageFull, takeMic, leaveMic, setMuted } = useRoomVoice(id, {
+    userId: user.id,
+    userName: user.name,
+    userAvatar: user.avatar,
+  });
   const [text, setText] = useState("");
-  const [micOn, setMicOn] = useState(false);
   const flatRef = useRef<FlatList>(null);
+
+  const onMicPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!onMic) takeMic();
+    else setMuted(!muted);
+  }, [onMic, muted, takeMic, setMuted]);
+
+  const onMicLongPress = useCallback(() => {
+    if (!onMic) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    leaveMic();
+  }, [onMic, leaveMic]);
 
   // Inverted list expects newest-first; chat stores chronological order.
   const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
@@ -93,26 +103,44 @@ export default function RoomDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Speakers stage */}
+      {/* Speakers stage — live seats over our WebSocket */}
       <View style={[styles.stage, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <View style={styles.speakersGrid}>
-          {MOCK_SPEAKERS.map((sp) => (
-            <View key={sp.id} style={styles.speakerItem}>
-              <View style={[
-                styles.speakerRing,
-                { borderColor: sp.speaking ? colors.primary : "transparent" }
-              ]}>
-                <UserAvatar uri={sp.avatar} size={52} />
-              </View>
-              {sp.speaking && (
-                <View style={[styles.speakingDot, { backgroundColor: colors.primary }]} />
-              )}
-              <Text style={[styles.speakerName, { color: colors.mutedForeground }]} numberOfLines={1}>
-                {sp.name}
-              </Text>
-            </View>
-          ))}
-        </View>
+        {seats.length === 0 ? (
+          <View style={styles.stageEmpty}>
+            <Ionicons name="mic-outline" size={22} color={colors.mutedForeground} />
+            <Text style={[styles.stageEmptyText, { color: colors.mutedForeground }]}>
+              المنصة فارغة — اضغط المايك وكن أول المتحدثين
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.speakersGrid}>
+            {seats.map((sp) => {
+              const isMe = sp.userId === user.id;
+              return (
+                <View key={sp.userId} style={styles.speakerItem}>
+                  <View style={[
+                    styles.speakerRing,
+                    { borderColor: sp.muted ? "transparent" : colors.primary },
+                  ]}>
+                    <UserAvatar uri={sp.userAvatar} size={52} />
+                  </View>
+                  <View style={[
+                    styles.micBadge,
+                    { backgroundColor: sp.muted ? AMBER : colors.primary, borderColor: colors.card },
+                  ]}>
+                    <Ionicons name={sp.muted ? "mic-off" : "mic"} size={9} color="#fff" />
+                  </View>
+                  <Text style={[styles.speakerName, { color: colors.mutedForeground }]} numberOfLines={1}>
+                    {isMe ? "أنت" : sp.userName}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        {stageFull && (
+          <Text style={[styles.stageFullText, { color: AMBER }]}>المنصة ممتلئة</Text>
+        )}
       </View>
 
       {/* Chat messages - inverted FlatList */}
@@ -152,10 +180,18 @@ export default function RoomDetailScreen() {
       {/* Bottom controls */}
       <View style={[styles.controls, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: botPad + 8 }]}>
         <TouchableOpacity
-          style={[styles.micBtn, { backgroundColor: micOn ? colors.primary : colors.muted }]}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setMicOn((p) => !p); }}
+          style={[styles.micBtn, {
+            backgroundColor: !onMic ? colors.muted : muted ? AMBER : colors.primary,
+          }]}
+          onPress={onMicPress}
+          onLongPress={onMicLongPress}
+          delayLongPress={400}
         >
-          <Ionicons name={micOn ? "mic" : "mic-off"} size={20} color={micOn ? "#fff" : colors.mutedForeground} />
+          <Ionicons
+            name={!onMic || muted ? "mic-off" : "mic"}
+            size={20}
+            color={!onMic ? colors.mutedForeground : "#fff"}
+          />
         </TouchableOpacity>
 
         <View style={[styles.inputWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -239,15 +275,21 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     padding: 2,
   },
-  speakingDot: {
+  micBadge: {
     position: "absolute",
-    top: 2,
-    right: 4,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    top: 0,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   speakerName: { fontSize: 11, textAlign: "center" as const },
+  stageEmpty: { alignItems: "center", justifyContent: "center", paddingVertical: 14, gap: 6 },
+  stageEmptyText: { fontSize: 13, textAlign: "center" as const },
+  stageFullText: { fontSize: 12, textAlign: "center" as const, marginTop: 8, fontWeight: "600" as const },
   chatList: { flex: 1 },
   chatContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   msgRow: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
