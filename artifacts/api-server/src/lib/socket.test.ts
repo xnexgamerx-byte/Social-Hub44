@@ -407,3 +407,91 @@ describe("game events stay scoped to their own game", () => {
     leaveGame(io, gameB, bId);
   });
 });
+
+describe("mic seats are freed and the stage limit holds", () => {
+  it("frees a user's mic seat when they leave the room", async () => {
+    const a = connect(tokenFor("user_a"));
+    const b = connect(tokenFor("user_b"));
+    await Promise.all([waitConnect(a), waitConnect(b)]);
+    const r = room("mic_leave");
+    await joinRoom(a, r, "A");
+    await joinRoom(b, r, "B");
+    await takeMicSeat(a, r, "user_a", "A");
+    await takeMicSeat(b, r, "user_b", "B");
+
+    // B (still in the room) must see A's seat disappear when A leaves.
+    const afterLeave = waitFor<MicState>(b, "mic:state", (s) =>
+      !s.seats.some((x) => x.userId === "user_a"),
+    );
+    a.emit("room:leave");
+    const state = await afterLeave;
+    expect(state.seats.some((x) => x.userId === "user_a")).toBe(false);
+    expect(state.seats.some((x) => x.userId === "user_b")).toBe(true);
+  });
+
+  it("frees a user's mic seat when their socket disconnects", async () => {
+    const a = connect(tokenFor("user_a"));
+    const b = connect(tokenFor("user_b"));
+    await Promise.all([waitConnect(a), waitConnect(b)]);
+    const r = room("mic_disconnect");
+    await joinRoom(a, r, "A");
+    await joinRoom(b, r, "B");
+    await takeMicSeat(a, r, "user_a", "A");
+    await takeMicSeat(b, r, "user_b", "B");
+
+    const afterDrop = waitFor<MicState>(b, "mic:state", (s) =>
+      !s.seats.some((x) => x.userId === "user_a"),
+    );
+    a.disconnect();
+    const state = await afterDrop;
+    expect(state.seats.some((x) => x.userId === "user_a")).toBe(false);
+    expect(state.seats.some((x) => x.userId === "user_b")).toBe(true);
+  });
+
+  it("frees the seat in the old room when a user switches rooms", async () => {
+    const a = connect(tokenFor("user_a"));
+    const observer = connect(tokenFor("user_b"));
+    await Promise.all([waitConnect(a), waitConnect(observer)]);
+    const r1 = room("mic_switch_r1");
+    const r2 = room("mic_switch_r2");
+    await joinRoom(a, r1, "A");
+    await joinRoom(observer, r1, "B");
+    await takeMicSeat(a, r1, "user_a", "A");
+
+    // The observer stays in r1 and must see A's seat vacated when A moves to r2.
+    const r1Vacated = waitFor<MicState>(observer, "mic:state", (s) =>
+      s.roomId === r1 && !s.seats.some((x) => x.userId === "user_a"),
+    );
+    a.emit("room:join", { roomId: r2, userName: "A" });
+    const state = await r1Vacated;
+    expect(state.seats).toHaveLength(0);
+  });
+
+  it("rejects a new speaker when the stage is full and adds no seat", async () => {
+    const r = room("mic_full");
+    const MAX = 12;
+    for (let i = 0; i < MAX; i++) {
+      const uid = `full_${i}`;
+      const s = connect(tokenFor(uid));
+      await waitConnect(s);
+      await joinRoom(s, r, `U${i}`);
+      await takeMicSeat(s, r, uid, `U${i}`);
+    }
+
+    // A late arrival joins the room; its snapshot should already show 12 seats.
+    const late = connect(tokenFor("full_late"));
+    await waitConnect(late);
+    const snapshot = once<MicState>(late, "mic:state");
+    await joinRoom(late, r, "Late");
+    const snap = await snapshot;
+    expect(snap.seats).toHaveLength(MAX);
+
+    // Attempting to speak is rejected with mic:full and broadcasts no new seat.
+    const noNewSeat = expectNoEvent(late, "mic:state", 600);
+    const full = once<{ roomId: string }>(late, "mic:full");
+    late.emit("mic:join", { roomId: r, userId: "full_late", userName: "Late" });
+    const evt = await full;
+    expect(evt.roomId).toBe(r);
+    await noNewSeat;
+  });
+});
