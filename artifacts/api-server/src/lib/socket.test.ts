@@ -18,8 +18,16 @@ vi.mock("@clerk/backend", () => ({
   },
 }));
 
-import { db, messagesTable } from "@workspace/db";
+import {
+  db,
+  messagesTable,
+  storeItemsTable,
+  walletsTable,
+  walletTransactionsTable,
+} from "@workspace/db";
 import { attachSocketServer } from "./socket";
+import { ensureWallet, WELCOME_COINS } from "./wallet";
+import { leaveGame } from "./gameSession";
 
 const TAG = `vitest_sock_${Date.now()}`;
 const room = (suffix: string): string => `${TAG}_${suffix}`;
@@ -44,6 +52,9 @@ beforeAll(async () => {
 afterEach(async () => {
   for (const c of clients.splice(0)) c.disconnect();
   await db.delete(messagesTable).where(like(messagesTable.roomId, `${TAG}%`));
+  await db.delete(walletTransactionsTable).where(like(walletTransactionsTable.userId, `${TAG}%`));
+  await db.delete(walletsTable).where(like(walletsTable.userId, `${TAG}%`));
+  await db.delete(storeItemsTable).where(like(storeItemsTable.name, `${TAG}%`));
 });
 
 afterAll(async () => {
@@ -256,6 +267,49 @@ describe("socket identity cannot be spoofed", () => {
     expect(left.seats.some((x) => x.userId === "user_a")).toBe(true);
     expect(left.seats.some((x) => x.userId === "user_b")).toBe(false);
   });
+
+  it("charges the authenticated sender for a gift, ignoring a spoofed payload userId", async () => {
+    const gifterId = `${TAG}_gifter`;
+    await ensureWallet(gifterId); // seeds the fixed welcome balance
+    const [gift] = await db
+      .insert(storeItemsTable)
+      .values({
+        name: `${TAG}_gift`,
+        category: "هدايا",
+        itemType: "gift",
+        currency: "coins",
+        price: 100,
+        active: true,
+      })
+      .returning();
+
+    const a = connect(tokenFor(gifterId));
+    await waitConnect(a);
+    const r = room("gift_identity");
+    await joinRoom(a, r, "Gifter");
+
+    const giftNew = once<{ fromUserId: string }>(a, "gift:new");
+    const walletUpdate = once<{ userId: string; coins: number }>(a, "wallet:update");
+    a.emit("gift:send", {
+      roomId: r,
+      userId: "user_victim", // spoofed — must be ignored
+      userName: "Gifter",
+      itemId: gift.id,
+    });
+    const [evt, wallet] = await Promise.all([giftNew, walletUpdate]);
+
+    // The gift is attributed to, and paid for by, the authenticated user.
+    expect(evt.fromUserId).toBe(gifterId);
+    expect(wallet.userId).toBe(gifterId);
+    expect(wallet.coins).toBe(WELCOME_COINS - gift.price);
+
+    // The spoofed victim was never created or charged.
+    const victimWallet = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.userId, "user_victim"));
+    expect(victimWallet).toHaveLength(0);
+  });
 });
 
 describe("messages and presence stay scoped to the joined room", () => {
@@ -308,5 +362,48 @@ describe("messages and presence stay scoped to the joined room", () => {
     await waitConnect(b);
     b.emit("room:join", { roomId: r2, userName: "B" });
     await noLeak;
+  });
+});
+
+describe("game events stay scoped to their own game", () => {
+  async function joinTrivia(
+    socket: ReturnType<typeof connect>,
+    gameId: string,
+    userId: string,
+    userName: string,
+  ): Promise<void> {
+    const joined = once(socket, "game:state");
+    socket.emit("game:join", { gameId, userId, userName });
+    await joined;
+  }
+
+  it("does not deliver one game's question to players in a different game", async () => {
+    const aId = `${TAG}_gameA_user`;
+    const bId = `${TAG}_gameB_user`;
+    const a = connect(tokenFor(aId));
+    const b = connect(tokenFor(bId));
+    await Promise.all([waitConnect(a), waitConnect(b)]);
+
+    const gameA = `${TAG}_gameA`;
+    const gameB = `${TAG}_gameB`;
+    await joinTrivia(a, gameA, aId, "A");
+    await joinTrivia(b, gameB, bId, "B");
+
+    // Start only game A; its question must reach A but never leak to game B.
+    const aGetsQuestion = waitFor<{ gameId: string }>(
+      a,
+      "game:question",
+      (q) => q.gameId === gameA,
+    );
+    const bGetsNothing = expectNoEvent(b, "game:question", 700);
+    a.emit("game:start", { gameId: gameA });
+
+    const q = await aGetsQuestion;
+    expect(q.gameId).toBe(gameA);
+    await bGetsNothing;
+
+    // Purge both sessions so the running question timer is cleared.
+    leaveGame(io, gameA, aId);
+    leaveGame(io, gameB, bId);
   });
 });
