@@ -19,16 +19,16 @@ export interface Room {
 }
 
 const TAG_STYLES: Record<string, { bg: string; color: string }> = {
-  PK: { bg: "#FF7A0022", color: "#FF7A00" },
-  "Super W": { bg: "#00BCD422", color: "#0097A7" },
-  Chat: { bg: "#E8F5E9", color: "#2E7D32" },
-  "Lv.6": { bg: "#EDE7F6", color: "#7C5CFC" },
-  "Lv.8": { bg: "#EDE7F6", color: "#7C5CFC" },
-  "Lv.5": { bg: "#EDE7F6", color: "#7C5CFC" },
+  PK: { bg: "rgba(255,122,0,0.18)", color: "#FFA040" },
+  "Super W": { bg: "rgba(0,188,212,0.18)", color: "#22D3EE" },
+  Chat: { bg: "rgba(34,197,94,0.18)", color: "#4ADE80" },
+  "Lv.6": { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" },
+  "Lv.8": { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" },
+  "Lv.5": { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" },
 };
 
 function TagPill({ tag }: { tag: string }) {
-  const style = TAG_STYLES[tag] ?? { bg: "#F0EEFF", color: "#7C5CFC" };
+  const style = TAG_STYLES[tag] ?? { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" };
   return (
     <View style={[styles.tag, { backgroundColor: style.bg }]}>
       <Text style={[styles.tagText, { color: style.color }]}>{tag}</Text>
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#EAE6FF",
+    borderBottomColor: "rgba(180,140,255,0.15)",
   },
   avatar: {
     width: 64,
