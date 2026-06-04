@@ -18,8 +18,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppContextProvider } from "@/context/AppContext";
 import { setSocketTokenGetter } from "@/lib/socket";
+import { RevenueCatProvider, initializeRevenueCat } from "@/lib/revenuecat";
 
 SplashScreen.preventAutoHideAsync();
+initializeRevenueCat();
 
 const apiDomain = process.env.EXPO_PUBLIC_DOMAIN;
 if (apiDomain) {
@@ -108,15 +110,17 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
-              <AppContextProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <KeyboardProvider>
-                    <AuthGate>
-                      <RootLayoutNav />
-                    </AuthGate>
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </AppContextProvider>
+              <RevenueCatProvider>
+                <AppContextProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <KeyboardProvider>
+                      <AuthGate>
+                        <RootLayoutNav />
+                      </AuthGate>
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </AppContextProvider>
+              </RevenueCatProvider>
             </QueryClientProvider>
           </ErrorBoundary>
         </SafeAreaProvider>
