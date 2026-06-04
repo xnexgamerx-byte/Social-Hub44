@@ -43,10 +43,9 @@ export default function SignUpScreen() {
   }, []);
 
   const finishNavigate = useCallback(
-    ({ session, decorateUrl }: { session?: { currentTask?: unknown }; decorateUrl: (u: string) => string }) => {
+    ({ session }: { session?: { currentTask?: unknown }; decorateUrl: (u: string) => string }) => {
       if (session?.currentTask) return;
-      const url = decorateUrl("/(tabs)");
-      router.replace(url as Href);
+      router.replace("/(tabs)" as Href);
     },
     [router],
   );
