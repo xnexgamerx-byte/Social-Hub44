@@ -144,7 +144,7 @@ export default function SignInScreen() {
               </View>
 
               {/* Brand name */}
-              <Text style={styles.brandName}>نبضة</Text>
+              <Text style={styles.brandName}>Viber Tok</Text>
 
               {/* Welcome heading */}
               <Text style={styles.welcomeTitle}>أهلاً بعودتك!</Text>
