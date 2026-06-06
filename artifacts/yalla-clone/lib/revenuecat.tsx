@@ -14,10 +14,16 @@ const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
 const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
 
 // react-native-purchases ships native modules and is not available on web or in
-// Expo Go. We treat those environments as "unavailable" so the app never crashes
-// when a purchase is attempted there.
+// Expo Go (executionEnvironment "storeClient"). We treat those environments as
+// "unavailable" so the app never crashes when a purchase is attempted there.
 export const isPurchasesSupported =
-  Platform.OS === "ios" || Platform.OS === "android";
+  (Platform.OS === "ios" || Platform.OS === "android") &&
+  Constants.executionEnvironment !== "storeClient";
+
+// Tracks whether Purchases.configure() actually ran. Even on a supported native
+// platform, a missing API key leaves the SDK unconfigured — in that case we keep
+// the app running and treat purchases as unavailable rather than crashing.
+let purchasesConfigured = false;
 
 /**
  * Raised when the shopper backs out of the native purchase sheet. The caller
@@ -53,43 +59,34 @@ export class MissingTransactionIdError extends Error {
   }
 }
 
-function getRevenueCatApiKey(): string {
-  if (
-    __DEV__ ||
-    Platform.OS === "web" ||
-    Constants.executionEnvironment === "storeClient"
-  ) {
-    if (!REVENUECAT_TEST_API_KEY) {
-      throw new Error("EXPO_PUBLIC_REVENUECAT_TEST_API_KEY is not set");
-    }
-    return REVENUECAT_TEST_API_KEY;
+// Resolves the API key for the current platform/build. Returns null (instead of
+// throwing) when the key is missing so a misconfiguration degrades to "purchases
+// unavailable" rather than crashing the whole app at startup.
+function getRevenueCatApiKey(): string | null {
+  if (__DEV__ || Platform.OS === "web") {
+    return REVENUECAT_TEST_API_KEY ?? null;
   }
-
   if (Platform.OS === "ios") {
-    if (!REVENUECAT_IOS_API_KEY) {
-      throw new Error("EXPO_PUBLIC_REVENUECAT_IOS_API_KEY is not set");
-    }
-    return REVENUECAT_IOS_API_KEY;
+    return REVENUECAT_IOS_API_KEY ?? null;
   }
-
   if (Platform.OS === "android") {
-    if (!REVENUECAT_ANDROID_API_KEY) {
-      throw new Error("EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY is not set");
-    }
-    return REVENUECAT_ANDROID_API_KEY;
+    return REVENUECAT_ANDROID_API_KEY ?? null;
   }
-
-  if (!REVENUECAT_TEST_API_KEY) {
-    throw new Error("EXPO_PUBLIC_REVENUECAT_TEST_API_KEY is not set");
-  }
-  return REVENUECAT_TEST_API_KEY;
+  return REVENUECAT_TEST_API_KEY ?? null;
 }
 
 export function initializeRevenueCat(): void {
   if (!isPurchasesSupported) return;
   const apiKey = getRevenueCatApiKey();
+  if (!apiKey) {
+    console.warn(
+      "RevenueCat API key is not set; in-app purchases are disabled for this build.",
+    );
+    return;
+  }
   Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
   Purchases.configure({ apiKey });
+  purchasesConfigured = true;
 }
 
 function isCancelledError(err: unknown): boolean {
@@ -118,7 +115,7 @@ function useRevenueCatContext() {
   // proactive sync; purchaseByProductId additionally enforces login as a hard
   // precondition before charging anything.
   useEffect(() => {
-    if (!isPurchasesSupported) return;
+    if (!isPurchasesSupported || !purchasesConfigured) return;
     if (isSignedIn && userId) {
       Purchases.logIn(userId).catch(() => {
         // Ignore here; the purchase flow re-runs logIn and fails hard if it
@@ -130,10 +127,10 @@ function useRevenueCatContext() {
   const offeringsQuery = useQuery<PurchasesOfferings | null>({
     queryKey: ["revenuecat", "offerings"],
     queryFn: async () => {
-      if (!isPurchasesSupported) return null;
+      if (!isPurchasesSupported || !purchasesConfigured) return null;
       return Purchases.getOfferings();
     },
-    enabled: isPurchasesSupported,
+    enabled: isPurchasesSupported && purchasesConfigured,
     staleTime: 300 * 1000,
   });
 
@@ -152,7 +149,7 @@ function useRevenueCatContext() {
   async function purchaseByProductId(
     productId: string,
   ): Promise<CoinPurchaseResult> {
-    if (!isPurchasesSupported) {
+    if (!isPurchasesSupported || !purchasesConfigured) {
       throw new PurchasesUnavailableError();
     }
 
