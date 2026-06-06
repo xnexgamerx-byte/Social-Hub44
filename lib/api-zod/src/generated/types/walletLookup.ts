@@ -6,8 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AuthMe {
+export interface WalletLookup {
   userId: string;
-  isAdmin: boolean;
-  isOwner: boolean;
+  publicId: string;
+  displayName: string;
+  coins: number;
+  vPoints: number;
 }

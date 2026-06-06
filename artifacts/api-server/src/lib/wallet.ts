@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   db,
   walletsTable,
@@ -21,12 +21,51 @@ export type TxType =
 
 export interface WalletView {
   userId: string;
+  publicId: string;
   coins: number;
   vPoints: number;
 }
 
 export function toWalletView(w: Wallet): WalletView {
-  return { userId: w.userId, coins: w.coins, vPoints: w.vPoints };
+  return {
+    userId: w.userId,
+    publicId: w.publicId ?? "",
+    coins: w.coins,
+    vPoints: w.vPoints,
+  };
+}
+
+/** Generate a random 8-digit public account id (10000000–99999999). */
+function generatePublicId(): string {
+  return String(Math.floor(10000000 + Math.random() * 90000000));
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err != null &&
+    (err as { code?: string }).code === "23505"
+  );
+}
+
+/**
+ * Assign a unique publicId to a wallet that does not have one yet (newly
+ * created rows, or rows from before publicId existed). Retries on the rare
+ * collision against the unique constraint.
+ */
+async function assignPublicId(userId: string): Promise<void> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      await db
+        .update(walletsTable)
+        .set({ publicId: generatePublicId() })
+        .where(and(eq(walletsTable.userId, userId), isNull(walletsTable.publicId)));
+      return;
+    } catch (err) {
+      if (isUniqueViolation(err) && attempt < 5) continue;
+      throw err;
+    }
+  }
 }
 
 /**
@@ -46,16 +85,43 @@ export const WELCOME_VPOINTS = 0;
 export async function ensureWallet(userId: string): Promise<Wallet> {
   await db
     .insert(walletsTable)
-    .values({ userId, coins: WELCOME_COINS, vPoints: WELCOME_VPOINTS })
+    .values({
+      userId,
+      publicId: generatePublicId(),
+      coins: WELCOME_COINS,
+      vPoints: WELCOME_VPOINTS,
+    })
     .onConflictDoNothing({ target: walletsTable.userId });
 
-  const [wallet] = await db
+  let [wallet] = await db
     .select()
     .from(walletsTable)
     .where(eq(walletsTable.userId, userId))
     .limit(1);
 
+  // Backfill a publicId for legacy rows created before the column existed.
+  if (wallet && !wallet.publicId) {
+    await assignPublicId(userId);
+    [wallet] = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.userId, userId))
+      .limit(1);
+  }
+
   return wallet;
+}
+
+/** Look up a wallet by its public account id (null when not found). */
+export async function getWalletByPublicId(
+  publicId: string,
+): Promise<Wallet | null> {
+  const [wallet] = await db
+    .select()
+    .from(walletsTable)
+    .where(eq(walletsTable.publicId, publicId))
+    .limit(1);
+  return wallet ?? null;
 }
 
 export class InsufficientBalanceError extends Error {

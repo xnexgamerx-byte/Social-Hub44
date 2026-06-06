@@ -91,6 +91,42 @@ export async function requireAdmin(
   next();
 }
 
+/** True when the Clerk user id maps to a bootstrap owner email (ADMIN_EMAILS). */
+export async function isOwnerUserId(userId: string): Promise<boolean> {
+  try {
+    const email = await getUserEmail(userId);
+    if (email == null) return false;
+    return adminEmails().has(email);
+  } catch (err) {
+    logger.error({ err, userId }, "Failed to resolve owner status");
+    return false;
+  }
+}
+
+/**
+ * Reject requests that are not from a bootstrap owner (ADMIN_EMAILS). Stronger
+ * than requireAdmin: in-app granted admins are NOT owners. Used for sensitive
+ * actions like directly crediting a user's wallet.
+ */
+export async function requireOwner(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const auth = getAuth(req);
+  const userId = auth?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "يجب تسجيل الدخول" });
+    return;
+  }
+  if (!(await isOwnerUserId(userId))) {
+    res.status(403).json({ error: "هذه الميزة مخصصة للمالك فقط" });
+    return;
+  }
+  (req as AuthedRequest).userId = userId;
+  next();
+}
+
 /**
  * Verify a Clerk session JWT (used for the Socket.IO handshake, which has no
  * Express request to run middleware on). Returns the user id or null.

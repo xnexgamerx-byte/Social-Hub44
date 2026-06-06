@@ -34,6 +34,7 @@ const room = (suffix: string): string => `${TAG}_${suffix}`;
 const tokenFor = (userId: string): string => `valid:${userId}`;
 
 interface MicState {
+  roomId: string;
   seats: Array<{ userId: string; muted: boolean }>;
 }
 

@@ -29,6 +29,8 @@ import {
   useUpdateDailyTask,
   useUpdateStoreItem,
   useUpdateVipTier,
+  useGrantCoins,
+  lookupWalletByPublicId,
   type Admin,
   type AdminAuditEvent,
   type CoinPackage,
@@ -36,6 +38,8 @@ import {
   type StoreItem,
   type VipFeature,
   type VipTier,
+  type WalletLookup,
+  GrantCoinsInputCurrency,
 } from "@workspace/api-client-react";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -110,7 +114,7 @@ const ICON_OPTIONS: { name: string; label: string }[] = [
   { name: "eye", label: "زيارة" },
 ];
 
-type Tab = "store" | "packages" | "tasks" | "tiers" | "features" | "notifications" | "admins";
+type Tab = "store" | "packages" | "tasks" | "tiers" | "features" | "notifications" | "admins" | "coins";
 type ItemType = "frame" | "entrance" | "gift" | "background" | "symbol" | "recovery" | "other";
 type AdminRole = "owner" | "admin" | "moderator" | "editor";
 type NotifTarget = "all" | "vip" | "admins";
@@ -145,7 +149,11 @@ export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 20 : insets.top;
   const [tab, setTab] = useState<Tab>("store");
-  const { isAdmin, isAdminLoading } = useApp();
+  const { isAdmin, isAdminLoading, isOwner } = useApp();
+
+  const tabs = isOwner
+    ? [...TAB_ITEMS, { k: "coins" as Tab, l: "إرسال عملات", icon: "send" }]
+    : TAB_ITEMS;
 
   useEffect(() => {
     if (!isAdminLoading && !isAdmin) router.replace("/(tabs)");
@@ -179,7 +187,7 @@ export default function AdminScreen() {
         style={S.tabBar}
         contentContainerStyle={S.tabBarContent}
       >
-        {TAB_ITEMS.map((t) => {
+        {tabs.map((t) => {
           const on = tab === t.k;
           return (
             <TouchableOpacity
@@ -202,6 +210,7 @@ export default function AdminScreen() {
       {tab === "features" && <FeaturesAdmin />}
       {tab === "notifications" && <NotificationsAdmin />}
       {tab === "admins" && <AdminsAdmin />}
+      {tab === "coins" && isOwner && <CoinsAdmin />}
     </View>
   );
 }
@@ -932,6 +941,122 @@ function AdminsAdmin() {
   );
 }
 
+function CoinsAdmin() {
+  const insets = useSafeAreaInsets();
+  const [publicId, setPublicId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState<typeof GrantCoinsInputCurrency[keyof typeof GrantCoinsInputCurrency]>(
+    GrantCoinsInputCurrency.coins,
+  );
+  const [lookup, setLookup] = useState<WalletLookup | null>(null);
+  const [looking, setLooking] = useState(false);
+  const grantM = useGrantCoins();
+
+  const doLookup = async () => {
+    const id = publicId.trim();
+    if (!id) { Alert.alert("خطأ", "أدخل معرّف المستخدم"); return; }
+    setLooking(true);
+    setLookup(null);
+    try {
+      const res = await lookupWalletByPublicId(id);
+      setLookup(res);
+    } catch (err: unknown) {
+      Alert.alert("غير موجود", (err as Error)?.message ?? "لم يتم العثور على المستخدم");
+    } finally {
+      setLooking(false);
+    }
+  };
+
+  const send = () => {
+    const id = publicId.trim();
+    const amt = Number(amount);
+    if (!id) { Alert.alert("خطأ", "أدخل معرّف المستخدم"); return; }
+    if (!amount || Number.isNaN(amt) || amt <= 0) { Alert.alert("خطأ", "أدخل مبلغاً صالحاً"); return; }
+    const label = currency === GrantCoinsInputCurrency.coins ? "عملة" : "ماسة";
+    Alert.alert("تأكيد الإرسال", `إرسال ${amt.toLocaleString()} ${label} إلى ${id}؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "إرسال",
+        onPress: () => grantM.mutate(
+          { data: { publicId: id, amount: amt, currency } },
+          {
+            onSuccess: (res) => {
+              setLookup(res);
+              setAmount("");
+              Alert.alert("تم", `الرصيد الجديد: ${res.coins.toLocaleString()} عملة · ${res.vPoints.toLocaleString()} ماسة`);
+            },
+            onError: (err: unknown) => Alert.alert("تعذّر الإرسال", (err as Error)?.message ?? "حدث خطأ"),
+          },
+        ),
+      },
+    ]);
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 20 : insets.bottom) + 40 }} showsVerticalScrollIndicator={false}>
+      <SectionCard title="إرسال عملات إلى مستخدم">
+        <View style={S.infoBox}>
+          <Ionicons name="information-circle" size={15} color={GOLD} />
+          <Text style={S.infoText}>أدخل المعرّف العام للمستخدم لإرسال العملات أو الماسات مباشرةً.</Text>
+        </View>
+
+        <Text style={S.fieldLabel}>معرّف المستخدم العام</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+          <TextInput
+            value={publicId}
+            onChangeText={setPublicId}
+            placeholder="12345678"
+            placeholderTextColor={MUTED}
+            keyboardType="numeric"
+            style={[S.inputDark, { flex: 1 }]}
+          />
+          <TouchableOpacity style={S.lookupBtn} onPress={doLookup} disabled={looking} activeOpacity={0.85}>
+            {looking ? <ActivityIndicator color="#fff" /> : <Ionicons name="search" size={18} color="#fff" />}
+          </TouchableOpacity>
+        </View>
+
+        {lookup && (
+          <View style={S.lookupCard}>
+            <View style={[S.listIcon, { backgroundColor: GOLD }]}>
+              <Ionicons name="person" size={18} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={S.listName}>{lookup.displayName}</Text>
+              <Text style={S.listMeta}>معرّف: {lookup.publicId} · {lookup.coins.toLocaleString()} عملة · {lookup.vPoints.toLocaleString()} ماسة</Text>
+            </View>
+          </View>
+        )}
+
+        <Text style={S.fieldLabel}>نوع العملة</Text>
+        <View style={S.chipRow}>
+          <TouchableOpacity
+            onPress={() => setCurrency(GrantCoinsInputCurrency.coins)}
+            style={[S.roleChip, currency === GrantCoinsInputCurrency.coins && { backgroundColor: GOLD + "22", borderColor: GOLD }]}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="logo-bitcoin" size={14} color={currency === GrantCoinsInputCurrency.coins ? GOLD : MUTED} />
+            <Text style={[S.chipText, currency === GrantCoinsInputCurrency.coins && { color: GOLD }]}>عملات</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setCurrency(GrantCoinsInputCurrency.V)}
+            style={[S.roleChip, currency === GrantCoinsInputCurrency.V && { backgroundColor: PURPLE + "22", borderColor: PURPLE }]}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="diamond" size={14} color={currency === GrantCoinsInputCurrency.V ? PURPLE : MUTED} />
+            <Text style={[S.chipText, currency === GrantCoinsInputCurrency.V && { color: PURPLE }]}>ماسات</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Field label="المبلغ" value={amount} onChange={setAmount} keyboard="numeric" placeholder="1000" />
+
+        <TouchableOpacity style={S.submitBtn} onPress={send} disabled={grantM.isPending} activeOpacity={0.85}>
+          {grantM.isPending ? <ActivityIndicator color="#fff" /> : <Text style={S.submitBtnText}>إرسال</Text>}
+        </TouchableOpacity>
+      </SectionCard>
+    </ScrollView>
+  );
+}
+
 function formatAuditTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -995,6 +1120,15 @@ const S = StyleSheet.create({
     alignItems: "center", marginTop: 4,
   },
   submitBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
+  lookupBtn: {
+    width: 50, borderRadius: 14, backgroundColor: PURPLE,
+    alignItems: "center", justifyContent: "center",
+  },
+  lookupCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderRadius: 14, padding: 12, marginBottom: 14,
+    backgroundColor: CARD2, borderWidth: 1, borderColor: BORDER,
+  },
   listHeader: { color: MUTED, fontSize: 12, fontWeight: "700", marginHorizontal: 16, marginBottom: 8, marginTop: 4 },
   listRow: {
     flexDirection: "row", alignItems: "center", gap: 12,

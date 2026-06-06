@@ -8,13 +8,23 @@ import {
   CreateAdminBody,
   DeleteAdminParams,
   ListAdminAuditResponse,
+  LookupWalletByPublicIdParams,
+  LookupWalletByPublicIdResponse,
+  GrantCoinsBody,
+  GrantCoinsResponse,
 } from "@workspace/api-zod";
 import {
   requireAdmin,
+  requireOwner,
   adminEmails,
   getUserEmail,
   type AuthedRequest,
 } from "../lib/authz";
+import {
+  getWalletByPublicId,
+  adjustWallet,
+  type Currency,
+} from "../lib/wallet";
 
 const router: IRouter = Router();
 
@@ -142,6 +152,102 @@ router.delete("/admins/:id", requireAdmin, async (req, res): Promise<void> => {
   });
   res.sendStatus(204);
 });
+
+/** Best-effort human-friendly name for a Clerk user id (falls back to "مستخدم"). */
+async function resolveDisplayName(userId: string): Promise<string> {
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const name =
+      user.fullName ||
+      user.username ||
+      [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+      user.emailAddresses?.[0]?.emailAddress ||
+      "";
+    return name || "مستخدم";
+  } catch {
+    return "مستخدم";
+  }
+}
+
+// Owner-only: look up an account by its public id so the owner can confirm the
+// recipient before sending coins.
+router.get(
+  "/admins/wallet-lookup/:publicId",
+  requireOwner,
+  async (req, res): Promise<void> => {
+    const params = LookupWalletByPublicIdParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const wallet = await getWalletByPublicId(params.data.publicId.trim());
+    if (!wallet) {
+      res.status(404).json({ error: "لا يوجد حساب بهذا المعرّف" });
+      return;
+    }
+    const displayName = await resolveDisplayName(wallet.userId);
+    res.json(
+      LookupWalletByPublicIdResponse.parse({
+        userId: wallet.userId,
+        publicId: wallet.publicId ?? "",
+        displayName,
+        coins: wallet.coins,
+        vPoints: wallet.vPoints,
+      }),
+    );
+  },
+);
+
+// Owner-only: directly credit (or debit) an account's balance by public id.
+router.post(
+  "/admins/grant-coins",
+  requireOwner,
+  async (req, res): Promise<void> => {
+    const body = GrantCoinsBody.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: body.error.message });
+      return;
+    }
+    const { publicId, amount, currency } = body.data;
+    if (!Number.isInteger(amount) || amount === 0) {
+      res.status(400).json({ error: "المبلغ غير صالح" });
+      return;
+    }
+
+    const wallet = await getWalletByPublicId(publicId.trim());
+    if (!wallet) {
+      res.status(404).json({ error: "لا يوجد حساب بهذا المعرّف" });
+      return;
+    }
+
+    const actorEmail = await getUserEmail(
+      (req as AuthedRequest).userId ?? "",
+    ).catch(() => null);
+
+    const updated = await adjustWallet({
+      userId: wallet.userId,
+      currency: currency as Currency,
+      amount,
+      type: "adjust",
+      description:
+        amount > 0
+          ? `إضافة من الإدارة${actorEmail ? ` (${actorEmail})` : ""}`
+          : `خصم من الإدارة${actorEmail ? ` (${actorEmail})` : ""}`,
+      refId: `owner-grant`,
+    });
+
+    const displayName = await resolveDisplayName(updated.userId);
+    res.json(
+      GrantCoinsResponse.parse({
+        userId: updated.userId,
+        publicId: updated.publicId ?? "",
+        displayName,
+        coins: updated.coins,
+        vPoints: updated.vPoints,
+      }),
+    );
+  },
+);
 
 router.get("/admins/audit", requireAdmin, async (_req, res): Promise<void> => {
   const rows = await db

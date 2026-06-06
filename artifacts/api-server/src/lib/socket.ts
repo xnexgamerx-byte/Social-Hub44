@@ -9,6 +9,14 @@ import {
 } from "@workspace/db";
 import { logger } from "./logger";
 import { joinGame, startGame, submitAnswer, leaveGame, markDisconnected } from "./gameSession";
+import {
+  joinLudo,
+  startLudo,
+  rollLudo,
+  moveLudo,
+  leaveLudo,
+  markLudoDisconnected,
+} from "./ludoSession";
 import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
 import { adjustWallet, InsufficientBalanceError } from "./wallet";
 import { verifySessionToken } from "./authz";
@@ -319,6 +327,52 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       gameUserId = null;
     });
 
+    let joinedLudo: string | null = null;
+    let ludoUserId: string | null = null;
+
+    socket.on("ludo:join", ({ gameId, userName, userAvatar }: GameJoinPayload) => {
+      const userId = authUserId;
+      if (!gameId) return;
+      joinedLudo = gameId;
+      ludoUserId = userId;
+      void socket.join(`ludo:${gameId}`);
+      joinLudo(io, socket, gameId, {
+        userId,
+        userName,
+        userAvatar: userAvatar ?? "",
+      });
+    });
+
+    socket.on("ludo:start", ({ gameId }: { gameId: string }) => {
+      const userId = authUserId;
+      if (!gameId) return;
+      startLudo(io, gameId, userId);
+    });
+
+    socket.on("ludo:roll", ({ gameId }: { gameId: string }) => {
+      const userId = authUserId;
+      if (!gameId) return;
+      rollLudo(io, gameId, userId);
+    });
+
+    socket.on(
+      "ludo:move",
+      ({ gameId, tokenIndex }: { gameId: string; tokenIndex: number }) => {
+        const userId = authUserId;
+        if (!gameId || typeof tokenIndex !== "number") return;
+        moveLudo(io, gameId, userId, tokenIndex);
+      },
+    );
+
+    socket.on("ludo:leave", ({ gameId }: { gameId: string }) => {
+      const userId = authUserId;
+      if (!gameId) return;
+      leaveLudo(io, gameId, userId);
+      void socket.leave(`ludo:${gameId}`);
+      joinedLudo = null;
+      ludoUserId = null;
+    });
+
     socket.on("disconnect", () => {
       if (joinedRoom) {
         if (voiceUserId) leaveMic(io, joinedRoom, voiceUserId);
@@ -327,6 +381,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       }
       if (joinedGame && gameUserId) {
         markDisconnected(io, joinedGame, gameUserId);
+      }
+      if (joinedLudo && ludoUserId) {
+        markLudoDisconnected(io, joinedLudo, ludoUserId);
       }
     });
   });

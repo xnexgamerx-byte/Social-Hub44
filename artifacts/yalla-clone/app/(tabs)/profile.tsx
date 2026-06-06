@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
+import { THEME_OPTIONS, useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
 
 const TOOLS = [
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useApp();
+  const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -107,6 +109,21 @@ export default function ProfileScreen() {
         </View>
         <Ionicons name="chevron-back" size={18} color={colors.mutedForeground} />
       </TouchableOpacity>
+
+      {/* Public ID */}
+      {!!user.publicId && (
+        <View style={[styles.idCard, { backgroundColor: colors.card }]}>
+          <View style={styles.idLeft}>
+            <Ionicons name="finger-print" size={18} color={colors.primary} />
+            <Text style={[styles.idValue, { color: colors.foreground }]}>
+              {user.publicId}
+            </Text>
+          </View>
+          <Text style={[styles.idLabel, { color: colors.mutedForeground }]}>
+            معرّفي
+          </Text>
+        </View>
+      )}
 
       {/* Stats */}
       <View style={styles.statsRow}>
@@ -208,6 +225,40 @@ export default function ProfileScreen() {
         ))}
       </View>
 
+      {/* Theme picker */}
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>المظهر</Text>
+      <View style={[styles.themeCard, { backgroundColor: colors.card }]}>
+        {THEME_OPTIONS.map((opt) => {
+          const selected = theme === opt.name;
+          return (
+            <TouchableOpacity
+              key={opt.name}
+              style={[
+                styles.themeRow,
+                { borderColor: selected ? colors.primary : "transparent" },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setTheme(opt.name)}
+            >
+              <View style={[styles.themeSwatch, { backgroundColor: opt.swatch }]} />
+              <View style={{ flex: 1, alignItems: "flex-end" }}>
+                <Text style={[styles.themeLabel, { color: colors.foreground }]}>
+                  {opt.label}
+                </Text>
+                <Text style={[styles.themeDesc, { color: colors.mutedForeground }]}>
+                  {opt.description}
+                </Text>
+              </View>
+              <Ionicons
+                name={selected ? "checkmark-circle" : "ellipse-outline"}
+                size={22}
+                color={selected ? colors.primary : colors.mutedForeground}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {/* Store entry */}
       <TouchableOpacity
         style={[styles.storeRow, { backgroundColor: colors.card }]}
@@ -262,6 +313,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   vipBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" as const },
+  idCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  idLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  idValue: { fontSize: 16, fontWeight: "800" as const, letterSpacing: 1 },
+  idLabel: { fontSize: 13, fontWeight: "600" as const },
   statsRow: {
     flexDirection: "row",
     marginHorizontal: 16,
@@ -323,6 +387,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   toolLabel: { fontSize: 12, fontWeight: "600" as const },
+  themeCard: {
+    marginHorizontal: 16,
+    borderRadius: 18,
+    padding: 8,
+    marginBottom: 20,
+  },
+  themeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  themeSwatch: { width: 28, height: 28, borderRadius: 14 },
+  themeLabel: { fontSize: 15, fontWeight: "700" as const },
+  themeDesc: { fontSize: 12, marginTop: 2, textAlign: "right" },
   storeRow: {
     flexDirection: "row",
     alignItems: "center",

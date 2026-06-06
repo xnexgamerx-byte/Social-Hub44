@@ -136,6 +136,62 @@ paths:
                 items:
                   $ref: "#/components/schemas/AdminAuditEvent"
 
+  /admins/wallet-lookup/{publicId}:
+    get:
+      operationId: lookupWalletByPublicId
+      tags: [auth]
+      summary: Owner-only — look up an account by its public id
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The matched account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletLookup"
+        "404":
+          description: No account with that id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admins/grant-coins:
+    post:
+      operationId: grantCoins
+      tags: [auth]
+      summary: Owner-only — send coins or diamonds to an account by public id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrantCoinsInput"
+      responses:
+        "200":
+          description: Updated recipient account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletLookup"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No account with that id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /store-items:
     get:
       operationId: listStoreItems
@@ -817,9 +873,12 @@ components:
           type: string
         isAdmin:
           type: boolean
+        isOwner:
+          type: boolean
       required:
         - userId
         - isAdmin
+        - isOwner
     Admin:
       type: object
       required:
@@ -856,6 +915,30 @@ components:
         targetEmail: { type: string }
         actorEmail: { type: string }
         createdAt: { type: string }
+    WalletLookup:
+      type: object
+      required:
+        - userId
+        - publicId
+        - displayName
+        - coins
+        - vPoints
+      properties:
+        userId: { type: string }
+        publicId: { type: string }
+        displayName: { type: string }
+        coins: { type: integer }
+        vPoints: { type: integer }
+    GrantCoinsInput:
+      type: object
+      required:
+        - publicId
+        - amount
+        - currency
+      properties:
+        publicId: { type: string, minLength: 1 }
+        amount: { type: integer }
+        currency: { type: string, enum: [coins, V] }
     Error:
       type: object
       properties:
@@ -1038,10 +1121,12 @@ components:
       type: object
       required:
         - userId
+        - publicId
         - coins
         - vPoints
       properties:
         userId: { type: string }
+        publicId: { type: string }
         coins: { type: integer }
         vPoints: { type: integer }
     WalletTransaction:

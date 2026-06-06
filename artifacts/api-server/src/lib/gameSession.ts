@@ -1,5 +1,5 @@
 import type { Server, Socket } from "socket.io";
-import { TRIVIA_QUESTIONS } from "./trivia";
+import { pickQuestions, type TriviaQuestion } from "./trivia";
 import { logger } from "./logger";
 
 const QUESTION_MS = 15000;
@@ -22,6 +22,7 @@ interface Session {
   gameId: string;
   phase: Phase;
   index: number;
+  questions: TriviaQuestion[];
   players: Map<string, Player>;
   answers: Map<string, { choice: number; at: number }>;
   questionEndsAt: number;
@@ -42,6 +43,7 @@ function getOrCreate(gameId: string): Session {
       gameId,
       phase: "lobby",
       index: 0,
+      questions: pickQuestions(),
       players: new Map(),
       answers: new Map(),
       questionEndsAt: 0,
@@ -64,7 +66,7 @@ function emitState(io: Server, s: Session) {
     gameId: s.gameId,
     phase: s.phase,
     index: s.index,
-    total: TRIVIA_QUESTIONS.length,
+    total: s.questions.length,
     players: leaderboard(s),
   });
 }
@@ -80,11 +82,11 @@ function runQuestion(io: Server, s: Session) {
   s.phase = "question";
   s.answers = new Map();
   s.questionEndsAt = Date.now() + QUESTION_MS;
-  const q = TRIVIA_QUESTIONS[s.index];
+  const q = s.questions[s.index];
   io.to(gameChannel(s.gameId)).emit("game:question", {
     gameId: s.gameId,
     index: s.index,
-    total: TRIVIA_QUESTIONS.length,
+    total: s.questions.length,
     question: q.question,
     choices: q.choices,
     endsAt: s.questionEndsAt,
@@ -95,7 +97,7 @@ function runQuestion(io: Server, s: Session) {
 }
 
 function endQuestion(io: Server, s: Session) {
-  const q = TRIVIA_QUESTIONS[s.index];
+  const q = s.questions[s.index];
   const gained: Record<string, number> = {};
   for (const [userId, ans] of s.answers) {
     const player = s.players.get(userId);
@@ -123,7 +125,7 @@ function endQuestion(io: Server, s: Session) {
 
 function advance(io: Server, s: Session) {
   s.index += 1;
-  if (s.index >= TRIVIA_QUESTIONS.length) {
+  if (s.index >= s.questions.length) {
     s.phase = "ended";
     io.to(gameChannel(s.gameId)).emit("game:end", {
       gameId: s.gameId,
@@ -157,11 +159,11 @@ export function joinGame(
   // If a round is already running, send the current question to the joining
   // socket ONLY — broadcasting to the whole room would reset everyone's state.
   if (s.phase === "question") {
-    const q = TRIVIA_QUESTIONS[s.index];
+    const q = s.questions[s.index];
     socket.emit("game:question", {
       gameId,
       index: s.index,
-      total: TRIVIA_QUESTIONS.length,
+      total: s.questions.length,
       question: q.question,
       choices: q.choices,
       endsAt: s.questionEndsAt,
@@ -176,6 +178,7 @@ export function startGame(io: Server, gameId: string): void {
   if (s.phase === "question" || s.phase === "reveal") return;
   for (const p of s.players.values()) p.score = 0;
   s.index = 0;
+  s.questions = pickQuestions();
   logger.info({ gameId, players: s.players.size }, "Trivia game started");
   runQuestion(io, s);
 }

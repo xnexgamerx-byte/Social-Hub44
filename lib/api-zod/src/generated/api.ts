@@ -23,7 +23,8 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetAuthMeResponse = zod.object({
   "userId": zod.string(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "isOwner": zod.boolean()
 })
 
 
@@ -74,6 +75,43 @@ export const ListAdminAuditResponseItem = zod.object({
   "createdAt": zod.string()
 })
 export const ListAdminAuditResponse = zod.array(ListAdminAuditResponseItem)
+
+
+/**
+ * @summary Owner-only — look up an account by its public id
+ */
+export const LookupWalletByPublicIdParams = zod.object({
+  "publicId": zod.coerce.string()
+})
+
+export const LookupWalletByPublicIdResponse = zod.object({
+  "userId": zod.string(),
+  "publicId": zod.string(),
+  "displayName": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
+
+
+/**
+ * @summary Owner-only — send coins or diamonds to an account by public id
+ */
+
+
+
+export const GrantCoinsBody = zod.object({
+  "publicId": zod.string().min(1),
+  "amount": zod.number(),
+  "currency": zod.enum(['coins', 'V'])
+})
+
+export const GrantCoinsResponse = zod.object({
+  "userId": zod.string(),
+  "publicId": zod.string(),
+  "displayName": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number()
+})
 
 
 /**
@@ -470,6 +508,7 @@ export const GetWalletParams = zod.object({
 
 export const GetWalletResponse = zod.object({
   "userId": zod.string(),
+  "publicId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()
 })
@@ -484,6 +523,7 @@ export const EnsureWalletParams = zod.object({
 
 export const EnsureWalletResponse = zod.object({
   "userId": zod.string(),
+  "publicId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()
 })
@@ -524,6 +564,7 @@ export const RechargeWalletBody = zod.object({
 
 export const RechargeWalletResponse = zod.object({
   "userId": zod.string(),
+  "publicId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()
 })
@@ -539,6 +580,7 @@ export const ReconcileRechargesParams = zod.object({
 
 export const ReconcileRechargesResponse = zod.object({
   "userId": zod.string(),
+  "publicId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()
 })
@@ -558,6 +600,7 @@ export const PurchaseItemBody = zod.object({
 export const PurchaseItemResponse = zod.object({
   "wallet": zod.object({
   "userId": zod.string(),
+  "publicId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()
 }),
@@ -583,6 +626,7 @@ export const ClaimTaskBody = zod.object({
 
 export const ClaimTaskResponse = zod.object({
   "userId": zod.string(),
+  "publicId": zod.string(),
   "coins": zod.number(),
   "vPoints": zod.number()
 })

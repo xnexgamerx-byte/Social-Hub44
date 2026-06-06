@@ -33,6 +33,7 @@ import type {
   DailyTaskUpdate,
   EquipInput,
   Error,
+  GrantCoinsInput,
   HealthStatus,
   PurchaseInput,
   PurchaseResult,
@@ -49,6 +50,7 @@ import type {
   VipTierInput,
   VipTierUpdate,
   Wallet,
+  WalletLookup,
   WalletTransaction
 } from './api.schemas';
 
@@ -516,6 +518,154 @@ export function useListAdminAudit<TData = Awaited<ReturnType<typeof listAdminAud
 
 
 
+
+export const getLookupWalletByPublicIdUrl = (publicId: string,) => {
+
+
+
+
+  return `/api/admins/wallet-lookup/${publicId}`
+}
+
+/**
+ * @summary Owner-only — look up an account by its public id
+ */
+export const lookupWalletByPublicId = async (publicId: string, options?: RequestInit): Promise<WalletLookup> => {
+
+  return customFetch<WalletLookup>(getLookupWalletByPublicIdUrl(publicId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLookupWalletByPublicIdQueryKey = (publicId: string,) => {
+    return [
+    `/api/admins/wallet-lookup/${publicId}`
+    ] as const;
+    }
+
+
+export const getLookupWalletByPublicIdQueryOptions = <TData = Awaited<ReturnType<typeof lookupWalletByPublicId>>, TError = ErrorType<Error>>(publicId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupWalletByPublicId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLookupWalletByPublicIdQueryKey(publicId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof lookupWalletByPublicId>>> = ({ signal }) => lookupWalletByPublicId(publicId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(publicId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof lookupWalletByPublicId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LookupWalletByPublicIdQueryResult = NonNullable<Awaited<ReturnType<typeof lookupWalletByPublicId>>>
+export type LookupWalletByPublicIdQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Owner-only — look up an account by its public id
+ */
+
+export function useLookupWalletByPublicId<TData = Awaited<ReturnType<typeof lookupWalletByPublicId>>, TError = ErrorType<Error>>(
+ publicId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupWalletByPublicId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLookupWalletByPublicIdQueryOptions(publicId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGrantCoinsUrl = () => {
+
+
+
+
+  return `/api/admins/grant-coins`
+}
+
+/**
+ * @summary Owner-only — send coins or diamonds to an account by public id
+ */
+export const grantCoins = async (grantCoinsInput: GrantCoinsInput, options?: RequestInit): Promise<WalletLookup> => {
+
+  return customFetch<WalletLookup>(getGrantCoinsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      grantCoinsInput,)
+  }
+);}
+
+
+
+
+export const getGrantCoinsMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantCoins>>, TError,{data: BodyType<GrantCoinsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof grantCoins>>, TError,{data: BodyType<GrantCoinsInput>}, TContext> => {
+
+const mutationKey = ['grantCoins'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof grantCoins>>, {data: BodyType<GrantCoinsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  grantCoins(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GrantCoinsMutationResult = NonNullable<Awaited<ReturnType<typeof grantCoins>>>
+    export type GrantCoinsMutationBody = BodyType<GrantCoinsInput>
+    export type GrantCoinsMutationError = ErrorType<Error>
+
+    /**
+ * @summary Owner-only — send coins or diamonds to an account by public id
+ */
+export const useGrantCoins = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantCoins>>, TError,{data: BodyType<GrantCoinsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof grantCoins>>,
+        TError,
+        {data: BodyType<GrantCoinsInput>},
+        TContext
+      > => {
+      return useMutation(getGrantCoinsMutationOptions(options));
+    }
 
 export const getListStoreItemsUrl = () => {
 

@@ -12,6 +12,7 @@ export interface HealthStatus {
 export interface AuthMe {
   userId: string;
   isAdmin: boolean;
+  isOwner: boolean;
 }
 
 export interface Admin {
@@ -34,6 +35,29 @@ export interface AdminAuditEvent {
   targetEmail: string;
   actorEmail: string;
   createdAt: string;
+}
+
+export interface WalletLookup {
+  userId: string;
+  publicId: string;
+  displayName: string;
+  coins: number;
+  vPoints: number;
+}
+
+export type GrantCoinsInputCurrency = typeof GrantCoinsInputCurrency[keyof typeof GrantCoinsInputCurrency];
+
+
+export const GrantCoinsInputCurrency = {
+  coins: 'coins',
+  V: 'V',
+} as const;
+
+export interface GrantCoinsInput {
+  /** @minLength 1 */
+  publicId: string;
+  amount: number;
+  currency: GrantCoinsInputCurrency;
 }
 
 export interface Error {
@@ -171,6 +195,7 @@ export interface DailyTaskUpdate {
 
 export interface Wallet {
   userId: string;
+  publicId: string;
   coins: number;
   vPoints: number;
 }

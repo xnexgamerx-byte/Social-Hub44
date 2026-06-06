@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useSignUp, useSSO } from "@clerk/expo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as AuthSession from "expo-auth-session";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,6 +30,9 @@ export default function SignUpScreen() {
 
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | null>(null);
+  const [age, setAge] = useState("");
   const [code, setCode] = useState("");
   const [pendingVerify, setPendingVerify] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -52,22 +56,51 @@ export default function SignUpScreen() {
 
   const handleSubmit = async () => {
     setFormError(null);
+    const ageNum = Number(age);
+    if (!username.trim()) {
+      setFormError("الرجاء إدخال اسم المستخدم.");
+      return;
+    }
+    if (!gender) {
+      setFormError("الرجاء اختيار الجنس.");
+      return;
+    }
+    if (!age || Number.isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
+      setFormError("الرجاء إدخال عمر صحيح (13 فأكثر).");
+      return;
+    }
     const { error } = await signUp.password({ emailAddress, password });
     if (error) {
       setFormError("تعذّر إنشاء الحساب. تحقّق من البيانات.");
       return;
     }
+    // Stash the profile details, scoped to this email so AppContext only ever
+    // applies them to the matching account once its session becomes active
+    // (the sign-up flow itself only sets credentials).
+    await AsyncStorage.setItem(
+      "pendingProfile",
+      JSON.stringify({
+        email: emailAddress.trim().toLowerCase(),
+        username: username.trim(),
+        gender,
+        age: ageNum,
+      }),
+    );
     await signUp.verifications.sendEmailCode();
     setPendingVerify(true);
   };
 
   const handleVerify = async () => {
     setFormError(null);
-    await signUp.verifications.verifyEmailCode({ code });
-    if (signUp.status === "complete") {
-      await signUp.finalize({ navigate: finishNavigate });
-    } else {
-      setFormError("رمز التحقق غير صحيح.");
+    try {
+      await signUp.verifications.verifyEmailCode({ code });
+      if (signUp.status === "complete") {
+        await signUp.finalize({ navigate: finishNavigate });
+      } else {
+        setFormError("رمز التحقق غير صحيح.");
+      }
+    } catch {
+      setFormError("تعذّر التحقق من الرمز. حاول مرة أخرى.");
     }
   };
 
@@ -226,6 +259,71 @@ export default function SignUpScreen() {
                     placeholderTextColor="rgba(200,180,255,0.45)"
                     value={password}
                     onChangeText={setPassword}
+                    textAlign="right"
+                  />
+
+                  <Text style={styles.label}>اسم المستخدم</Text>
+                  <TextInput
+                    style={styles.input}
+                    autoCapitalize="none"
+                    placeholder="username"
+                    placeholderTextColor="rgba(200,180,255,0.45)"
+                    value={username}
+                    onChangeText={setUsername}
+                    textAlign="right"
+                  />
+
+                  <Text style={styles.label}>الجنس</Text>
+                  <View style={styles.genderRow}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.genderBtn,
+                        gender === "male" && styles.genderBtnOn,
+                        pressed && styles.btnPressed,
+                      ]}
+                      onPress={() => setGender("male")}
+                    >
+                      <Ionicons
+                        name="male"
+                        size={18}
+                        color={gender === "male" ? "#fff" : "rgba(200,180,255,0.7)"}
+                      />
+                      <Text
+                        style={[styles.genderText, gender === "male" && styles.genderTextOn]}
+                      >
+                        ذكر
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.genderBtn,
+                        gender === "female" && styles.genderBtnOn,
+                        pressed && styles.btnPressed,
+                      ]}
+                      onPress={() => setGender("female")}
+                    >
+                      <Ionicons
+                        name="female"
+                        size={18}
+                        color={gender === "female" ? "#fff" : "rgba(200,180,255,0.7)"}
+                      />
+                      <Text
+                        style={[styles.genderText, gender === "female" && styles.genderTextOn]}
+                      >
+                        أنثى
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  <Text style={styles.label}>العمر</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    placeholder="18"
+                    placeholderTextColor="rgba(200,180,255,0.45)"
+                    value={age}
+                    onChangeText={setAge}
+                    maxLength={3}
                     textAlign="right"
                   />
 
@@ -430,6 +528,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: "rgba(255,255,255,0.06)",
   },
+
+  /* Gender selector */
+  genderRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  genderBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(180,140,255,0.4)",
+    borderRadius: 14,
+    paddingVertical: 13,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  genderBtnOn: { backgroundColor: "#8B5CF6", borderColor: "#8B5CF6" },
+  genderText: { color: "rgba(220,200,255,0.85)", fontSize: 15, fontWeight: "600" },
+  genderTextOn: { color: "#fff", fontWeight: "700" },
 
   /* Error */
   error: {

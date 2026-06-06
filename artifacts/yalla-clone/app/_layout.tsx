@@ -17,6 +17,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppContextProvider } from "@/context/AppContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { setSocketTokenGetter } from "@/lib/socket";
 import { RevenueCatProvider, initializeRevenueCat } from "@/lib/revenuecat";
 
@@ -44,6 +45,10 @@ function RootLayoutNav() {
       />
       <Stack.Screen
         name="game/[id]"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="ludo/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen name="profile-edit" options={{ headerShown: false, presentation: "card" }} />
@@ -111,15 +116,17 @@ export default function RootLayout() {
           <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
               <RevenueCatProvider>
-                <AppContextProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <KeyboardProvider>
-                      <AuthGate>
-                        <RootLayoutNav />
-                      </AuthGate>
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </AppContextProvider>
+                <ThemeProvider>
+                  <AppContextProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <KeyboardProvider>
+                        <AuthGate>
+                          <RootLayoutNav />
+                        </AuthGate>
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </AppContextProvider>
+                </ThemeProvider>
               </RevenueCatProvider>
             </QueryClientProvider>
           </ErrorBoundary>

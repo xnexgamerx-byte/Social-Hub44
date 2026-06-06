@@ -21,7 +21,11 @@ export function GameCard({ game }: { game: Game }) {
 
   const handlePlay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push(`/game/${game.id}`);
+    if (game.id === "ludo") {
+      router.push(`/ludo/${game.id}`);
+    } else {
+      router.push(`/game/${game.id}`);
+    }
   };
 
   return (

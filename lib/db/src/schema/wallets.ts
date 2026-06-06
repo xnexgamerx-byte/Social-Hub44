@@ -12,6 +12,9 @@ export const walletsTable = pgTable("wallets", {
   id: serial("id").primaryKey(),
   // keyed to the existing app user id
   userId: text("user_id").notNull().unique(),
+  // short, human-friendly public account id shown in the profile and used by
+  // the owner to send coins to a specific account. Unique 8-digit string.
+  publicId: text("public_id").unique(),
   // كوينزات (coins) balance
   coins: bigint("coins", { mode: "number" }).notNull().default(0),
   // نقاط / ماسات (vPoints / diamonds) balance

@@ -21,6 +21,7 @@ const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=3";
 
 export interface AppUser {
   id: string;
+  publicId: string;
   name: string;
   username: string;
   avatar: string;
@@ -48,6 +49,7 @@ interface LocalVip {
 interface AppContextValue {
   user: AppUser;
   isAdmin: boolean;
+  isOwner: boolean;
   isAdminLoading: boolean;
   walletReady: boolean;
   likedVideos: Set<string>;
@@ -69,6 +71,7 @@ interface AppContextValue {
 
 const EMPTY_USER: AppUser = {
   id: "",
+  publicId: "",
   name: "",
   username: "",
   avatar: FALLBACK_AVATAR,
@@ -88,6 +91,7 @@ const noopAsync = async (): Promise<ActionResult> => ({ ok: false });
 const AppContext = createContext<AppContextValue>({
   user: EMPTY_USER,
   isAdmin: false,
+  isOwner: false,
   isAdminLoading: true,
   walletReady: false,
   likedVideos: new Set(),
@@ -125,10 +129,65 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());
   const [walletReady, setWalletReady] = useState(false);
 
+  // Apply the username/gender/age captured during sign-up. The sign-up flow only
+  // sets credentials, so the details are stashed in AsyncStorage (scoped to the
+  // sign-up email) and written to the Clerk user once that exact account's
+  // session is active — never replayed onto a different account.
+  useEffect(() => {
+    if (!clerkUser) return;
+    let cancelled = false;
+    (async () => {
+      const raw = await AsyncStorage.getItem("pendingProfile");
+      if (!raw || cancelled) return;
+      let parsed: {
+        email?: string;
+        username?: string;
+        gender?: "male" | "female";
+        age?: number;
+      };
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        await AsyncStorage.removeItem("pendingProfile");
+        return;
+      }
+      // Only apply to the account the details were collected for.
+      const currentEmail = clerkUser.primaryEmailAddress?.emailAddress?.toLowerCase();
+      if (!parsed.email || !currentEmail || parsed.email !== currentEmail) return;
+
+      const { username, gender, age } = parsed;
+      const metadata = {
+        ...(clerkUser.unsafeMetadata ?? {}),
+        ...(gender ? { gender } : {}),
+        ...(typeof age === "number" ? { age } : {}),
+      };
+      try {
+        await clerkUser.update({
+          ...(username && !clerkUser.username ? { username } : {}),
+          unsafeMetadata: metadata,
+        });
+        await AsyncStorage.removeItem("pendingProfile");
+      } catch {
+        // The username may be taken; still persist gender/age so the details
+        // are not lost, and only clear once that succeeds.
+        try {
+          await clerkUser.update({ unsafeMetadata: metadata });
+          await AsyncStorage.removeItem("pendingProfile");
+        } catch {
+          // Transient failure — keep the blob so it can retry on next mount.
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clerkUser]);
+
   const authMeQ = useGetAuthMe({
     query: { queryKey: getGetAuthMeQueryKey(), enabled: !!isSignedIn },
   });
   const isAdmin = authMeQ.data?.isAdmin ?? false;
+  const isOwner = authMeQ.data?.isOwner ?? false;
   const isAdminLoading = !!isSignedIn && authMeQ.isLoading;
 
   // Hydrate device-local UI state (likes, joins, vip) and make sure the signed-in
@@ -221,6 +280,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     return {
       ...EMPTY_USER,
       id: userId ?? "",
+      publicId: walletQ.data?.publicId ?? "",
       name: displayName,
       username: handle,
       avatar: clerkUser?.imageUrl || FALLBACK_AVATAR,
@@ -326,6 +386,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       value={{
         user,
         isAdmin,
+        isOwner,
         isAdminLoading,
         walletReady: walletReady && walletQ.isSuccess,
         likedVideos,

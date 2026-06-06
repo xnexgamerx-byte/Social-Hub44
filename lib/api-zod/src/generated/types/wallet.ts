@@ -8,6 +8,7 @@
 
 export interface Wallet {
   userId: string;
+  publicId: string;
   coins: number;
   vPoints: number;
 }
