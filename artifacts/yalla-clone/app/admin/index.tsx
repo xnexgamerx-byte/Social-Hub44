@@ -438,7 +438,7 @@ function StoreAdmin() {
       </SectionCard>
 
       <Text style={S.listHeader}>العناصر الحالية</Text>
-      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : (data ?? []).map((item) => (
+      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : ((data ?? []) as StoreItem[]).map((item) => (
         <View key={item.id} style={[S.listRow, editingId === item.id && S.listRowSelected]}>
           <View style={[S.listIcon, { backgroundColor: item.color }]}>
             <Ionicons name={(item.icon as never) || "gift"} size={18} color="#fff" />
@@ -537,7 +537,7 @@ function CoinPackagesAdmin() {
       </SectionCard>
 
       <Text style={S.listHeader}>الباقات الحالية</Text>
-      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : (data ?? []).map((p) => (
+      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : ((data ?? []) as CoinPackage[]).map((p) => (
         <View key={p.id} style={[S.listRow, editingId === p.id && S.listRowSelected]}>
           <View style={[S.listIcon, { backgroundColor: p.color }]}>
             <Ionicons name={(p.icon as never) || "logo-bitcoin"} size={18} color="#fff" />
@@ -607,7 +607,7 @@ function DailyTasksAdmin() {
       </SectionCard>
 
       <Text style={S.listHeader}>المهام الحالية</Text>
-      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : (data ?? []).map((t) => (
+      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : ((data ?? []) as DailyTask[]).map((t) => (
         <View key={t.id} style={[S.listRow, editingId === t.id && S.listRowSelected]}>
           <View style={[S.listIcon, { backgroundColor: t.color }]}>
             <Ionicons name={(t.icon as never) || "checkbox"} size={18} color="#fff" />
@@ -630,7 +630,7 @@ function TiersAdmin() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery(getListVipTiersQueryOptions());
   const updateM = useUpdateVipTier({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListVipTiersQueryKey() }) } });
-  const tiers = (data ?? []).slice().sort((a, b) => a.type !== b.type ? (a.type === "vip" ? -1 : 1) : a.level - b.level);
+  const tiers = ((data ?? []) as VipTier[]).slice().sort((a, b) => a.type !== b.type ? (a.type === "vip" ? -1 : 1) : a.level - b.level);
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 20 : insets.bottom) + 40 }} showsVerticalScrollIndicator={false}>
@@ -706,7 +706,7 @@ function FeaturesAdmin() {
       </SectionCard>
 
       <Text style={S.listHeader}>المميزات الحالية</Text>
-      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : (data ?? []).map((f) => (
+      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : ((data ?? []) as VipFeature[]).map((f) => (
         <View key={f.id} style={S.listRow}>
           <View style={[S.listIcon, { backgroundColor: PURPLE }]}>
             <Ionicons name={(f.icon as never) || "star"} size={18} color="#fff" />
@@ -844,13 +844,13 @@ function AdminsAdmin() {
   const add = () => {
     const e = email.trim().toLowerCase();
     if (!e.includes("@") || e.length < 3) { Alert.alert("خطأ", "أدخل بريداً إلكترونياً صالحاً"); return; }
-    createM.mutate({ data: { email: e } }, { onSuccess: () => setEmail(""), onError: (err) => Alert.alert("تعذّر الإضافة", (err as Error)?.message ?? "حدث خطأ") });
+    createM.mutate({ data: { email: e } }, { onSuccess: () => setEmail(""), onError: (err: unknown) => Alert.alert("تعذّر الإضافة", (err as Error)?.message ?? "حدث خطأ") });
   };
 
   const confirmDelete = (a: Admin) => {
     Alert.alert("إزالة مشرف", `إزالة صلاحية "${a.email}"؟`, [
       { text: "إلغاء", style: "cancel" },
-      { text: "إزالة", style: "destructive", onPress: () => deleteM.mutate({ id: a.id }, { onError: (err) => Alert.alert("تعذّرت الإزالة", (err as Error)?.message ?? "حدث خطأ") }) },
+      { text: "إزالة", style: "destructive", onPress: () => deleteM.mutate({ id: a.id }, { onError: (err: unknown) => Alert.alert("تعذّرت الإزالة", (err as Error)?.message ?? "حدث خطأ") }) },
     ]);
   };
 
@@ -891,7 +891,7 @@ function AdminsAdmin() {
       </SectionCard>
 
       <Text style={S.listHeader}>المشرفون الحاليون</Text>
-      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : (data ?? []).map((a) => {
+      {isLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} /> : ((data ?? []) as Admin[]).map((a) => {
         const displayRole = a.removable ? ADMIN_ROLES.find(r => r.k === "admin") : ADMIN_ROLES.find(r => r.k === "owner");
         return (
           <View key={`${a.source}-${a.id}`} style={S.listRow}>
@@ -912,9 +912,9 @@ function AdminsAdmin() {
       })}
 
       <Text style={[S.listHeader, { marginTop: 8 }]}>سجل التغييرات</Text>
-      {auditLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 12 }} /> : (audit ?? []).length === 0 ? (
+      {auditLoading ? <ActivityIndicator color={PURPLE} style={{ marginTop: 12 }} /> : ((audit ?? []) as AdminAuditEvent[]).length === 0 ? (
         <Text style={[S.listMeta, { textAlign: "center", paddingVertical: 20 }]}>لا يوجد سجل بعد.</Text>
-      ) : (audit ?? []).map((ev: AdminAuditEvent) => {
+      ) : ((audit ?? []) as AdminAuditEvent[]).map((ev) => {
         const granted = ev.action === "grant";
         return (
           <View key={ev.id} style={S.listRow}>
