@@ -128,15 +128,15 @@ export default function ProfileScreen() {
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.stat}>
-          <Text style={[styles.statValue, { color: colors.foreground }]}>{user.following.toLocaleString()}</Text>
+          <Text style={[styles.statValue, { color: colors.foreground }]}>{String(user.following)}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>متابَع</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={[styles.statValue, { color: colors.foreground }]}>{user.followers.toLocaleString()}</Text>
+          <Text style={[styles.statValue, { color: colors.foreground }]}>{String(user.followers)}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>متابع</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={[styles.statValue, { color: colors.foreground }]}>{user.coins.toLocaleString()}</Text>
+          <Text style={[styles.statValue, { color: colors.foreground }]}>{String(user.coins)}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>عملات</Text>
         </View>
       </View>
@@ -153,7 +153,7 @@ export default function ProfileScreen() {
             <Ionicons name="logo-bitcoin" size={26} color="#F5C242" />
             <View>
               <Text style={styles.rechargeTitle}>شحن كوينزات</Text>
-              <Text style={styles.rechargeSub}>رصيدك: {user.coins.toLocaleString()} كوينز</Text>
+              <Text style={styles.rechargeSub}>رصيدك: {String(user.coins)} كوينز</Text>
             </View>
           </View>
           <View style={styles.rechargeBtn}>

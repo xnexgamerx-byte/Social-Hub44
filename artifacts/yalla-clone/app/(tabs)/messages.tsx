@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     borderRadius: 6.5,
     backgroundColor: "#22C55E",
     borderWidth: 2,
-    borderColor: "#0D0320",
+    borderColor: "#fff",
   },
   convTop: {
     flexDirection: "row",

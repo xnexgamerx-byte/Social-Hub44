@@ -67,11 +67,11 @@ function UserRow({ user }: { user: NearbyUser }) {
       </View>
 
       <TouchableOpacity
-        style={[styles.chatBtn, { backgroundColor: colors.secondary }]}
+        style={[styles.chatBtn, { backgroundColor: colors.primary }]}
         onPress={handleChat}
         activeOpacity={0.8}
       >
-        <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+        <Ionicons name="chatbubble-ellipses" size={18} color={colors.primaryForeground} />
       </TouchableOpacity>
     </View>
   );
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: 6.5,
     backgroundColor: "#22C55E",
     borderWidth: 2,
-    borderColor: "#0D0320",
+    borderColor: "#fff",
   },
   userInfo: { flex: 1, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },

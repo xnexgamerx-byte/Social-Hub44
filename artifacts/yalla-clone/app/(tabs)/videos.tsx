@@ -57,8 +57,8 @@ function PostCard({ post }: { post: Post }) {
             </View>
           </View>
         </View>
-        <TouchableOpacity style={[styles.chatBtn, { backgroundColor: colors.secondary }]}>
-          <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+        <TouchableOpacity style={[styles.chatBtn, { backgroundColor: colors.primary }]}>
+          <Ionicons name="chatbubble-ellipses" size={18} color={colors.primaryForeground} />
         </TouchableOpacity>
       </View>
 
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     borderRadius: 5.5,
     backgroundColor: "#22C55E",
     borderWidth: 2,
-    borderColor: "#0D0320",
+    borderColor: "#fff",
   },
   postUserInfo: { gap: 4 },
   postNameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
