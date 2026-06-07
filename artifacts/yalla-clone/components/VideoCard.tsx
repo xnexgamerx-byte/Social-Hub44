@@ -1,9 +1,22 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ImageStyle } from "react-native";
+import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
-import * as Haptics from "expo-haptics";
+
+function Thumbnail({ uri, style }: { uri: string; style: StyleProp<ImageStyle> }) {
+  const colors = useColors();
+  const [error, setError] = useState(false);
+  if (error || !uri) {
+    return (
+      <View style={[style, { backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }]}>
+        <Ionicons name="image-outline" size={32} color={colors.mutedForeground} />
+      </View>
+    );
+  }
+  return <Image source={{ uri }} style={style} resizeMode="cover" onError={() => setError(true)} />;
+}
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
@@ -33,10 +46,9 @@ export function VideoCard({ video }: { video: Video }) {
   return (
     <View style={[styles.card, { width: CARD_WIDTH }]}>
       <View style={styles.thumbnailContainer}>
-        <Image
-          source={{ uri: video.thumbnail }}
+        <Thumbnail
+          uri={video.thumbnail}
           style={[styles.thumbnail, { backgroundColor: colors.muted }]}
-          resizeMode="cover"
         />
         <View style={styles.duration}>
           <Text style={styles.durationText}>{video.duration}</Text>
@@ -83,11 +95,7 @@ export function VideoCardFull({ video }: { video: Video }) {
 
   return (
     <View style={{ width, height: SCREEN_HEIGHT, backgroundColor: "#000" }}>
-      <Image
-        source={{ uri: video.thumbnail }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
+      <Thumbnail uri={video.thumbnail} style={StyleSheet.absoluteFill} />
       <View style={styles.fullOverlay}>
         <View style={styles.fullActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.8}>

@@ -20,6 +20,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useApp } from "@/context/AppContext";
 
 const BG = "#2A1A12";
@@ -110,7 +111,9 @@ export default function VipScreen() {
           style={styles.hero}
         >
           <View style={styles.heroTop}>
-            <Image source={{ uri: user.avatar }} style={styles.heroAvatar} />
+            <View style={[styles.heroAvatar, { alignItems: "center", justifyContent: "center", overflow: "hidden" }]}>
+              <UserAvatar uri={user.avatar} name={user.name} size={52} />
+            </View>
             <View style={{ flex: 1, alignItems: "flex-end" }}>
               <Text style={styles.heroName}>{user.name}</Text>
               <View style={styles.heroBadge}>

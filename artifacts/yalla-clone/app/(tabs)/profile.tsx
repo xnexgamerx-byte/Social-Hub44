@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useApp } from "@/context/AppContext";
 import { THEME_OPTIONS, useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
@@ -83,7 +84,7 @@ export default function ProfileScreen() {
         onPress={() => router.push("/profile-edit")}
       >
         <View style={[styles.avatarWrapper, { borderColor: colors.primary }]}>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          <UserAvatar uri={user.avatar} name={user.name} size={65} />
         </View>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
           <Text style={[styles.name, { color: colors.foreground }]}>{user.name}</Text>
