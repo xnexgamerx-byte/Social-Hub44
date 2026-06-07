@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export interface Room {
   id: string;
@@ -45,10 +46,7 @@ export function RoomCard({ room }: { room: Room }) {
       onPress={() => router.push(`/room/${room.id}`)}
       activeOpacity={0.88}
     >
-      <Image
-        source={{ uri: room.hostAvatar }}
-        style={[styles.avatar, { backgroundColor: colors.muted }]}
-      />
+      <UserAvatar uri={room.hostAvatar} name={room.hostName} size={64} />
       <View style={styles.body}>
         <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
           {room.name}
@@ -81,11 +79,6 @@ const styles = StyleSheet.create({
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(180,140,255,0.15)",
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
   },
   body: {
     flex: 1,

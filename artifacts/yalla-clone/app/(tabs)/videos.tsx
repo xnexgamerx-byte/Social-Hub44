@@ -8,7 +8,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ImageErrorEventData,
+  NativeSyntheticEvent,
 } from "react-native";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { POSTS, type Post } from "@/data/mockData";
 import { useColors } from "@/hooks/useColors";
@@ -24,6 +27,26 @@ const HOT_TOPICS = [
   "سفر",
 ];
 
+function PostImage({ uri }: { uri: string }) {
+  const colors = useColors();
+  const [error, setError] = useState(false);
+  if (error) {
+    return (
+      <View style={[styles.postImageSingle, { backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }]}>
+        <Ionicons name="image-outline" size={40} color={colors.mutedForeground} />
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.postImageSingle}
+      resizeMode="cover"
+      onError={() => setError(true)}
+    />
+  );
+}
+
 function PostCard({ post }: { post: Post }) {
   const colors = useColors();
   const [liked, setLiked] = useState(false);
@@ -38,8 +61,7 @@ function PostCard({ post }: { post: Post }) {
       <View style={styles.postHeader}>
         <View style={styles.postUser}>
           <View style={styles.postAvatarContainer}>
-            <Image source={{ uri: post.avatar }} style={styles.postAvatar} />
-            {post.isOnline && <View style={styles.postOnlineDot} />}
+            <UserAvatar uri={post.avatar} name={post.user} size={42} online={post.isOnline} />
           </View>
           <View style={styles.postUserInfo}>
             <View style={styles.postNameRow}>
@@ -63,15 +85,11 @@ function PostCard({ post }: { post: Post }) {
       </View>
 
       {post.images.length === 1 ? (
-        <Image
-          source={{ uri: post.images[0] }}
-          style={styles.postImageSingle}
-          resizeMode="cover"
-        />
+        <PostImage uri={post.images[0]} />
       ) : (
         <View style={styles.postImageGrid}>
           {post.images.map((img, i) => (
-            <Image key={i} source={{ uri: img }} style={styles.postImageHalf} resizeMode="cover" />
+            <PostImage key={i} uri={img} />
           ))}
         </View>
       )}

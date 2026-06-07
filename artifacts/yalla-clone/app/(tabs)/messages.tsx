@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   FlatList,
-  Image,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 
@@ -73,8 +73,7 @@ export default function MessagesScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.convRow} activeOpacity={0.7}>
             <View style={styles.avatarWrap}>
-              <Image source={{ uri: item.avatar }} style={styles.avatar} />
-              {item.online && <View style={styles.onlineDot} />}
+              <UserAvatar uri={item.avatar} name={item.name} size={54} online={item.online} />
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.convTop}>

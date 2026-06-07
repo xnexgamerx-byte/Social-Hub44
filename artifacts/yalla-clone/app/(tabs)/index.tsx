@@ -2,7 +2,6 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   FlatList,
-  Image,
   Platform,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NEARBY_USERS, type NearbyUser } from "@/data/mockData";
 import { useColors } from "@/hooks/useColors";
+import { UserAvatar } from "@/components/UserAvatar";
 import * as Haptics from "expo-haptics";
 
 const TABS = ["قريبون", "مستخدمون جدد"];
@@ -42,8 +42,7 @@ function UserRow({ user }: { user: NearbyUser }) {
   return (
     <View style={[styles.userRow, { backgroundColor: colors.card }]}>
       <View style={styles.avatarContainer}>
-        <Image source={{ uri: user.avatar }} style={styles.avatar} />
-        {user.isOnline && <View style={styles.onlineDot} />}
+        <UserAvatar uri={user.avatar} name={user.name} size={54} online={user.isOnline} />
       </View>
 
       <View style={styles.userInfo}>
