@@ -40,6 +40,7 @@ description: Architecture and key decisions for the نبضة mobile app (chat ro
 ## Gotchas (durable)
 
 - [Metro stale resolution after codegen](metro-stale-codegen-cache.md) — Metro caches "module not found" for freshly codegen'd files and persists it across workflow restarts.
+- **Root-level auth redirect must wait for the navigator to mount.** `AuthGate` in `app/_layout.tsx` calls `router.replace("/(tabs)")`/`"/(auth)/sign-in"` from a `useEffect`; if it fires before the root navigator mounts, expo-router throws "The action 'REPLACE' ... was not handled by any navigator. Do you have a route named '(tabs)'?". Gate the effect on `useRootNavigationState()?.key` being truthy (and include it in the dep array). **How to apply:** any programmatic navigation from a root layout effect needs this guard.
 - **Seed must be idempotent per item-type, not all-or-nothing.** `seed.ts` originally guarded store_items insert on `count===0`; once frames were seeded, later-added gift/entrance types never inserted. Fix: backfill only itemTypes not already present (`selectDistinct(itemType)` → insert missing). Same trap applies any time you add new seed rows to an already-populated table.
 
 **Why:** Social entertainment apps need dark, rich palettes; AsyncStorage avoids backend complexity for MVP.

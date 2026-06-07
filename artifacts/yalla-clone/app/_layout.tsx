@@ -9,7 +9,7 @@ import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -69,6 +69,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navState = useRootNavigationState();
 
   useEffect(() => {
     setAuthTokenGetter(() => getToken());
@@ -76,14 +77,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [getToken]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    // Wait until the root navigator has mounted (navState.key exists) before
+    // navigating, otherwise expo-router has no route tree to handle the action
+    // and throws "REPLACE ... was not handled by any navigator".
+    if (!navState?.key || !isLoaded) return;
     const inAuthGroup = segments[0] === "(auth)";
     if (!isSignedIn && !inAuthGroup) {
       router.replace("/(auth)/sign-in");
     } else if (isSignedIn && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isLoaded, isSignedIn, segments, router]);
+  }, [navState?.key, isLoaded, isSignedIn, segments, router]);
 
   if (!isLoaded) return null;
   return <>{children}</>;
