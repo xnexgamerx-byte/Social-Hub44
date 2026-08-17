@@ -24,6 +24,8 @@ tags:
     description: Voice/text chat room management
   - name: dm
     description: Private direct-message conversations
+  - name: social
+    description: Follow relationships and social stats
 paths:
   /healthz:
     get:
@@ -858,6 +860,85 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /follow:
+    post:
+      operationId: followUser
+      tags: [social]
+      summary: Follow a user (idempotent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FollowInput"
+      responses:
+        "200":
+          description: Updated stats of the followed user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowStats"
+        "400":
+          description: Invalid target
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /follow/{targetUserId}:
+    delete:
+      operationId: unfollowUser
+      tags: [social]
+      summary: Unfollow a user (idempotent)
+      parameters:
+        - name: targetUserId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated stats of the unfollowed user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowStats"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /follow/stats/{userId}:
+    get:
+      operationId: getFollowStats
+      tags: [social]
+      summary: Follower/following counts for a user, plus whether the caller follows them
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Follow stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowStats"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /wallet/{userId}:
     get:
       operationId: getWallet
@@ -1521,6 +1602,8 @@ components:
         - vPoints
         - vipLevel
         - vipType
+        - xp
+        - level
       properties:
         userId: { type: string }
         publicId: { type: string }
@@ -1528,6 +1611,26 @@ components:
         vPoints: { type: integer }
         vipLevel: { type: integer }
         vipType: { type: string }
+        xp: { type: integer }
+        level: { type: integer }
+    FollowStats:
+      type: object
+      required:
+        - userId
+        - followers
+        - following
+        - isFollowedByMe
+      properties:
+        userId: { type: string }
+        followers: { type: integer }
+        following: { type: integer }
+        isFollowedByMe: { type: boolean }
+    FollowInput:
+      type: object
+      required:
+        - targetUserId
+      properties:
+        targetUserId: { type: string, minLength: 1 }
     ActivateVipInput:
       type: object
       required:

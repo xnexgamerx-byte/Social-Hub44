@@ -288,6 +288,20 @@ export interface Wallet {
   vPoints: number;
   vipLevel: number;
   vipType: string;
+  xp: number;
+  level: number;
+}
+
+export interface FollowStats {
+  userId: string;
+  followers: number;
+  following: number;
+  isFollowedByMe: boolean;
+}
+
+export interface FollowInput {
+  /** @minLength 1 */
+  targetUserId: string;
 }
 
 export type ActivateVipInputType = typeof ActivateVipInputType[keyof typeof ActivateVipInputType];

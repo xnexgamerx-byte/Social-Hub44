@@ -15,10 +15,14 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  getGetFollowStatsQueryKey,
+  getGetFollowStatsQueryOptions,
   getListConversationsQueryKey,
   getListDmMessagesQueryKey,
   getListDmMessagesQueryOptions,
+  useFollowUser,
   useMarkConversationRead,
+  useUnfollowUser,
   type DmMessage,
 } from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -53,6 +57,26 @@ export default function DmScreen() {
     enabled: Number.isFinite(conversationId),
   });
   const markReadM = useMarkConversationRead();
+
+  const followStatsQ = useQuery({
+    ...getGetFollowStatsQueryOptions(otherUserId ?? "__none__"),
+    enabled: !!otherUserId,
+  });
+  const followM = useFollowUser();
+  const unfollowM = useUnfollowUser();
+  const isFollowing = followStatsQ.data?.isFollowedByMe ?? false;
+  const followBusy = followM.isPending || unfollowM.isPending;
+
+  const toggleFollow = useCallback(async () => {
+    if (!otherUserId || followBusy) return;
+    try {
+      if (isFollowing) await unfollowM.mutateAsync({ targetUserId: otherUserId });
+      else await followM.mutateAsync({ data: { targetUserId: otherUserId } });
+      qc.invalidateQueries({ queryKey: getGetFollowStatsQueryKey(otherUserId) });
+    } catch {
+      Alert.alert("المتابعة", "تعذّر تحديث المتابعة");
+    }
+  }, [otherUserId, isFollowing, followBusy, followM, unfollowM, qc]);
 
   const markRead = useCallback(() => {
     if (!Number.isFinite(conversationId)) return;
@@ -137,7 +161,34 @@ export default function DmScreen() {
           <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
             {otherName || "مستخدم"}
           </Text>
+          {followStatsQ.data && (
+            <Text style={[styles.followCount, { color: colors.mutedForeground }]}>
+              {followStatsQ.data.followers} متابع
+            </Text>
+          )}
         </View>
+        {otherUserId ? (
+          <TouchableOpacity
+            style={[
+              styles.followBtn,
+              isFollowing
+                ? { backgroundColor: colors.muted }
+                : { backgroundColor: colors.primary },
+              followBusy && { opacity: 0.6 },
+            ]}
+            onPress={toggleFollow}
+            disabled={followBusy}
+          >
+            <Text
+              style={[
+                styles.followText,
+                { color: isFollowing ? colors.mutedForeground : "#fff" },
+              ]}
+            >
+              {isFollowing ? "أتابعه" : "متابعة"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Messages - inverted FlatList */}
@@ -240,6 +291,13 @@ const styles = StyleSheet.create({
   },
   headerCenter: { flex: 1 },
   name: { fontSize: 16, fontWeight: "700" as const },
+  followCount: { fontSize: 11, marginTop: 2 },
+  followBtn: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  followText: { fontSize: 12, fontWeight: "700" as const },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   empty: { paddingVertical: 40, alignItems: "center", transform: [{ scaleY: -1 }] },

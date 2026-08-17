@@ -686,6 +686,54 @@ export const MarkConversationReadParams = zod.object({
 
 
 /**
+ * @summary Follow a user (idempotent)
+ */
+
+
+
+export const FollowUserBody = zod.object({
+  "targetUserId": zod.string().min(1)
+})
+
+export const FollowUserResponse = zod.object({
+  "userId": zod.string(),
+  "followers": zod.number(),
+  "following": zod.number(),
+  "isFollowedByMe": zod.boolean()
+})
+
+
+/**
+ * @summary Unfollow a user (idempotent)
+ */
+export const UnfollowUserParams = zod.object({
+  "targetUserId": zod.coerce.string()
+})
+
+export const UnfollowUserResponse = zod.object({
+  "userId": zod.string(),
+  "followers": zod.number(),
+  "following": zod.number(),
+  "isFollowedByMe": zod.boolean()
+})
+
+
+/**
+ * @summary Follower/following counts for a user, plus whether the caller follows them
+ */
+export const GetFollowStatsParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const GetFollowStatsResponse = zod.object({
+  "userId": zod.string(),
+  "followers": zod.number(),
+  "following": zod.number(),
+  "isFollowedByMe": zod.boolean()
+})
+
+
+/**
  * @summary Get a user's wallet (auto-creates if missing)
  */
 export const GetWalletParams = zod.object({
@@ -698,7 +746,9 @@ export const GetWalletResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 })
 
 
@@ -715,7 +765,9 @@ export const EnsureWalletResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 })
 
 
@@ -761,7 +813,9 @@ export const ActivateVipResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 })
 
 
@@ -783,7 +837,9 @@ export const RechargeWalletResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 })
 
 
@@ -801,7 +857,9 @@ export const ReconcileRechargesResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 })
 
 
@@ -823,7 +881,9 @@ export const PurchaseItemResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 }),
   "item": zod.object({
   "id": zod.number(),
@@ -851,7 +911,9 @@ export const ClaimTaskResponse = zod.object({
   "coins": zod.number(),
   "vPoints": zod.number(),
   "vipLevel": zod.number(),
-  "vipType": zod.string()
+  "vipType": zod.string(),
+  "xp": zod.number(),
+  "level": zod.number()
 })
 
 

@@ -13,4 +13,6 @@ export interface Wallet {
   vPoints: number;
   vipLevel: number;
   vipType: string;
+  xp: number;
+  level: number;
 }

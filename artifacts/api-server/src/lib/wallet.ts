@@ -26,6 +26,34 @@ export interface WalletView {
   vPoints: number;
   vipLevel: number;
   vipType: string;
+  xp: number;
+  level: number;
+}
+
+/**
+ * User level derived from lifetime XP: level n needs (n-1)^2 * 100 XP, capped
+ * at 99. Level is always computed server-side from the stored XP.
+ */
+export function levelForXp(xp: number): number {
+  if (xp <= 0) return 1;
+  return Math.min(99, Math.floor(Math.sqrt(xp / 100)) + 1);
+}
+
+/**
+ * XP granted for a ledger entry. Only real economic activity earns XP:
+ * recharges, gift sends, store purchases and task rewards — one XP per unit
+ * of currency moved. Manual admin adjustments earn nothing.
+ */
+export function xpGainFor(type: TxType, amount: number): number {
+  switch (type) {
+    case "recharge":
+    case "gift_sent":
+    case "purchase":
+    case "task_reward":
+      return Math.abs(amount);
+    default:
+      return 0;
+  }
 }
 
 export function toWalletView(w: Wallet): WalletView {
@@ -36,6 +64,8 @@ export function toWalletView(w: Wallet): WalletView {
     vPoints: w.vPoints,
     vipLevel: w.vipLevel,
     vipType: w.vipType,
+    xp: w.xp,
+    level: levelForXp(w.xp),
   };
 }
 
@@ -183,9 +213,13 @@ export async function adjustWalletTx(
   const next = current + amount;
   if (next < 0) throw new InsufficientBalanceError(currency);
 
+  const xpGain = xpGainFor(type, amount);
   const [updated] = await tx
     .update(walletsTable)
-    .set(currency === "coins" ? { coins: next } : { vPoints: next })
+    .set({
+      ...(currency === "coins" ? { coins: next } : { vPoints: next }),
+      ...(xpGain > 0 ? { xp: wallet.xp + xpGain } : {}),
+    })
     .where(eq(walletsTable.userId, userId))
     .returning();
 

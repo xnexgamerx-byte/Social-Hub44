@@ -25,6 +25,10 @@ export const walletsTable = pgTable("wallets", {
   vipLevel: integer("vip_level").notNull().default(0),
   // "" | vip | svip
   vipType: text("vip_type").notNull().default(""),
+  // Lifetime activity points awarded server-side by the wallet ledger
+  // (recharges, gifts, purchases, task rewards). The user level is derived
+  // from this — clients can never write it.
+  xp: bigint("xp", { mode: "number" }).notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

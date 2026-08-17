@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ensureWallet as ensureWalletReq,
   getGetAuthMeQueryKey,
+  getGetFollowStatsQueryOptions,
   getGetWalletQueryKey,
   getGetWalletQueryOptions,
   getListUserItemsQueryKey,
@@ -228,6 +229,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     ...getListUserItemsQueryOptions(userId ?? "__none__"),
     enabled: walletReady && !!userId,
   });
+  const followStatsQ = useQuery({
+    ...getGetFollowStatsQueryOptions(userId ?? "__none__"),
+    enabled: walletReady && !!userId,
+  });
 
   const invalidateWallet = () => {
     if (userId) qc.invalidateQueries({ queryKey: getGetWalletQueryKey(userId) });
@@ -272,14 +277,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       bio: (clerkUser?.unsafeMetadata?.bio as string | undefined) || "",
       coins: walletQ.data?.coins ?? 0,
       vPoints: walletQ.data?.vPoints ?? 0,
+      level: walletQ.data?.level ?? 1,
       vipLevel: walletQ.data?.vipLevel ?? 0,
       vipType:
         walletQ.data?.vipType === "vip" || walletQ.data?.vipType === "svip"
           ? walletQ.data.vipType
           : null,
+      followers: followStatsQ.data?.followers ?? 0,
+      following: followStatsQ.data?.following ?? 0,
       isAdmin,
     };
-  }, [clerkUser, userId, walletQ.data, isAdmin]);
+  }, [clerkUser, userId, walletQ.data, followStatsQ.data, isAdmin]);
 
   const toggleLikeVideo = (id: string) => {
     setLikedVideos((prev) => {

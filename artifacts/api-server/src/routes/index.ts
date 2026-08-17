@@ -11,6 +11,7 @@ import walletRouter from "./wallet";
 import adminsRouter from "./admins";
 import roomsRouter from "./rooms";
 import dmRouter from "./dm";
+import followsRouter from "./follows";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(walletRouter);
 router.use(adminsRouter);
 router.use(roomsRouter);
 router.use(dmRouter);
+router.use(followsRouter);
 
 export default router;

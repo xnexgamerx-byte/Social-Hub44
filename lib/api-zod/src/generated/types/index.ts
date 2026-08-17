@@ -23,6 +23,8 @@ export * from './dailyTaskUpdate';
 export * from './dmMessage';
 export * from './equipInput';
 export * from './error';
+export * from './followInput';
+export * from './followStats';
 export * from './grantCoinsInput';
 export * from './grantCoinsInputCurrency';
 export * from './healthStatus';
