@@ -14,12 +14,13 @@ import {
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery } from "@tanstack/react-query";
+import { getGetRoomQueryOptions, useOpenConversation } from "@workspace/api-client-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { LiveBadge } from "@/components/LiveBadge";
 import { EntranceOverlay } from "@/components/EntranceOverlay";
 import { GiftOverlay } from "@/components/GiftOverlay";
 import { GiftPicker, type GiftItem } from "@/components/GiftPicker";
-import { ROOMS } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { useRoomChat, type ChatMessage } from "@/hooks/useRoomChat";
@@ -38,7 +39,9 @@ export default function RoomDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, refreshWallet } = useApp();
-  const room = ROOMS.find((r) => r.id === id) ?? ROOMS[0];
+  const roomQ = useQuery({ ...getGetRoomQueryOptions(Number(id)), enabled: !!id });
+  const room = roomQ.data;
+  const openConversationM = useOpenConversation();
 
   const { messages, presence, connected, sendMessage: emitMessage } = useRoomChat(id, {
     userId: user.id,
@@ -85,6 +88,29 @@ export default function RoomDetailScreen() {
     leaveMic();
   }, [onMic, leaveMic]);
 
+  // Tap another member's avatar to open a private conversation with them.
+  const openDm = useCallback(
+    async (other: { userId: string; userName: string; userAvatar?: string }) => {
+      if (!other.userId || other.userId === user.id) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      try {
+        const conv = await openConversationM.mutateAsync({
+          data: {
+            otherUserId: other.userId,
+            otherName: other.userName,
+            otherAvatar: other.userAvatar ?? "",
+          },
+        });
+        router.push(
+          `/dm/${conv.id}?otherUserId=${encodeURIComponent(conv.otherUserId)}&otherName=${encodeURIComponent(conv.otherName || other.userName)}&otherAvatar=${encodeURIComponent(conv.otherAvatar || other.userAvatar || "")}`,
+        );
+      } catch {
+        Alert.alert("خطأ", "تعذّر فتح المحادثة");
+      }
+    },
+    [user.id, openConversationM],
+  );
+
   // Inverted list expects newest-first; chat stores chronological order.
   const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
@@ -117,13 +143,13 @@ export default function RoomDetailScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={[styles.roomName, { color: colors.foreground }]} numberOfLines={1}>
-            {room.name}
+            {room?.name ?? "..."}
           </Text>
           <View style={styles.headerSub}>
-            {room.isLive && <LiveBadge small />}
+            {presence > 0 && <LiveBadge small />}
             <View style={[styles.onlineDot, { backgroundColor: connected ? "#22C55E" : colors.mutedForeground }]} />
             <Text style={[styles.listenerCount, { color: colors.mutedForeground }]}>
-              {presence > 0 ? `${presence} متصل الآن` : `${room.listenerCount} مستمع`}
+              {presence > 0 ? `${presence} متصل الآن` : "كن أول الحاضرين"}
             </Text>
           </View>
         </View>
@@ -192,7 +218,13 @@ export default function RoomDetailScreen() {
         }
         renderItem={({ item }: { item: ChatMessage }) => (
           <View style={styles.msgRow}>
-            <UserAvatar uri={item.userAvatar} size={32} />
+            <TouchableOpacity
+              onPress={() => openDm(item)}
+              disabled={!item.userId || item.userId === user.id}
+              activeOpacity={0.7}
+            >
+              <UserAvatar uri={item.userAvatar} name={item.userName} size={32} />
+            </TouchableOpacity>
             <View style={styles.msgBody}>
               <View style={styles.msgMeta}>
                 <Text style={[styles.msgUser, { color: colors.primary }]}>{item.userName}</Text>

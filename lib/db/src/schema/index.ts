@@ -12,3 +12,6 @@ export * from "./userItems";
 export * from "./dailyTaskClaims";
 export * from "./admins";
 export * from "./adminAudit";
+export * from "./rooms";
+export * from "./conversations";
+export * from "./dmMessages";

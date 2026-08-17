@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { router } from "expo-router";
+import React, { useEffect } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Platform,
   StyleSheet,
@@ -8,28 +10,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getListConversationsQueryKey,
+  getListConversationsQueryOptions,
+  type Conversation,
+} from "@workspace/api-client-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
-
-interface Conversation {
-  id: string;
-  name: string;
-  avatar: string;
-  last: string;
-  time: string;
-  unread: number;
-  online: boolean;
-}
-
-const CONVERSATIONS: Conversation[] = [
-  { id: "1", name: "سارة محمد", avatar: "https://i.pravatar.cc/150?img=5", last: "مرحباً، كيف حالك اليوم؟", time: "الآن", unread: 2, online: true },
-  { id: "2", name: "خالد العتيبي", avatar: "https://i.pravatar.cc/150?img=12", last: "شكراً على الهدية! 🎁", time: "5 د", unread: 0, online: true },
-  { id: "3", name: "نورة أحمد", avatar: "https://i.pravatar.cc/150?img=9", last: "هل ستنضم للغرفة الليلة؟", time: "20 د", unread: 1, online: false },
-  { id: "4", name: "فيصل الدوسري", avatar: "https://i.pravatar.cc/150?img=15", last: "تمام، نشوفك بكرة", time: "1 س", unread: 0, online: false },
-  { id: "5", name: "ريم سالم", avatar: "https://i.pravatar.cc/150?img=20", last: "أرسلت لك دعوة للعائلة", time: "3 س", unread: 0, online: true },
-  { id: "6", name: "عبدالله ناصر", avatar: "https://i.pravatar.cc/150?img=33", last: "كانت لعبة ممتعة 🎮", time: "أمس", unread: 0, online: false },
-];
+import { getSocket } from "@/lib/socket";
 
 const QUICK = [
   { icon: "people" as const, label: "العائلة", color: "#7C5CFC" },
@@ -38,58 +28,118 @@ const QUICK = [
   { icon: "notifications" as const, label: "الإشعارات", color: "#F59E0B" },
 ];
 
+function formatTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  const mins = Math.floor((Date.now() - then) / 60_000);
+  if (mins < 1) return "الآن";
+  if (mins < 60) return `${mins} د`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} س`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "أمس";
+  return `${days} يوم`;
+}
+
 export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const conversationsQ = useQuery(getListConversationsQueryOptions());
+
+  // Any DM activity (in or out) refreshes the inbox ordering + unread badges.
+  useEffect(() => {
+    const socket = getSocket();
+    const onDm = () => {
+      qc.invalidateQueries({ queryKey: getListConversationsQueryKey() });
+    };
+    socket.on("dm:new", onDm);
+    return () => {
+      socket.off("dm:new", onDm);
+    };
+  }, [qc]);
+
+  const conversations = conversationsQ.data ?? [];
+
+  const openConversation = (c: Conversation) => {
+    router.push(
+      `/dm/${c.id}?otherUserId=${encodeURIComponent(c.otherUserId)}&otherName=${encodeURIComponent(c.otherName)}&otherAvatar=${encodeURIComponent(c.otherAvatar)}`,
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>الرسائل</Text>
-        <TouchableOpacity>
-          <Ionicons name="create-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.quickRow}>
-        {QUICK.map((q) => (
-          <TouchableOpacity key={q.label} style={styles.quickItem} activeOpacity={0.7}>
-            <View style={[styles.quickIcon, { backgroundColor: q.color + "1A" }]}>
-              <Ionicons name={q.icon} size={22} color={q.color} />
-            </View>
-            <Text style={[styles.quickLabel, { color: colors.mutedForeground }]}>{q.label}</Text>
-          </TouchableOpacity>
-        ))}
       </View>
 
       <FlatList
-        data={CONVERSATIONS}
-        keyExtractor={(c) => c.id}
+        data={conversations}
+        keyExtractor={(c) => String(c.id)}
         contentContainerStyle={{
           paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
+          flexGrow: 1,
         }}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.convRow} activeOpacity={0.7}>
-            <View style={styles.avatarWrap}>
-              <UserAvatar uri={item.avatar} name={item.name} size={54} online={item.online} />
+        ListHeaderComponent={
+          <View style={styles.quickRow}>
+            {QUICK.map((q) => (
+              <TouchableOpacity key={q.label} style={styles.quickItem} activeOpacity={0.8}>
+                <View style={[styles.quickIcon, { backgroundColor: `${q.color}22` }]}>
+                  <Ionicons name={q.icon} size={22} color={q.color} />
+                </View>
+                <Text style={[styles.quickLabel, { color: colors.mutedForeground }]}>{q.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
+        ListEmptyComponent={
+          conversationsQ.isLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator color={colors.primary} />
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.convTop}>
-                <Text style={[styles.convName, { color: colors.foreground }]}>{item.name}</Text>
-                <Text style={[styles.convTime, { color: colors.mutedForeground }]}>{item.time}</Text>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="chatbubbles-outline" size={36} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                ما عندك محادثات بعد{"\n"}اضغط على صورة أي شخص داخل الغرف لتبدأ محادثة
+              </Text>
+            </View>
+          )
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.row, { borderBottomColor: colors.border }]}
+            onPress={() => openConversation(item)}
+            activeOpacity={0.85}
+          >
+            <UserAvatar uri={item.otherAvatar} name={item.otherName} size={52} />
+            <View style={styles.rowBody}>
+              <View style={styles.rowTop}>
+                <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+                  {item.otherName || "مستخدم"}
+                </Text>
+                <Text style={[styles.time, { color: colors.mutedForeground }]}>
+                  {formatTime(item.lastAt)}
+                </Text>
               </View>
-              <View style={styles.convTop}>
+              <View style={styles.rowBottom}>
                 <Text
-                  style={[styles.convLast, { color: colors.mutedForeground }]}
+                  style={[
+                    styles.last,
+                    {
+                      color: item.unread > 0 ? colors.foreground : colors.mutedForeground,
+                      fontWeight: item.unread > 0 ? "600" : "400",
+                    },
+                  ]}
                   numberOfLines={1}
                 >
-                  {item.last}
+                  {item.lastText || "ابدأ المحادثة 👋"}
                 </Text>
                 {item.unread > 0 && (
-                  <View style={[styles.unread, { backgroundColor: colors.accent }]}>
-                    <Text style={styles.unreadText}>{item.unread}</Text>
+                  <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.unreadText}>{item.unread > 99 ? "99+" : item.unread}</Text>
                   </View>
                 )}
               </View>
@@ -108,14 +158,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingBottom: 14,
+    marginBottom: 8,
   },
   title: { fontSize: 22, fontWeight: "800" as const },
   quickRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 14,
   },
   quickItem: { alignItems: "center", gap: 6 },
   quickIcon: {
@@ -125,44 +175,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  quickLabel: { fontSize: 12, fontWeight: "500" as const },
-  convRow: {
+  quickLabel: { fontSize: 12 },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
     gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  avatarWrap: { position: "relative" },
-  avatar: { width: 54, height: 54, borderRadius: 27 },
-  onlineDot: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: "#22C55E",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  convTop: {
+  rowBody: { flex: 1, gap: 4 },
+  rowTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 3,
   },
-  convName: { fontSize: 15, fontWeight: "700" as const },
-  convTime: { fontSize: 11 },
-  convLast: { fontSize: 13, flex: 1 },
-  unread: {
+  rowBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  name: { fontSize: 15, fontWeight: "700" as const, flex: 1 },
+  time: { fontSize: 11 },
+  last: { fontSize: 13, flex: 1 },
+  unreadBadge: {
     minWidth: 20,
     height: 20,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
-    marginLeft: 8,
+    paddingHorizontal: 5,
   },
-  unreadText: { color: "#fff", fontSize: 11, fontWeight: "800" as const },
+  unreadText: { color: "#fff", fontSize: 11, fontWeight: "700" as const },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyText: { fontSize: 14, textAlign: "center" as const, lineHeight: 22 },
 });

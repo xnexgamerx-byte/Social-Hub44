@@ -1,27 +1,70 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
-  ImageBackground,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getListMyRoomsQueryKey,
+  getListMyRoomsQueryOptions,
+  getListRoomsQueryKey,
+  getListRoomsQueryOptions,
+  useDeleteRoom,
+  type Room,
+} from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RoomCard } from "@/components/RoomCard";
-import { ROOMS } from "@/data/mockData";
 import { useColors } from "@/hooks/useColors";
-import { LinearGradient } from "expo-linear-gradient";
 
 const TABS = ["موصى به", "أنا"];
 
 export default function ChatroomScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState(0);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const allRoomsQ = useQuery(getListRoomsQueryOptions());
+  const myRoomsQ = useQuery({
+    ...getListMyRoomsQueryOptions(),
+    enabled: activeTab === 1,
+  });
+  const deleteM = useDeleteRoom();
+
+  const rooms = activeTab === 0 ? allRoomsQ.data ?? [] : myRoomsQ.data ?? [];
+  const loading = activeTab === 0 ? allRoomsQ.isLoading : myRoomsQ.isLoading;
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: getListRoomsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListMyRoomsQueryKey() });
+  };
+
+  const confirmDelete = (room: Room) => {
+    Alert.alert("حذف الغرفة", `هل تريد حذف غرفة «${room.name}»؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "حذف",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteM.mutateAsync({ id: room.id });
+            invalidate();
+          } catch {
+            Alert.alert("خطأ", "تعذّر حذف الغرفة");
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -38,10 +81,10 @@ export default function ChatroomScreen() {
           ))}
         </View>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
-            <Ionicons name="earth-outline" size={18} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.secondary }]}
+            onPress={() => router.push("/room-create")}
+          >
             <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: "#FFF8E1" }]}>
@@ -51,10 +94,11 @@ export default function ChatroomScreen() {
       </View>
 
       <FlatList
-        data={ROOMS}
-        keyExtractor={(r) => r.id}
+        data={rooms}
+        keyExtractor={(r) => String(r.id)}
         contentContainerStyle={{
           paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
+          flexGrow: 1,
         }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -75,7 +119,40 @@ export default function ChatroomScreen() {
             </View>
           </View>
         }
-        renderItem={({ item }) => <RoomCard room={item} />}
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="home-outline" size={36} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                {activeTab === 1 ? "ما عندك غرف بعد — أنشئ غرفتك الأولى!" : "لا توجد غرف متاحة حالياً"}
+              </Text>
+              {activeTab === 1 && (
+                <TouchableOpacity
+                  style={[styles.createBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push("/room-create")}
+                >
+                  <Ionicons name="add" size={18} color="#fff" />
+                  <Text style={styles.createBtnText}>إنشاء غرفة</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )
+        }
+        renderItem={({ item }) =>
+          activeTab === 1 ? (
+            <RoomCard
+              room={item}
+              onEdit={() => router.push(`/room-create?id=${item.id}`)}
+              onDelete={() => confirmDelete(item)}
+            />
+          ) : (
+            <RoomCard room={item} />
+          )
+        }
         ItemSeparatorComponent={() => null}
       />
     </View>
@@ -137,4 +214,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     width: 18,
   },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyText: { fontSize: 14, textAlign: "center" as const },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  createBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" as const },
 });

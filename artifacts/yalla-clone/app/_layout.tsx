@@ -52,6 +52,11 @@ function RootLayoutNav() {
         name="ludo/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen
+        name="dm/[id]"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen name="room-create" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="profile-edit" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="store" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="recharge" options={{ headerShown: false, presentation: "card" }} />

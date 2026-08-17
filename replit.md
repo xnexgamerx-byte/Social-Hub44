@@ -25,14 +25,18 @@
 ## Where things live
 
 - `artifacts/yalla-clone/` — Expo mobile app (نبضة)
-  - `app/(tabs)/` — main tab screens (index, rooms, videos, games, profile)
-  - `app/room/[id].tsx` — voice/text chat room detail screen
+  - `app/(tabs)/` — main tab screens (index, rooms, messages, videos, profile)
+  - `app/room/[id].tsx` — voice/text chat room detail screen (room loaded from API)
+  - `app/room-create.tsx` — create/edit a room (owner-scoped)
+  - `app/dm/[id].tsx` — private direct-message chat screen
   - `app/game/[id].tsx` — trivia game screen
   - `components/` — RoomCard, VideoCard, GameCard, UserAvatar, LiveBadge
   - `context/AppContext.tsx` — global user & app state
-  - `data/mockData.ts` — mock rooms, videos, games, trivia questions
+  - `data/mockData.ts` — mock videos, games, nearby users (rooms are DB-backed now)
   - `constants/colors.ts` — dark purple theme (#7C3AED primary, #F59E0B accent)
 - `artifacts/api-server/` — Express API server
+  - Rooms: `rooms` table + `/api/rooms` CRUD (create requires auth; edit/delete owner-or-admin; max 3 active rooms/user; seeded starter rooms)
+  - DMs: `conversations` + `dm_messages` tables, `/api/dm/*` REST (inbox, open, history, read) + socket `dm:send`/`dm:new`/`dm:error` over personal `user:<id>` channels
 
 ## Architecture decisions
 

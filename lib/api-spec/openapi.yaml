@@ -20,6 +20,10 @@ tags:
     description: Per-user wallet, ledger, ownership and spend/earn operations
   - name: auth
     description: Authentication and authorization operations
+  - name: rooms
+    description: Voice/text chat room management
+  - name: dm
+    description: Private direct-message conversations
 paths:
   /healthz:
     get:
@@ -597,6 +601,263 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      summary: List active rooms
+      responses:
+        "200":
+          description: List of active rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a room owned by the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomInput"
+      responses:
+        "201":
+          description: Created room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /rooms/mine:
+    get:
+      operationId: listMyRooms
+      tags: [rooms]
+      summary: List rooms owned by the authenticated user
+      responses:
+        "200":
+          description: List of my rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a room by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update a room (owner or admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomUpdate"
+      responses:
+        "200":
+          description: Updated room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "403":
+          description: Not the room owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      summary: Delete a room (owner or admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Not the room owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /dm/conversations:
+    get:
+      operationId: listConversations
+      tags: [dm]
+      summary: List the authenticated user's conversations, newest first
+      responses:
+        "200":
+          description: Conversations shaped for the requesting user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dm/open:
+    post:
+      operationId: openConversation
+      tags: [dm]
+      summary: Open (or create) a conversation with another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenConversationInput"
+      responses:
+        "200":
+          description: The conversation with the other user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dm/conversations/{id}/messages:
+    get:
+      operationId: listDmMessages
+      tags: [dm]
+      summary: List messages in a conversation (participants only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DmMessage"
+        "403":
+          description: Not a participant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dm/conversations/{id}/read:
+    post:
+      operationId: markConversationRead
+      tags: [dm]
+      summary: Reset the authenticated user's unread counter for a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Marked read
+        "403":
+          description: Not a participant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /wallet/{userId}:
     get:
       operationId: getWallet
@@ -946,6 +1207,103 @@ components:
           type: string
       required:
         - error
+
+    Room:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - category
+        - ownerId
+        - ownerName
+        - ownerAvatar
+        - tags
+        - active
+        - createdAt
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        ownerId: { type: string }
+        ownerName: { type: string }
+        ownerAvatar: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+        createdAt: { type: string }
+    RoomInput:
+      type: object
+      required:
+        - name
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        description: { type: string, maxLength: 200 }
+        category: { type: string, enum: [chat, gaming, music, family] }
+        tags:
+          type: array
+          items: { type: string }
+        ownerName: { type: string }
+        ownerAvatar: { type: string }
+    RoomUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        description: { type: string, maxLength: 200 }
+        category: { type: string, enum: [chat, gaming, music, family] }
+        tags:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+
+    Conversation:
+      type: object
+      required:
+        - id
+        - otherUserId
+        - otherName
+        - otherAvatar
+        - lastText
+        - lastFromId
+        - lastAt
+        - unread
+      properties:
+        id: { type: integer }
+        otherUserId: { type: string }
+        otherName: { type: string }
+        otherAvatar: { type: string }
+        lastText: { type: string }
+        lastFromId: { type: string }
+        lastAt: { type: string }
+        unread: { type: integer }
+    OpenConversationInput:
+      type: object
+      required:
+        - otherUserId
+      properties:
+        otherUserId: { type: string, minLength: 1 }
+        otherName: { type: string }
+        otherAvatar: { type: string }
+    DmMessage:
+      type: object
+      required:
+        - id
+        - conversationId
+        - fromUserId
+        - fromName
+        - fromAvatar
+        - text
+        - createdAt
+      properties:
+        id: { type: integer }
+        conversationId: { type: integer }
+        fromUserId: { type: string }
+        fromName: { type: string }
+        fromAvatar: { type: string }
+        text: { type: string }
+        createdAt: { type: string }
 
     StoreItem:
       type: object

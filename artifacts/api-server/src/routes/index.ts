@@ -9,6 +9,8 @@ import coinPackagesRouter from "./coinPackages";
 import dailyTasksRouter from "./dailyTasks";
 import walletRouter from "./wallet";
 import adminsRouter from "./admins";
+import roomsRouter from "./rooms";
+import dmRouter from "./dm";
 
 const router: IRouter = Router();
 
@@ -22,5 +24,7 @@ router.use(coinPackagesRouter);
 router.use(dailyTasksRouter);
 router.use(walletRouter);
 router.use(adminsRouter);
+router.use(roomsRouter);
+router.use(dmRouter);
 
 export default router;

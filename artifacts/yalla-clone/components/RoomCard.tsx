@@ -2,30 +2,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { Room } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { UserAvatar } from "@/components/UserAvatar";
 
-export interface Room {
-  id: string;
-  name: string;
-  hostName: string;
-  hostAvatar: string;
-  speakerCount: number;
-  listenerCount: number;
-  description: string;
-  tags: string[];
-  isLive: boolean;
-  category: "chat" | "gaming" | "music" | "family";
-  speakerAvatars: string[];
-}
+export type { Room };
 
 const TAG_STYLES: Record<string, { bg: string; color: string }> = {
   PK: { bg: "rgba(255,122,0,0.18)", color: "#FFA040" },
   "Super W": { bg: "rgba(0,188,212,0.18)", color: "#22D3EE" },
   Chat: { bg: "rgba(34,197,94,0.18)", color: "#4ADE80" },
-  "Lv.6": { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" },
-  "Lv.8": { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" },
-  "Lv.5": { bg: "rgba(139,92,246,0.22)", color: "#C4B5FD" },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  chat: "دردشة",
+  gaming: "ألعاب",
+  music: "طرب",
+  family: "عائلة",
 };
 
 function TagPill({ tag }: { tag: string }) {
@@ -37,7 +30,13 @@ function TagPill({ tag }: { tag: string }) {
   );
 }
 
-export function RoomCard({ room }: { room: Room }) {
+interface RoomCardProps {
+  room: Room;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+export function RoomCard({ room, onEdit, onDelete }: RoomCardProps) {
   const colors = useColors();
 
   return (
@@ -46,26 +45,47 @@ export function RoomCard({ room }: { room: Room }) {
       onPress={() => router.push(`/room/${room.id}`)}
       activeOpacity={0.88}
     >
-      <UserAvatar uri={room.hostAvatar} name={room.hostName} size={64} />
+      <UserAvatar uri={room.ownerAvatar} name={room.ownerName || room.name} size={64} />
       <View style={styles.body}>
         <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
           {room.name}
         </Text>
         <Text style={[styles.desc, { color: colors.mutedForeground }]} numberOfLines={1}>
-          {room.description}
+          {room.description || (room.ownerName ? `بإدارة ${room.ownerName}` : "")}
         </Text>
         <View style={styles.tagsRow}>
+          <TagPill tag={CATEGORY_LABELS[room.category] ?? room.category} />
           {room.tags.map((t) => (
             <TagPill key={t} tag={t} />
           ))}
         </View>
       </View>
-      <View style={styles.right}>
-        <Ionicons name="bar-chart" size={14} color={colors.mutedForeground} />
-        <Text style={[styles.count, { color: colors.mutedForeground }]}>
-          {room.listenerCount}
-        </Text>
-      </View>
+      {onEdit || onDelete ? (
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity
+              onPress={onEdit}
+              style={[styles.actionBtn, { backgroundColor: colors.secondary }]}
+              hitSlop={8}
+            >
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              onPress={onDelete}
+              style={[styles.actionBtn, { backgroundColor: "#EF444422" }]}
+              hitSlop={8}
+            >
+              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <View style={styles.right}>
+          <Ionicons name="chevron-back" size={16} color={colors.mutedForeground} />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -111,7 +131,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 3,
   },
-  count: {
-    fontSize: 12,
+  actions: {
+    gap: 8,
+  },
+  actionBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

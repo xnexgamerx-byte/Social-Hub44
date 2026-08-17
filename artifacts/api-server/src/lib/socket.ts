@@ -20,6 +20,7 @@ import {
 import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
 import { adjustWallet, InsufficientBalanceError } from "./wallet";
 import { verifySessionToken } from "./authz";
+import { sendDm, shapeForUser, DmValidationError } from "./dm";
 
 interface JoinPayload {
   roomId: string;
@@ -71,6 +72,15 @@ interface MicMutePayload {
   muted: boolean;
 }
 
+interface DmSendPayload {
+  toUserId: string;
+  toName?: string;
+  toAvatar?: string;
+  text: string;
+  userName?: string;
+  userAvatar?: string;
+}
+
 const MAX_HISTORY = 50;
 
 function roomChannel(roomId: string): string {
@@ -108,6 +118,10 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     let joinedRoom: string | null = null;
     let joinedGame: string | null = null;
     let voiceUserId: string | null = null;
+
+    // Personal channel: every socket of this user receives their DMs, so
+    // delivery works across devices and outside any specific room.
+    void socket.join(`user:${authUserId}`);
 
     // Deterministically leave the socket's current room: free its mic seat,
     // leave the channel, and refresh presence. Prevents ghost seats when a
@@ -294,6 +308,40 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       } catch (err) {
         logger.error({ err, roomId }, "Failed to save message");
         socket.emit("message:error", { message: "تعذّر إرسال الرسالة" });
+      }
+    });
+
+    socket.on("dm:send", async (payload: DmSendPayload) => {
+      const { toUserId, text } = payload;
+      if (!toUserId || !text?.trim()) return;
+      try {
+        // Sender identity comes from the authenticated socket; payload names
+        // are display-only snapshots.
+        const { message, conversation } = await sendDm({
+          fromUserId: authUserId,
+          fromName: payload.userName ?? "",
+          fromAvatar: payload.userAvatar ?? "",
+          toUserId,
+          toName: payload.toName,
+          toAvatar: payload.toAvatar,
+          text,
+        });
+        const wire = { ...message, createdAt: message.createdAt.toISOString() };
+        io.to(`user:${toUserId}`).emit("dm:new", {
+          message: wire,
+          conversation: shapeForUser(conversation, toUserId),
+        });
+        io.to(`user:${authUserId}`).emit("dm:new", {
+          message: wire,
+          conversation: shapeForUser(conversation, authUserId),
+        });
+      } catch (err) {
+        if (err instanceof DmValidationError) {
+          socket.emit("dm:error", { message: err.message });
+          return;
+        }
+        logger.error({ err, toUserId }, "Failed to send DM");
+        socket.emit("dm:error", { message: "تعذّر إرسال الرسالة" });
       }
     });
 

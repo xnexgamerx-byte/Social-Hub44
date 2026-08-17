@@ -1,4 +1,3 @@
-import type { Room } from "@/components/RoomCard";
 import type { Video } from "@/components/VideoCard";
 import type { Game } from "@/components/GameCard";
 
@@ -172,98 +171,6 @@ export const POSTS: Post[] = [
     distance: "3 كم",
     likes: 55,
     comments: 20,
-  },
-];
-
-export const ROOMS: Room[] = [
-  {
-    id: "r1",
-    name: "سارة وأصحابها",
-    hostName: "سارة محمد",
-    hostAvatar: "https://i.pravatar.cc/150?img=5",
-    speakerCount: 6,
-    listenerCount: 500,
-    description: "احتفال بعيد الميلاد السعيد معنا",
-    tags: ["PK", "Super W", "Chat", "Lv.6"],
-    isLive: true,
-    category: "music",
-    speakerAvatars: [
-      "https://i.pravatar.cc/150?img=5",
-      "https://i.pravatar.cc/150?img=6",
-      "https://i.pravatar.cc/150?img=7",
-      "https://i.pravatar.cc/150?img=8",
-    ],
-  },
-  {
-    id: "r2",
-    name: "كريم علي وأصدقاؤه",
-    hostName: "كريم علي",
-    hostAvatar: "https://i.pravatar.cc/150?img=12",
-    speakerCount: 4,
-    listenerCount: 328,
-    description: "أراك مرة أخرى",
-    tags: ["Chat", "Lv.6"],
-    isLive: true,
-    category: "chat",
-    speakerAvatars: [
-      "https://i.pravatar.cc/150?img=12",
-      "https://i.pravatar.cc/150?img=13",
-    ],
-  },
-  {
-    id: "r3",
-    name: "فارس النجار",
-    hostName: "فارس",
-    hostAvatar: "https://i.pravatar.cc/150?img=21",
-    speakerCount: 8,
-    listenerCount: 300,
-    description: "احتفال بعيد الميلاد السعيد",
-    tags: ["Chat", "Lv.6"],
-    isLive: true,
-    category: "gaming",
-    speakerAvatars: [
-      "https://i.pravatar.cc/150?img=21",
-      "https://i.pravatar.cc/150?img=22",
-    ],
-  },
-  {
-    id: "r4",
-    name: "بسمة",
-    hostName: "بسمة",
-    hostAvatar: "https://i.pravatar.cc/150?img=25",
-    speakerCount: 5,
-    listenerCount: 300,
-    description: "تعال وتحدث معي بالصوت",
-    tags: ["Chat", "Lv.6"],
-    isLive: false,
-    category: "family",
-    speakerAvatars: ["https://i.pravatar.cc/150?img=25"],
-  },
-  {
-    id: "r5",
-    name: "معلم الرقص",
-    hostName: "معلم الرقص",
-    hostAvatar: "https://i.pravatar.cc/150?img=33",
-    speakerCount: 3,
-    listenerCount: 182,
-    description: "لا تكن مثل الدعم فقط...",
-    tags: ["Chat", "Lv.8"],
-    isLive: true,
-    category: "music",
-    speakerAvatars: ["https://i.pravatar.cc/150?img=33"],
-  },
-  {
-    id: "r6",
-    name: "يوم جيد",
-    hostName: "أحمد",
-    hostAvatar: "https://i.pravatar.cc/150?img=50",
-    speakerCount: 2,
-    listenerCount: 97,
-    description: "تحدث معنا اليوم",
-    tags: ["Chat", "Lv.5"],
-    isLive: false,
-    category: "chat",
-    speakerAvatars: ["https://i.pravatar.cc/150?img=50"],
   },
 ];
 

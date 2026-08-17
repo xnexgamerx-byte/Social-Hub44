@@ -500,6 +500,192 @@ export const DeleteDailyTaskParams = zod.object({
 
 
 /**
+ * @summary List active rooms
+ */
+export const ListRoomsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "ownerId": zod.string(),
+  "ownerName": zod.string(),
+  "ownerAvatar": zod.string(),
+  "tags": zod.array(zod.string()),
+  "active": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListRoomsResponse = zod.array(ListRoomsResponseItem)
+
+
+/**
+ * @summary Create a room owned by the authenticated user
+ */
+export const createRoomBodyNameMax = 60;
+
+export const createRoomBodyDescriptionMax = 200;
+
+
+
+export const CreateRoomBody = zod.object({
+  "name": zod.string().min(1).max(createRoomBodyNameMax),
+  "description": zod.string().max(createRoomBodyDescriptionMax).optional(),
+  "category": zod.enum(['chat', 'gaming', 'music', 'family']).optional(),
+  "tags": zod.array(zod.string()).optional(),
+  "ownerName": zod.string().optional(),
+  "ownerAvatar": zod.string().optional()
+})
+
+
+/**
+ * @summary List rooms owned by the authenticated user
+ */
+export const ListMyRoomsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "ownerId": zod.string(),
+  "ownerName": zod.string(),
+  "ownerAvatar": zod.string(),
+  "tags": zod.array(zod.string()),
+  "active": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListMyRoomsResponse = zod.array(ListMyRoomsResponseItem)
+
+
+/**
+ * @summary Get a room by id
+ */
+export const GetRoomParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetRoomResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "ownerId": zod.string(),
+  "ownerName": zod.string(),
+  "ownerAvatar": zod.string(),
+  "tags": zod.array(zod.string()),
+  "active": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update a room (owner or admin only)
+ */
+export const UpdateRoomParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateRoomBodyNameMax = 60;
+
+export const updateRoomBodyDescriptionMax = 200;
+
+
+
+export const UpdateRoomBody = zod.object({
+  "name": zod.string().min(1).max(updateRoomBodyNameMax).optional(),
+  "description": zod.string().max(updateRoomBodyDescriptionMax).optional(),
+  "category": zod.enum(['chat', 'gaming', 'music', 'family']).optional(),
+  "tags": zod.array(zod.string()).optional(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateRoomResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "ownerId": zod.string(),
+  "ownerName": zod.string(),
+  "ownerAvatar": zod.string(),
+  "tags": zod.array(zod.string()),
+  "active": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a room (owner or admin only)
+ */
+export const DeleteRoomParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List the authenticated user's conversations, newest first
+ */
+export const ListConversationsResponseItem = zod.object({
+  "id": zod.number(),
+  "otherUserId": zod.string(),
+  "otherName": zod.string(),
+  "otherAvatar": zod.string(),
+  "lastText": zod.string(),
+  "lastFromId": zod.string(),
+  "lastAt": zod.string(),
+  "unread": zod.number()
+})
+export const ListConversationsResponse = zod.array(ListConversationsResponseItem)
+
+
+/**
+ * @summary Open (or create) a conversation with another user
+ */
+
+
+
+export const OpenConversationBody = zod.object({
+  "otherUserId": zod.string().min(1),
+  "otherName": zod.string().optional(),
+  "otherAvatar": zod.string().optional()
+})
+
+export const OpenConversationResponse = zod.object({
+  "id": zod.number(),
+  "otherUserId": zod.string(),
+  "otherName": zod.string(),
+  "otherAvatar": zod.string(),
+  "lastText": zod.string(),
+  "lastFromId": zod.string(),
+  "lastAt": zod.string(),
+  "unread": zod.number()
+})
+
+
+/**
+ * @summary List messages in a conversation (participants only)
+ */
+export const ListDmMessagesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDmMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "conversationId": zod.number(),
+  "fromUserId": zod.string(),
+  "fromName": zod.string(),
+  "fromAvatar": zod.string(),
+  "text": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListDmMessagesResponse = zod.array(ListDmMessagesResponseItem)
+
+
+/**
+ * @summary Reset the authenticated user's unread counter for a conversation
+ */
+export const MarkConversationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Get a user's wallet (auto-creates if missing)
  */
 export const GetWalletParams = zod.object({

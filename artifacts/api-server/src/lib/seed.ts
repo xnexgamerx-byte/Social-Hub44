@@ -6,11 +6,13 @@ import {
   vipTiersTable,
   coinPackagesTable,
   dailyTasksTable,
+  roomsTable,
   type InsertStoreItem,
   type InsertVipFeature,
   type InsertVipTier,
   type InsertCoinPackage,
   type InsertDailyTask,
+  type InsertRoom,
 } from "@workspace/db";
 import { logger } from "./logger";
 
@@ -179,6 +181,16 @@ const DAILY_TASKS: InsertDailyTask[] = [
   { label: "شارك التطبيق", description: "ادعُ صديقاً لتجربة نبضة", reward: 300, icon: "share-social", color: "#FFB300", active: true, sortOrder: 6 },
 ];
 
+// Official starter rooms owned by the system account so the directory is
+// never empty on a fresh install.
+const ROOMS: InsertRoom[] = [
+  { name: "صالة نبضة الرئيسية", description: "الغرفة الرسمية للترحيب بالأعضاء الجدد", category: "chat", ownerId: "system", ownerName: "نبضة", tags: ["Chat"], active: true },
+  { name: "سهرة ونسة", description: "دردشة عامة وسوالف مع الأصدقاء", category: "chat", ownerId: "system", ownerName: "نبضة", tags: ["Chat"], active: true },
+  { name: "عشاق الألعاب", description: "تحديات لودو وأسئلة مع الجوائز", category: "gaming", ownerId: "system", ownerName: "نبضة", tags: ["PK"], active: true },
+  { name: "ركن الطرب", description: "أجمل الأغاني والجلسات الطربية", category: "music", ownerId: "system", ownerName: "نبضة", tags: ["Super W"], active: true },
+  { name: "عائلة نبضة", description: "غرفة العائلة — الكل حياه الله", category: "family", ownerId: "system", ownerName: "نبضة", tags: ["Chat"], active: true },
+];
+
 export async function seedIfEmpty(): Promise<void> {
   try {
     const [{ count: featureCount }] = await db
@@ -231,6 +243,15 @@ export async function seedIfEmpty(): Promise<void> {
     if (taskCount === 0) {
       await db.insert(dailyTasksTable).values(DAILY_TASKS);
       logger.info({ n: DAILY_TASKS.length }, "Seeded daily tasks");
+    }
+
+    const [{ count: roomCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(roomsTable);
+
+    if (roomCount === 0) {
+      await db.insert(roomsTable).values(ROOMS);
+      logger.info({ n: ROOMS.length }, "Seeded rooms");
     }
   } catch (err) {
     logger.error({ err }, "Seeding failed");

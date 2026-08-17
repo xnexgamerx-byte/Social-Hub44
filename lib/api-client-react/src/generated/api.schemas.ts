@@ -64,6 +64,94 @@ export interface Error {
   error: string;
 }
 
+export interface Room {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  ownerId: string;
+  ownerName: string;
+  ownerAvatar: string;
+  tags: string[];
+  active: boolean;
+  createdAt: string;
+}
+
+export type RoomInputCategory = typeof RoomInputCategory[keyof typeof RoomInputCategory];
+
+
+export const RoomInputCategory = {
+  chat: 'chat',
+  gaming: 'gaming',
+  music: 'music',
+  family: 'family',
+} as const;
+
+export interface RoomInput {
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  name: string;
+  /** @maxLength 200 */
+  description?: string;
+  category?: RoomInputCategory;
+  tags?: string[];
+  ownerName?: string;
+  ownerAvatar?: string;
+}
+
+export type RoomUpdateCategory = typeof RoomUpdateCategory[keyof typeof RoomUpdateCategory];
+
+
+export const RoomUpdateCategory = {
+  chat: 'chat',
+  gaming: 'gaming',
+  music: 'music',
+  family: 'family',
+} as const;
+
+export interface RoomUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  name?: string;
+  /** @maxLength 200 */
+  description?: string;
+  category?: RoomUpdateCategory;
+  tags?: string[];
+  active?: boolean;
+}
+
+export interface Conversation {
+  id: number;
+  otherUserId: string;
+  otherName: string;
+  otherAvatar: string;
+  lastText: string;
+  lastFromId: string;
+  lastAt: string;
+  unread: number;
+}
+
+export interface OpenConversationInput {
+  /** @minLength 1 */
+  otherUserId: string;
+  otherName?: string;
+  otherAvatar?: string;
+}
+
+export interface DmMessage {
+  id: number;
+  conversationId: number;
+  fromUserId: string;
+  fromName: string;
+  fromAvatar: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface StoreItem {
   id: number;
   name: string;
