@@ -11,4 +11,6 @@ export interface Wallet {
   publicId: string;
   coins: number;
   vPoints: number;
+  vipLevel: number;
+  vipType: string;
 }

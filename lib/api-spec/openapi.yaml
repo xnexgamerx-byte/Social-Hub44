@@ -914,6 +914,43 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/WalletTransaction"
+  /wallet/{userId}/vip:
+    post:
+      operationId: activateVip
+      tags: [wallet]
+      summary: Activate a VIP tier (server-validated against vPoints)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateVipInput"
+      responses:
+        "200":
+          description: Wallet with the activated VIP status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+        "400":
+          description: Not enough points for this tier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Tier not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /wallet/{userId}/recharge:
     post:
       operationId: rechargeWallet
@@ -1482,11 +1519,23 @@ components:
         - publicId
         - coins
         - vPoints
+        - vipLevel
+        - vipType
       properties:
         userId: { type: string }
         publicId: { type: string }
         coins: { type: integer }
         vPoints: { type: integer }
+        vipLevel: { type: integer }
+        vipType: { type: string }
+    ActivateVipInput:
+      type: object
+      required:
+        - level
+        - type
+      properties:
+        level: { type: integer, minimum: 1 }
+        type: { type: string, enum: [vip, svip] }
     WalletTransaction:
       type: object
       required:

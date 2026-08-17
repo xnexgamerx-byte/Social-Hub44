@@ -10,6 +10,7 @@ import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -51,14 +52,26 @@ export default function VipScreen() {
   );
 
   const [selLevel, setSelLevel] = useState(1);
+  const [activating, setActivating] = useState(false);
   const selected: VipTier | undefined = tiers.find((t) => t.level === selLevel);
 
   const topPad = Platform.OS === "web" ? 20 : insets.top;
   const isCurrent = user.vipType === type && user.vipLevel === selLevel;
+  const eligible = selected ? user.vPoints >= selected.pointsRequired : false;
 
   const progress = selected
     ? Math.min(1, user.vPoints / Math.max(1, selected.pointsRequired))
     : 0;
+
+  const activate = async () => {
+    if (!selected || isCurrent || activating) return;
+    setActivating(true);
+    const result = await setVip(selLevel, type);
+    setActivating(false);
+    if (!result.ok) {
+      Alert.alert("VIP", result.error ?? "تعذّر تفعيل العضوية");
+    }
+  };
 
   if (tiersQ.isLoading || featuresQ.isLoading) {
     return (
@@ -135,13 +148,17 @@ export default function VipScreen() {
           </View>
 
           <Pressable
-            style={[styles.activateBtn, isCurrent && styles.activateBtnOn]}
-            onPress={() => setVip(selLevel, type)}
-            disabled={isCurrent}
+            style={[styles.activateBtn, (isCurrent || !eligible) && styles.activateBtnOn]}
+            onPress={activate}
+            disabled={isCurrent || !eligible || activating}
           >
-            <Text style={styles.activateText}>
-              {isCurrent ? "مفعّل حالياً" : "تفعيل"}
-            </Text>
+            {activating ? (
+              <ActivityIndicator color="#1A0F08" />
+            ) : (
+              <Text style={styles.activateText}>
+                {isCurrent ? "مفعّل حالياً" : eligible ? "تفعيل" : "نقاطك غير كافية"}
+              </Text>
+            )}
           </Pressable>
         </LinearGradient>
 

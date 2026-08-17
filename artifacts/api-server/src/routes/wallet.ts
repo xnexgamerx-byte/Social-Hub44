@@ -10,6 +10,7 @@ import {
   dailyTaskClaimsTable,
   storeItemsTable,
   userItemsTable,
+  vipTiersTable,
 } from "@workspace/db";
 import {
   GetWalletParams,
@@ -36,6 +37,9 @@ import {
   EquipItemResponse,
   ListTaskClaimsParams,
   ListTaskClaimsResponse,
+  ActivateVipParams,
+  ActivateVipBody,
+  ActivateVipResponse,
 } from "@workspace/api-zod";
 import {
   ensureWallet,
@@ -106,6 +110,52 @@ router.post("/wallet/:userId/ensure", async (req, res): Promise<void> => {
   // applied only on first wallet creation (see ensureWallet / WELCOME_COINS).
   const wallet = await ensureWallet(params.data.userId);
   res.json(EnsureWalletResponse.parse(toWalletView(wallet)));
+});
+
+// VIP activation is threshold-based (SUGO-style): the tier unlocks once the
+// wallet's vPoints reach the tier's requirement. The check runs server-side so
+// a client can never grant itself VIP status.
+router.post("/wallet/:userId/vip", async (req, res): Promise<void> => {
+  const params = ActivateVipParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const parsed = ActivateVipBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { level, type } = parsed.data;
+
+  const [tier] = await db
+    .select()
+    .from(vipTiersTable)
+    .where(
+      and(
+        eq(vipTiersTable.level, level),
+        eq(vipTiersTable.type, type),
+        eq(vipTiersTable.active, true),
+      ),
+    )
+    .limit(1);
+  if (!tier) {
+    res.status(404).json({ error: "المستوى غير موجود" });
+    return;
+  }
+
+  const wallet = await ensureWallet(params.data.userId);
+  if (wallet.vPoints < tier.pointsRequired) {
+    res.status(400).json({ error: "نقاطك غير كافية لهذا المستوى" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(walletsTable)
+    .set({ vipLevel: level, vipType: type })
+    .where(eq(walletsTable.userId, params.data.userId))
+    .returning();
+  res.json(ActivateVipResponse.parse(toWalletView(updated)));
 });
 
 router.get("/wallet/:userId/transactions", async (req, res): Promise<void> => {

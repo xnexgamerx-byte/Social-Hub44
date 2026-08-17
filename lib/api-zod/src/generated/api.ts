@@ -696,7 +696,9 @@ export const GetWalletResponse = zod.object({
   "userId": zod.string(),
   "publicId": zod.string(),
   "coins": zod.number(),
-  "vPoints": zod.number()
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
 })
 
 
@@ -711,7 +713,9 @@ export const EnsureWalletResponse = zod.object({
   "userId": zod.string(),
   "publicId": zod.string(),
   "coins": zod.number(),
-  "vPoints": zod.number()
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
 })
 
 
@@ -737,6 +741,31 @@ export const ListWalletTransactionsResponse = zod.array(ListWalletTransactionsRe
 
 
 /**
+ * @summary Activate a VIP tier (server-validated against vPoints)
+ */
+export const ActivateVipParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+
+
+
+export const ActivateVipBody = zod.object({
+  "level": zod.number().min(1),
+  "type": zod.enum(['vip', 'svip'])
+})
+
+export const ActivateVipResponse = zod.object({
+  "userId": zod.string(),
+  "publicId": zod.string(),
+  "coins": zod.number(),
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
+})
+
+
+/**
  * @summary Recharge coins by purchasing a coin package
  */
 export const RechargeWalletParams = zod.object({
@@ -752,7 +781,9 @@ export const RechargeWalletResponse = zod.object({
   "userId": zod.string(),
   "publicId": zod.string(),
   "coins": zod.number(),
-  "vPoints": zod.number()
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
 })
 
 
@@ -768,7 +799,9 @@ export const ReconcileRechargesResponse = zod.object({
   "userId": zod.string(),
   "publicId": zod.string(),
   "coins": zod.number(),
-  "vPoints": zod.number()
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
 })
 
 
@@ -788,7 +821,9 @@ export const PurchaseItemResponse = zod.object({
   "userId": zod.string(),
   "publicId": zod.string(),
   "coins": zod.number(),
-  "vPoints": zod.number()
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
 }),
   "item": zod.object({
   "id": zod.number(),
@@ -814,7 +849,9 @@ export const ClaimTaskResponse = zod.object({
   "userId": zod.string(),
   "publicId": zod.string(),
   "coins": zod.number(),
-  "vPoints": zod.number()
+  "vPoints": zod.number(),
+  "vipLevel": zod.number(),
+  "vipType": zod.string()
 })
 
 

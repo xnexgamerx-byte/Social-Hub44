@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActivateVipInput,
   Admin,
   AdminAuditEvent,
   AdminInput,
@@ -3085,6 +3086,78 @@ export function useListWalletTransactions<TData = Awaited<ReturnType<typeof list
 
 
 
+
+export const getActivateVipUrl = (userId: string,) => {
+
+
+
+
+  return `/api/wallet/${userId}/vip`
+}
+
+/**
+ * @summary Activate a VIP tier (server-validated against vPoints)
+ */
+export const activateVip = async (userId: string,
+    activateVipInput: ActivateVipInput, options?: RequestInit): Promise<Wallet> => {
+
+  return customFetch<Wallet>(getActivateVipUrl(userId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      activateVipInput,)
+  }
+);}
+
+
+
+
+export const getActivateVipMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateVip>>, TError,{userId: string;data: BodyType<ActivateVipInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof activateVip>>, TError,{userId: string;data: BodyType<ActivateVipInput>}, TContext> => {
+
+const mutationKey = ['activateVip'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activateVip>>, {userId: string;data: BodyType<ActivateVipInput>}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  activateVip(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActivateVipMutationResult = NonNullable<Awaited<ReturnType<typeof activateVip>>>
+    export type ActivateVipMutationBody = BodyType<ActivateVipInput>
+    export type ActivateVipMutationError = ErrorType<Error>
+
+    /**
+ * @summary Activate a VIP tier (server-validated against vPoints)
+ */
+export const useActivateVip = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateVip>>, TError,{userId: string;data: BodyType<ActivateVipInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof activateVip>>,
+        TError,
+        {userId: string;data: BodyType<ActivateVipInput>},
+        TContext
+      > => {
+      return useMutation(getActivateVipMutationOptions(options));
+    }
 
 export const getRechargeWalletUrl = (userId: string,) => {
 

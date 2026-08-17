@@ -24,6 +24,8 @@ export interface WalletView {
   publicId: string;
   coins: number;
   vPoints: number;
+  vipLevel: number;
+  vipType: string;
 }
 
 export function toWalletView(w: Wallet): WalletView {
@@ -32,6 +34,8 @@ export function toWalletView(w: Wallet): WalletView {
     publicId: w.publicId ?? "",
     coins: w.coins,
     vPoints: w.vPoints,
+    vipLevel: w.vipLevel,
+    vipType: w.vipType,
   };
 }
 

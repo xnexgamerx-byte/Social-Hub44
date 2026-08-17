@@ -286,6 +286,22 @@ export interface Wallet {
   publicId: string;
   coins: number;
   vPoints: number;
+  vipLevel: number;
+  vipType: string;
+}
+
+export type ActivateVipInputType = typeof ActivateVipInputType[keyof typeof ActivateVipInputType];
+
+
+export const ActivateVipInputType = {
+  vip: 'vip',
+  svip: 'svip',
+} as const;
+
+export interface ActivateVipInput {
+  /** @minimum 1 */
+  level: number;
+  type: ActivateVipInputType;
 }
 
 export interface WalletTransaction {

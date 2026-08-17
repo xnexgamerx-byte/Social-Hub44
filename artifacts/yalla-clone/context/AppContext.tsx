@@ -8,6 +8,7 @@ import {
   getGetWalletQueryOptions,
   getListUserItemsQueryKey,
   getListUserItemsQueryOptions,
+  useActivateVip,
   useClaimTask,
   useEquipItem,
   useGetAuthMe,
@@ -41,11 +42,6 @@ export interface ActionResult {
   error?: string;
 }
 
-interface LocalVip {
-  vipLevel: number;
-  vipType: "vip" | "svip" | null;
-}
-
 interface AppContextValue {
   user: AppUser;
   isAdmin: boolean;
@@ -65,7 +61,7 @@ interface AppContextValue {
   reconcileRecharges: () => Promise<ActionResult>;
   claimTask: (taskId: number) => Promise<ActionResult>;
   equipItem: (itemId: number) => Promise<ActionResult>;
-  setVip: (level: number, type: "vip" | "svip") => void;
+  setVip: (level: number, type: "vip" | "svip") => Promise<ActionResult>;
   refreshWallet: () => void;
 }
 
@@ -107,7 +103,7 @@ const AppContext = createContext<AppContextValue>({
   reconcileRecharges: noopAsync,
   claimTask: noopAsync,
   equipItem: noopAsync,
-  setVip: () => {},
+  setVip: noopAsync,
   refreshWallet: () => {},
 });
 
@@ -124,7 +120,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const { user: clerkUser } = useUser();
   const userId = clerkUserId ?? null;
 
-  const [vip, setVipState] = useState<LocalVip>({ vipLevel: 0, vipType: null });
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
   const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());
   const [walletReady, setWalletReady] = useState(false);
@@ -199,24 +194,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
     let cancelled = false;
     (async () => {
-      const [liked, joined, localVip] = await Promise.all([
+      const [liked, joined] = await Promise.all([
         AsyncStorage.getItem("likedVideos"),
         AsyncStorage.getItem("joinedRooms"),
-        AsyncStorage.getItem("userState"),
       ]);
       if (cancelled) return;
       if (liked) setLikedVideos(new Set(JSON.parse(liked)));
       if (joined) setJoinedRooms(new Set(JSON.parse(joined)));
-      if (localVip) {
-        try {
-          const parsed = JSON.parse(localVip) as Partial<LocalVip>;
-          if (typeof parsed.vipLevel === "number" && parsed.vipType) {
-            setVipState({ vipLevel: parsed.vipLevel, vipType: parsed.vipType });
-          }
-        } catch {
-          // ignore malformed local vip blob
-        }
-      }
 
       try {
         // The welcome balance is granted server-side on first creation; the
@@ -257,6 +241,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const reconcileM = useReconcileRecharges();
   const claimM = useClaimTask();
   const equipM = useEquipItem();
+  const vipM = useActivateVip();
 
   const ownedItems = useMemo(
     () => new Set((itemsQ.data ?? []).map((i) => i.itemId)),
@@ -287,11 +272,14 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       bio: (clerkUser?.unsafeMetadata?.bio as string | undefined) || "",
       coins: walletQ.data?.coins ?? 0,
       vPoints: walletQ.data?.vPoints ?? 0,
-      vipLevel: vip.vipLevel,
-      vipType: vip.vipType,
+      vipLevel: walletQ.data?.vipLevel ?? 0,
+      vipType:
+        walletQ.data?.vipType === "vip" || walletQ.data?.vipType === "svip"
+          ? walletQ.data.vipType
+          : null,
       isAdmin,
     };
-  }, [clerkUser, userId, walletQ.data, vip, isAdmin]);
+  }, [clerkUser, userId, walletQ.data, isAdmin]);
 
   const toggleLikeVideo = (id: string) => {
     setLikedVideos((prev) => {
@@ -372,13 +360,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const setVip = (level: number, type: "vip" | "svip") => {
-    const next: LocalVip = { vipLevel: level, vipType: type };
-    setVipState(next);
-    AsyncStorage.setItem(
-      "userState",
-      JSON.stringify({ vipLevel: next.vipLevel, vipType: next.vipType }),
-    );
+  // VIP activation is server-validated (vPoints must reach the tier's
+  // requirement); the local device never decides VIP status.
+  const setVip = async (level: number, type: "vip" | "svip"): Promise<ActionResult> => {
+    if (!userId) return { ok: false, error: "يجب تسجيل الدخول" };
+    try {
+      await vipM.mutateAsync({ userId, data: { level, type } });
+      invalidateWallet();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: errorMessage(err, "تعذّر تفعيل العضوية") };
+    }
   };
 
   return (

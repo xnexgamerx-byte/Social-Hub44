@@ -3,6 +3,7 @@ import {
   serial,
   text,
   bigint,
+  integer,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -19,6 +20,11 @@ export const walletsTable = pgTable("wallets", {
   coins: bigint("coins", { mode: "number" }).notNull().default(0),
   // نقاط / ماسات (vPoints / diamonds) balance
   vPoints: bigint("v_points", { mode: "number" }).notNull().default(0),
+  // Server-validated VIP status: level 0 + "" means no VIP. Activation is
+  // gated on vPoints reaching the tier's pointsRequired (see /wallet/:id/vip).
+  vipLevel: integer("vip_level").notNull().default(0),
+  // "" | vip | svip
+  vipType: text("vip_type").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

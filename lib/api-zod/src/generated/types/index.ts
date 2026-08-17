@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './activateVipInput';
+export * from './activateVipInputType';
 export * from './admin';
 export * from './adminAuditEvent';
 export * from './adminInput';
