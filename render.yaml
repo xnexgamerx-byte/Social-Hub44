@@ -7,9 +7,11 @@ services:
     runtime: node
     plan: free
     healthCheckPath: /api/healthz
+    # pnpm 10.x: v11 replaced onlyBuiltDependencies with a new allowBuilds
+    # scheme and fails CI installs with ERR_PNPM_IGNORED_BUILDS otherwise.
     buildCommand: >-
       corepack enable &&
-      corepack prepare pnpm@11.22.0 --activate &&
+      corepack prepare pnpm@10.18.1 --activate &&
       pnpm install --filter @workspace/api-server... --frozen-lockfile &&
       pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
