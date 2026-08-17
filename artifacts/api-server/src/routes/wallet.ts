@@ -61,7 +61,9 @@ const router: IRouter = Router();
 // Every wallet route is scoped to a `:userId`. Require a valid session, then
 // reject any request whose verified user id does not match the path — a signed
 // in user can only ever read or mutate their own wallet.
-router.use(requireAuth);
+// Scoped to /wallet: a bare router.use(requireAuth) would also gate every
+// router mounted after this one (e.g. the public /rooms list).
+router.use("/wallet", requireAuth);
 router.param("userId", (req, res, next, userId) => {
   if ((req as AuthedRequest).userId !== userId) {
     res.status(403).json({ error: "غير مصرح لك بالوصول" });

@@ -1,0 +1,28 @@
+# Render Blueprint: deploys the API server (Express + Socket.io).
+# Dashboard → New → Blueprint → pick this repo, then fill in the env vars
+# marked sync:false (they are secrets and never live in git).
+services:
+  - type: web
+    name: social-hub44-api
+    runtime: node
+    plan: free
+    healthCheckPath: /api/healthz
+    buildCommand: >-
+      corepack enable &&
+      corepack prepare pnpm@11.22.0 --activate &&
+      pnpm install --filter @workspace/api-server... --frozen-lockfile &&
+      pnpm --filter @workspace/api-server run build
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 24.4.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
