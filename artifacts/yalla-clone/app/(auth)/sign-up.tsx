@@ -19,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { clerkErrorMessage } from "@/lib/clerkError";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -71,7 +72,7 @@ export default function SignUpScreen() {
     }
     const { error } = await signUp.password({ emailAddress, password });
     if (error) {
-      setFormError("تعذّر إنشاء الحساب. تحقّق من البيانات.");
+      setFormError(clerkErrorMessage(error, "تعذّر إنشاء الحساب. تحقّق من البيانات."));
       return;
     }
     // Stash the profile details, scoped to this email so AppContext only ever
@@ -99,8 +100,8 @@ export default function SignUpScreen() {
       } else {
         setFormError("رمز التحقق غير صحيح.");
       }
-    } catch {
-      setFormError("تعذّر التحقق من الرمز. حاول مرة أخرى.");
+    } catch (err) {
+      setFormError(clerkErrorMessage(err, "تعذّر التحقق من الرمز. حاول مرة أخرى."));
     }
   };
 
@@ -121,8 +122,8 @@ export default function SignUpScreen() {
           },
         });
       }
-    } catch {
-      setFormError("تعذّر المتابعة عبر Google.");
+    } catch (err) {
+      setFormError(clerkErrorMessage(err, "تعذّر المتابعة عبر Google."));
     } finally {
       setGoogleLoading(false);
     }

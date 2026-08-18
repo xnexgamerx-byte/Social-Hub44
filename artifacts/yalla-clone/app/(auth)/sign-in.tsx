@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { clerkErrorMessage } from "@/lib/clerkError";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -52,7 +53,9 @@ export default function SignInScreen() {
     setFormError(null);
     const { error } = await signIn.password({ emailAddress, password });
     if (error) {
-      setFormError("تعذّر تسجيل الدخول. تحقّق من البريد وكلمة المرور.");
+      setFormError(
+        clerkErrorMessage(error, "تعذّر تسجيل الدخول. تحقّق من البريد وكلمة المرور."),
+      );
       return;
     }
     if (signIn.status === "complete") {
@@ -79,8 +82,8 @@ export default function SignInScreen() {
           },
         });
       }
-    } catch {
-      setFormError("تعذّر تسجيل الدخول عبر Google.");
+    } catch (err) {
+      setFormError(clerkErrorMessage(err, "تعذّر تسجيل الدخول عبر Google."));
     } finally {
       setGoogleLoading(false);
     }
