@@ -21,6 +21,7 @@ import {
   type ProfileInput,
 } from "@workspace/api-client-react";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { registerForPush } from "@/lib/push";
 
 const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=3";
 
@@ -314,7 +315,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     profileSyncRef.current = signature;
     profileM
       .mutateAsync({ data: payload })
-      .then(() => qc.invalidateQueries({ queryKey: getListProfilesQueryKey() }))
+      .then(() => {
+        qc.invalidateQueries({ queryKey: getListProfilesQueryKey() });
+        // Register for notifications once we know the account exists.
+        void registerForPush().catch(() => {});
+      })
       .catch(() => {
         // Directory sync is best-effort; retry on the next identity change.
         profileSyncRef.current = "";

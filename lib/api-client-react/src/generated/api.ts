@@ -40,6 +40,8 @@ import type {
   FollowStats,
   GrantCoinsInput,
   HealthStatus,
+  HostEntry,
+  HostInput,
   OpenConversationInput,
   Post,
   PostInput,
@@ -48,8 +50,13 @@ import type {
   ProfileInput,
   PurchaseInput,
   PurchaseResult,
+  PushTokenInput,
   RechargeInput,
+  ReferralClaimInput,
+  ReferralStatus,
   Room,
+  RoomEvent,
+  RoomEventInput,
   RoomInput,
   RoomUpdate,
   StoreItem,
@@ -2868,6 +2875,661 @@ export const useMarkConversationRead = <TError = ErrorType<Error>,
         TContext
       > => {
       return useMutation(getMarkConversationReadMutationOptions(options));
+    }
+
+export const getGetMyReferralUrl = () => {
+
+
+
+
+  return `/api/referrals/me`
+}
+
+/**
+ * @summary My invite code, how many joined, and whether I already used one
+ */
+export const getMyReferral = async ( options?: RequestInit): Promise<ReferralStatus> => {
+
+  return customFetch<ReferralStatus>(getGetMyReferralUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyReferralQueryKey = () => {
+    return [
+    `/api/referrals/me`
+    ] as const;
+    }
+
+
+export const getGetMyReferralQueryOptions = <TData = Awaited<ReturnType<typeof getMyReferral>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyReferral>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyReferralQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyReferral>>> = ({ signal }) => getMyReferral({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyReferral>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyReferralQueryResult = NonNullable<Awaited<ReturnType<typeof getMyReferral>>>
+export type GetMyReferralQueryError = ErrorType<Error>
+
+
+/**
+ * @summary My invite code, how many joined, and whether I already used one
+ */
+
+export function useGetMyReferral<TData = Awaited<ReturnType<typeof getMyReferral>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyReferral>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyReferralQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getClaimReferralUrl = () => {
+
+
+
+
+  return `/api/referrals/claim`
+}
+
+/**
+ * @summary Redeem a friend's invite code (once per account)
+ */
+export const claimReferral = async (referralClaimInput: ReferralClaimInput, options?: RequestInit): Promise<ReferralStatus> => {
+
+  return customFetch<ReferralStatus>(getClaimReferralUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      referralClaimInput,)
+  }
+);}
+
+
+
+
+export const getClaimReferralMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimReferral>>, TError,{data: BodyType<ReferralClaimInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimReferral>>, TError,{data: BodyType<ReferralClaimInput>}, TContext> => {
+
+const mutationKey = ['claimReferral'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimReferral>>, {data: BodyType<ReferralClaimInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  claimReferral(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimReferralMutationResult = NonNullable<Awaited<ReturnType<typeof claimReferral>>>
+    export type ClaimReferralMutationBody = BodyType<ReferralClaimInput>
+    export type ClaimReferralMutationError = ErrorType<Error>
+
+    /**
+ * @summary Redeem a friend's invite code (once per account)
+ */
+export const useClaimReferral = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimReferral>>, TError,{data: BodyType<ReferralClaimInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimReferral>>,
+        TError,
+        {data: BodyType<ReferralClaimInput>},
+        TContext
+      > => {
+      return useMutation(getClaimReferralMutationOptions(options));
+    }
+
+export const getListHostsUrl = () => {
+
+
+
+
+  return `/api/hosts`
+}
+
+/**
+ * @summary List paid hosts with their tracked hours (admin only)
+ */
+export const listHosts = async ( options?: RequestInit): Promise<HostEntry[]> => {
+
+  return customFetch<HostEntry[]>(getListHostsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListHostsQueryKey = () => {
+    return [
+    `/api/hosts`
+    ] as const;
+    }
+
+
+export const getListHostsQueryOptions = <TData = Awaited<ReturnType<typeof listHosts>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHosts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListHostsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listHosts>>> = ({ signal }) => listHosts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listHosts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListHostsQueryResult = NonNullable<Awaited<ReturnType<typeof listHosts>>>
+export type ListHostsQueryError = ErrorType<Error>
+
+
+/**
+ * @summary List paid hosts with their tracked hours (admin only)
+ */
+
+export function useListHosts<TData = Awaited<ReturnType<typeof listHosts>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHosts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListHostsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateHostUrl = () => {
+
+
+
+
+  return `/api/hosts`
+}
+
+/**
+ * @summary Grant host status by public account id (admin only)
+ */
+export const createHost = async (hostInput: HostInput, options?: RequestInit): Promise<HostEntry> => {
+
+  return customFetch<HostEntry>(getCreateHostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      hostInput,)
+  }
+);}
+
+
+
+
+export const getCreateHostMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHost>>, TError,{data: BodyType<HostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createHost>>, TError,{data: BodyType<HostInput>}, TContext> => {
+
+const mutationKey = ['createHost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createHost>>, {data: BodyType<HostInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createHost(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateHostMutationResult = NonNullable<Awaited<ReturnType<typeof createHost>>>
+    export type CreateHostMutationBody = BodyType<HostInput>
+    export type CreateHostMutationError = ErrorType<Error>
+
+    /**
+ * @summary Grant host status by public account id (admin only)
+ */
+export const useCreateHost = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHost>>, TError,{data: BodyType<HostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createHost>>,
+        TError,
+        {data: BodyType<HostInput>},
+        TContext
+      > => {
+      return useMutation(getCreateHostMutationOptions(options));
+    }
+
+export const getDeleteHostUrl = (userId: string,) => {
+
+
+
+
+  return `/api/hosts/${userId}`
+}
+
+/**
+ * @summary Revoke host status (admin only)
+ */
+export const deleteHost = async (userId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteHostUrl(userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteHostMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHost>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteHost>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['deleteHost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteHost>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  deleteHost(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteHostMutationResult = NonNullable<Awaited<ReturnType<typeof deleteHost>>>
+
+    export type DeleteHostMutationError = ErrorType<Error>
+
+    /**
+ * @summary Revoke host status (admin only)
+ */
+export const useDeleteHost = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHost>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteHost>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteHostMutationOptions(options));
+    }
+
+export const getListRoomEventsUrl = () => {
+
+
+
+
+  return `/api/room-events`
+}
+
+/**
+ * @summary Upcoming scheduled sessions
+ */
+export const listRoomEvents = async ( options?: RequestInit): Promise<RoomEvent[]> => {
+
+  return customFetch<RoomEvent[]>(getListRoomEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRoomEventsQueryKey = () => {
+    return [
+    `/api/room-events`
+    ] as const;
+    }
+
+
+export const getListRoomEventsQueryOptions = <TData = Awaited<ReturnType<typeof listRoomEvents>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoomEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRoomEventsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoomEvents>>> = ({ signal }) => listRoomEvents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRoomEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRoomEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listRoomEvents>>>
+export type ListRoomEventsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Upcoming scheduled sessions
+ */
+
+export function useListRoomEvents<TData = Awaited<ReturnType<typeof listRoomEvents>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoomEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRoomEventsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateRoomEventUrl = () => {
+
+
+
+
+  return `/api/room-events`
+}
+
+/**
+ * @summary Schedule a session (admin only)
+ */
+export const createRoomEvent = async (roomEventInput: RoomEventInput, options?: RequestInit): Promise<RoomEvent> => {
+
+  return customFetch<RoomEvent>(getCreateRoomEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      roomEventInput,)
+  }
+);}
+
+
+
+
+export const getCreateRoomEventMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoomEvent>>, TError,{data: BodyType<RoomEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRoomEvent>>, TError,{data: BodyType<RoomEventInput>}, TContext> => {
+
+const mutationKey = ['createRoomEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRoomEvent>>, {data: BodyType<RoomEventInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRoomEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRoomEventMutationResult = NonNullable<Awaited<ReturnType<typeof createRoomEvent>>>
+    export type CreateRoomEventMutationBody = BodyType<RoomEventInput>
+    export type CreateRoomEventMutationError = ErrorType<Error>
+
+    /**
+ * @summary Schedule a session (admin only)
+ */
+export const useCreateRoomEvent = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoomEvent>>, TError,{data: BodyType<RoomEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRoomEvent>>,
+        TError,
+        {data: BodyType<RoomEventInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRoomEventMutationOptions(options));
+    }
+
+export const getDeleteRoomEventUrl = (id: number,) => {
+
+
+
+
+  return `/api/room-events/${id}`
+}
+
+/**
+ * @summary Cancel a scheduled session (admin only)
+ */
+export const deleteRoomEvent = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteRoomEventUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteRoomEventMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoomEvent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRoomEvent>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRoomEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRoomEvent>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRoomEvent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRoomEventMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRoomEvent>>>
+
+    export type DeleteRoomEventMutationError = ErrorType<Error>
+
+    /**
+ * @summary Cancel a scheduled session (admin only)
+ */
+export const useDeleteRoomEvent = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRoomEvent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRoomEvent>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRoomEventMutationOptions(options));
+    }
+
+export const getRegisterPushTokenUrl = () => {
+
+
+
+
+  return `/api/push/register`
+}
+
+/**
+ * @summary Store this device's Expo push token
+ */
+export const registerPushToken = async (pushTokenInput: PushTokenInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRegisterPushTokenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pushTokenInput,)
+  }
+);}
+
+
+
+
+export const getRegisterPushTokenMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushToken>>, TError,{data: BodyType<PushTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerPushToken>>, TError,{data: BodyType<PushTokenInput>}, TContext> => {
+
+const mutationKey = ['registerPushToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerPushToken>>, {data: BodyType<PushTokenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerPushToken(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterPushTokenMutationResult = NonNullable<Awaited<ReturnType<typeof registerPushToken>>>
+    export type RegisterPushTokenMutationBody = BodyType<PushTokenInput>
+    export type RegisterPushTokenMutationError = ErrorType<Error>
+
+    /**
+ * @summary Store this device's Expo push token
+ */
+export const useRegisterPushToken = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushToken>>, TError,{data: BodyType<PushTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerPushToken>>,
+        TError,
+        {data: BodyType<PushTokenInput>},
+        TContext
+      > => {
+      return useMutation(getRegisterPushTokenMutationOptions(options));
     }
 
 export const getListProfilesUrl = () => {

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -18,6 +18,11 @@ export const profilesTable = pgTable(
     gender: text("gender").notNull().default(""),
     age: integer("age").notNull().default(0),
     country: text("country").notNull().default(""),
+    // Official app account — shown with a verified badge and never presented
+    // as a private individual. Set server-side only.
+    isOfficial: boolean("is_official").notNull().default(false),
+    // Paid host badge, mirrored from the hosts table for cheap list rendering.
+    isHost: boolean("is_host").notNull().default(false),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

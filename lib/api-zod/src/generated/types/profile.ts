@@ -16,5 +16,7 @@ export interface Profile {
   country: string;
   level: number;
   isOnline: boolean;
+  isOfficial: boolean;
+  isHost: boolean;
   lastSeenAt: string;
 }

@@ -61,6 +61,9 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "expo-clipboard": "~8.0.8",
+    "expo-device": "~8.0.10",
+    "expo-notifications": "~0.32.17",
     "expo-video": "~3.0.16",
     "lottie-react-native": "~7.3.8",
     "react-native-purchases": "^10.2.0",

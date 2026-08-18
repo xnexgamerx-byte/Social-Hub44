@@ -14,6 +14,7 @@ import dmRouter from "./dm";
 import followsRouter from "./follows";
 import profilesRouter from "./profiles";
 import postsRouter from "./posts";
+import growthRouter from "./growth";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(dmRouter);
 router.use(followsRouter);
 router.use(profilesRouter);
 router.use(postsRouter);
+router.use(growthRouter);
 
 export default router;

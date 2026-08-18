@@ -58,6 +58,20 @@ function UserRow({ user, onChat }: { user: Profile; onChat: (u: Profile) => void
           <Text style={[styles.userName, { color: colors.foreground }]} numberOfLines={1}>
             {user.name || "مستخدم"}
           </Text>
+          {/* Official and host accounts are always labelled — nothing on this
+              screen is allowed to look like a private person when it isn't. */}
+          {user.isOfficial && (
+            <View style={styles.officialBadge}>
+              <Ionicons name="checkmark-circle" size={11} color="#fff" />
+              <Text style={styles.badgeText}>رسمي</Text>
+            </View>
+          )}
+          {user.isHost && !user.isOfficial && (
+            <View style={styles.hostBadge}>
+              <Ionicons name="mic" size={10} color="#fff" />
+              <Text style={styles.badgeText}>مضيف</Text>
+            </View>
+          )}
           {!!user.country && <Text style={styles.flag}>{user.country}</Text>}
         </View>
         <View style={styles.badgesRow}>
@@ -233,6 +247,25 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(139,92,246,0.22)",
   },
   lvText: { fontSize: 11, fontWeight: "700" as const, color: "#C4B5FD" },
+  officialBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#2F80ED",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  hostBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#EC4899",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" as const },
   ageBadge: {
     flexDirection: "row",
     alignItems: "center",

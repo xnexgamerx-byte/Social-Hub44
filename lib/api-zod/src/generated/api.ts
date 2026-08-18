@@ -686,6 +686,138 @@ export const MarkConversationReadParams = zod.object({
 
 
 /**
+ * @summary My invite code, how many joined, and whether I already used one
+ */
+export const GetMyReferralResponse = zod.object({
+  "code": zod.string(),
+  "invitedCount": zod.number(),
+  "hasClaimed": zod.boolean(),
+  "referrerReward": zod.number(),
+  "referredReward": zod.number()
+})
+
+
+/**
+ * @summary Redeem a friend's invite code (once per account)
+ */
+export const claimReferralBodyCodeMin = 4;
+export const claimReferralBodyCodeMax = 12;
+
+
+
+export const ClaimReferralBody = zod.object({
+  "code": zod.string().min(claimReferralBodyCodeMin).max(claimReferralBodyCodeMax)
+})
+
+export const ClaimReferralResponse = zod.object({
+  "code": zod.string(),
+  "invitedCount": zod.number(),
+  "hasClaimed": zod.boolean(),
+  "referrerReward": zod.number(),
+  "referredReward": zod.number()
+})
+
+
+/**
+ * @summary List paid hosts with their tracked hours (admin only)
+ */
+export const ListHostsResponseItem = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string(),
+  "publicId": zod.string(),
+  "bonusSharePercent": zod.number(),
+  "active": zod.boolean(),
+  "minutesThisWeek": zod.number(),
+  "minutesTotal": zod.number()
+})
+export const ListHostsResponse = zod.array(ListHostsResponseItem)
+
+
+/**
+ * @summary Grant host status by public account id (admin only)
+ */
+
+export const createHostBodyBonusSharePercentMin = 0;
+export const createHostBodyBonusSharePercentMax = 50;
+
+
+
+export const CreateHostBody = zod.object({
+  "publicId": zod.string().min(1),
+  "bonusSharePercent": zod.number().min(createHostBodyBonusSharePercentMin).max(createHostBodyBonusSharePercentMax).optional()
+})
+
+
+/**
+ * @summary Revoke host status (admin only)
+ */
+export const DeleteHostParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+
+/**
+ * @summary Upcoming scheduled sessions
+ */
+export const ListRoomEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "roomId": zod.number(),
+  "roomName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "startsAt": zod.string(),
+  "weekday": zod.number(),
+  "active": zod.boolean()
+})
+export const ListRoomEventsResponse = zod.array(ListRoomEventsResponseItem)
+
+
+/**
+ * @summary Schedule a session (admin only)
+ */
+export const createRoomEventBodyTitleMax = 60;
+
+export const createRoomEventBodyDescriptionMax = 200;
+
+export const createRoomEventBodyWeekdayMin = -1;
+export const createRoomEventBodyWeekdayMax = 6;
+
+
+
+export const CreateRoomEventBody = zod.object({
+  "roomId": zod.number(),
+  "title": zod.string().min(1).max(createRoomEventBodyTitleMax),
+  "description": zod.string().max(createRoomEventBodyDescriptionMax).optional(),
+  "startsAt": zod.string(),
+  "weekday": zod.number().min(createRoomEventBodyWeekdayMin).max(createRoomEventBodyWeekdayMax).optional()
+})
+
+
+/**
+ * @summary Cancel a scheduled session (admin only)
+ */
+export const DeleteRoomEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Store this device's Expo push token
+ */
+export const registerPushTokenBodyTokenMin = 8;
+
+export const registerPushTokenBodyPlatformMax = 16;
+
+
+
+export const RegisterPushTokenBody = zod.object({
+  "token": zod.string().min(registerPushTokenBodyTokenMin),
+  "platform": zod.string().max(registerPushTokenBodyPlatformMax).optional()
+})
+
+
+/**
  * @summary List app users, most recently active first
  */
 export const ListProfilesResponseItem = zod.object({
@@ -698,6 +830,8 @@ export const ListProfilesResponseItem = zod.object({
   "country": zod.string(),
   "level": zod.number(),
   "isOnline": zod.boolean(),
+  "isOfficial": zod.boolean(),
+  "isHost": zod.boolean(),
   "lastSeenAt": zod.string()
 })
 export const ListProfilesResponse = zod.array(ListProfilesResponseItem)
@@ -736,6 +870,8 @@ export const UpsertMyProfileResponse = zod.object({
   "country": zod.string(),
   "level": zod.number(),
   "isOnline": zod.boolean(),
+  "isOfficial": zod.boolean(),
+  "isHost": zod.boolean(),
   "lastSeenAt": zod.string()
 })
 
@@ -757,6 +893,8 @@ export const GetProfileResponse = zod.object({
   "country": zod.string(),
   "level": zod.number(),
   "isOnline": zod.boolean(),
+  "isOfficial": zod.boolean(),
+  "isHost": zod.boolean(),
   "lastSeenAt": zod.string()
 })
 

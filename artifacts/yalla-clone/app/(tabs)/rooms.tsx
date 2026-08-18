@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,6 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getListMyRoomsQueryKey,
   getListMyRoomsQueryOptions,
+  getListRoomEventsQueryOptions,
   getListRoomsQueryKey,
   getListRoomsQueryOptions,
   useDeleteRoom,
@@ -26,6 +28,20 @@ import { useColors } from "@/hooks/useColors";
 
 const TABS = ["موصى به", "أنا"];
 
+/** "اليوم ٩:٠٠" for today, otherwise a short weekday + time. */
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const sameDay =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  if (sameDay) return `اليوم ${time}`;
+  const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  return `${days[d.getDay()]} ${time}`;
+}
+
 export default function ChatroomScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -34,6 +50,7 @@ export default function ChatroomScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const allRoomsQ = useQuery(getListRoomsQueryOptions());
+  const eventsQ = useQuery(getListRoomEventsQueryOptions());
   const myRoomsQ = useQuery({
     ...getListMyRoomsQueryOptions(),
     enabled: activeTab === 1,
@@ -105,21 +122,66 @@ export default function ChatroomScreen() {
         }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={styles.bannerContainer}>
-            <View style={styles.banner}>
-              <View style={styles.bannerContent}>
-                <Text style={styles.bannerTitle}>تمتع بالدردشة</Text>
-                <Text style={styles.bannerSub}>في نبضة</Text>
-              </View>
-              <View style={styles.bannerDots}>
-                {[0, 1, 2].map((d) => (
-                  <View
-                    key={d}
-                    style={[styles.dot, d === 0 && styles.dotActive]}
-                  />
-                ))}
-              </View>
+          <View>
+            <View style={styles.bannerContainer}>
+              <TouchableOpacity
+                style={styles.banner}
+                onPress={() => router.push("/invite")}
+                activeOpacity={0.9}
+              >
+                <View style={styles.bannerContent}>
+                  <Text style={styles.bannerTitle}>ادعُ أصدقاءك</Text>
+                  <Text style={styles.bannerSub}>واربحوا كوينزات سوا 🎁</Text>
+                </View>
+                <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.85)" />
+              </TouchableOpacity>
             </View>
+
+            {/* Upcoming scheduled sessions — a fixed time gives people a
+                reason to arrive together. */}
+            {(eventsQ.data?.length ?? 0) > 0 && (
+              <View style={styles.eventsWrap}>
+                <Text style={[styles.eventsTitle, { color: colors.foreground }]}>
+                  مواعيد قادمة
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.eventsRow}
+                >
+                  {(eventsQ.data ?? []).map((ev) => (
+                    <TouchableOpacity
+                      key={ev.id}
+                      style={[
+                        styles.eventCard,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                      ]}
+                      onPress={() => router.push(`/room/${ev.roomId}`)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.eventTime, { backgroundColor: colors.primary + "1A" }]}>
+                        <Ionicons name="time" size={12} color={colors.primary} />
+                        <Text style={[styles.eventTimeText, { color: colors.primary }]}>
+                          {formatEventTime(ev.startsAt)}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[styles.eventName, { color: colors.foreground }]}
+                        numberOfLines={1}
+                      >
+                        {ev.title}
+                      </Text>
+                      <Text
+                        style={[styles.eventRoom, { color: colors.mutedForeground }]}
+                        numberOfLines={1}
+                      >
+                        {ev.roomName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         }
         ListEmptyComponent={
@@ -188,11 +250,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: "#7C5CFC",
-    height: 100,
-    justifyContent: "flex-end",
-    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 18,
   },
-  bannerContent: {},
+  bannerContent: { gap: 3 },
   bannerTitle: {
     color: "#fff",
     fontSize: 20,
@@ -202,21 +265,28 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     fontSize: 14,
   },
-  bannerDots: {
+  eventsWrap: { paddingBottom: 10, gap: 8 },
+  eventsTitle: { fontSize: 14, fontWeight: "800" as const, paddingHorizontal: 16 },
+  eventsRow: { paddingHorizontal: 16, gap: 10 },
+  eventCard: {
+    width: 168,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 6,
+  },
+  eventTime: {
     flexDirection: "row",
-    gap: 5,
-    marginTop: 10,
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.4)",
-  },
-  dotActive: {
-    backgroundColor: "#fff",
-    width: 18,
-  },
+  eventTimeText: { fontSize: 11, fontWeight: "800" as const },
+  eventName: { fontSize: 14, fontWeight: "700" as const },
+  eventRoom: { fontSize: 12 },
   emptyState: {
     alignItems: "center",
     justifyContent: "center",

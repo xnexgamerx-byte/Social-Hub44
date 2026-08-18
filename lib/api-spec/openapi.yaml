@@ -30,6 +30,8 @@ tags:
     description: User directory mirrored from the auth provider
   - name: posts
     description: Moments feed (user posts and likes)
+  - name: growth
+    description: Invite rewards, paid hosts, scheduled events and push targets
 paths:
   /healthz:
     get:
@@ -859,6 +861,204 @@ paths:
                 $ref: "#/components/schemas/Error"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /referrals/me:
+    get:
+      operationId: getMyReferral
+      tags: [growth]
+      summary: My invite code, how many joined, and whether I already used one
+      responses:
+        "200":
+          description: Invite status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralStatus"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /referrals/claim:
+    post:
+      operationId: claimReferral
+      tags: [growth]
+      summary: Redeem a friend's invite code (once per account)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferralClaimInput"
+      responses:
+        "200":
+          description: Reward granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralStatus"
+        "400":
+          description: Invalid, self-referral, or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /hosts:
+    get:
+      operationId: listHosts
+      tags: [growth]
+      summary: List paid hosts with their tracked hours (admin only)
+      responses:
+        "200":
+          description: Hosts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HostEntry"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createHost
+      tags: [growth]
+      summary: Grant host status by public account id (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostInput"
+      responses:
+        "201":
+          description: Host granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostEntry"
+        "400":
+          description: Unknown account or already a host
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /hosts/{userId}:
+    delete:
+      operationId: deleteHost
+      tags: [growth]
+      summary: Revoke host status (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          description: Not a host
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /room-events:
+    get:
+      operationId: listRoomEvents
+      tags: [growth]
+      summary: Upcoming scheduled sessions
+      responses:
+        "200":
+          description: Events, soonest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomEvent"
+    post:
+      operationId: createRoomEvent
+      tags: [growth]
+      summary: Schedule a session (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomEvent"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /room-events/{id}:
+    delete:
+      operationId: deleteRoomEvent
+      tags: [growth]
+      summary: Cancel a scheduled session (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /push/register:
+    post:
+      operationId: registerPushToken
+      tags: [growth]
+      summary: Store this device's Expo push token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "204":
+          description: Stored
+        "400":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
           content:
             application/json:
               schema:
@@ -1786,6 +1986,96 @@ components:
         vipType: { type: string }
         xp: { type: integer }
         level: { type: integer }
+    ReferralStatus:
+      type: object
+      required:
+        - code
+        - invitedCount
+        - hasClaimed
+        - referrerReward
+        - referredReward
+      properties:
+        code: { type: string }
+        invitedCount: { type: integer }
+        hasClaimed: { type: boolean }
+        referrerReward: { type: integer }
+        referredReward: { type: integer }
+    ReferralClaimInput:
+      type: object
+      required:
+        - code
+      properties:
+        code: { type: string, minLength: 4, maxLength: 12 }
+
+    HostEntry:
+      type: object
+      required:
+        - userId
+        - name
+        - avatar
+        - publicId
+        - bonusSharePercent
+        - active
+        - minutesThisWeek
+        - minutesTotal
+      properties:
+        userId: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        publicId: { type: string }
+        bonusSharePercent: { type: integer }
+        active: { type: boolean }
+        minutesThisWeek: { type: integer }
+        minutesTotal: { type: integer }
+    HostInput:
+      type: object
+      required:
+        - publicId
+      properties:
+        publicId: { type: string, minLength: 1 }
+        bonusSharePercent: { type: integer, minimum: 0, maximum: 50 }
+
+    RoomEvent:
+      type: object
+      required:
+        - id
+        - roomId
+        - roomName
+        - title
+        - description
+        - startsAt
+        - weekday
+        - active
+      properties:
+        id: { type: integer }
+        roomId: { type: integer }
+        roomName: { type: string }
+        title: { type: string }
+        description: { type: string }
+        startsAt: { type: string }
+        weekday: { type: integer }
+        active: { type: boolean }
+    RoomEventInput:
+      type: object
+      required:
+        - roomId
+        - title
+        - startsAt
+      properties:
+        roomId: { type: integer }
+        title: { type: string, minLength: 1, maxLength: 60 }
+        description: { type: string, maxLength: 200 }
+        startsAt: { type: string }
+        weekday: { type: integer, minimum: -1, maximum: 6 }
+
+    PushTokenInput:
+      type: object
+      required:
+        - token
+      properties:
+        token: { type: string, minLength: 8 }
+        platform: { type: string, maxLength: 16 }
+
     Profile:
       type: object
       required:
@@ -1798,6 +2088,8 @@ components:
         - country
         - level
         - isOnline
+        - isOfficial
+        - isHost
         - lastSeenAt
       properties:
         userId: { type: string }
@@ -1809,6 +2101,8 @@ components:
         country: { type: string }
         level: { type: integer }
         isOnline: { type: boolean }
+        isOfficial: { type: boolean }
+        isHost: { type: boolean }
         lastSeenAt: { type: string }
     ProfileInput:
       type: object

@@ -292,6 +292,78 @@ export interface Wallet {
   level: number;
 }
 
+export interface ReferralStatus {
+  code: string;
+  invitedCount: number;
+  hasClaimed: boolean;
+  referrerReward: number;
+  referredReward: number;
+}
+
+export interface ReferralClaimInput {
+  /**
+     * @minLength 4
+     * @maxLength 12
+     */
+  code: string;
+}
+
+export interface HostEntry {
+  userId: string;
+  name: string;
+  avatar: string;
+  publicId: string;
+  bonusSharePercent: number;
+  active: boolean;
+  minutesThisWeek: number;
+  minutesTotal: number;
+}
+
+export interface HostInput {
+  /** @minLength 1 */
+  publicId: string;
+  /**
+     * @minimum 0
+     * @maximum 50
+     */
+  bonusSharePercent?: number;
+}
+
+export interface RoomEvent {
+  id: number;
+  roomId: number;
+  roomName: string;
+  title: string;
+  description: string;
+  startsAt: string;
+  weekday: number;
+  active: boolean;
+}
+
+export interface RoomEventInput {
+  roomId: number;
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  title: string;
+  /** @maxLength 200 */
+  description?: string;
+  startsAt: string;
+  /**
+     * @minimum -1
+     * @maximum 6
+     */
+  weekday?: number;
+}
+
+export interface PushTokenInput {
+  /** @minLength 8 */
+  token: string;
+  /** @maxLength 16 */
+  platform?: string;
+}
+
 export interface Profile {
   userId: string;
   name: string;
@@ -302,6 +374,8 @@ export interface Profile {
   country: string;
   level: number;
   isOnline: boolean;
+  isOfficial: boolean;
+  isHost: boolean;
   lastSeenAt: string;
 }
 

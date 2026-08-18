@@ -6,6 +6,8 @@ import {
   messagesTable,
   storeItemsTable,
   userItemsTable,
+  hostsTable,
+  hostSessionsTable,
 } from "@workspace/db";
 import { logger } from "./logger";
 import {
@@ -17,9 +19,10 @@ import {
   markLudoDisconnected,
 } from "./ludoSession";
 import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
-import { adjustWallet, InsufficientBalanceError } from "./wallet";
+import { adjustWallet, giftEarnings, InsufficientBalanceError } from "./wallet";
 import { verifySessionToken } from "./authz";
 import { sendDm, shapeForUser, DmValidationError } from "./dm";
+import { pushToUser } from "./push";
 
 interface JoinPayload {
   roomId: string;
@@ -87,9 +90,42 @@ interface DmSendPayload {
 }
 
 const MAX_HISTORY = 50;
+// Stints shorter than this are noise (a mis-tap, a reconnect) and are dropped
+// rather than padding a host's paid hours.
+const MIN_HOST_STINT_MS = 60_000;
 
 function roomChannel(roomId: string): string {
   return `room:${roomId}`;
+}
+
+/**
+ * Record how long a paid host stayed in a room. Called when they leave or
+ * disconnect; the row is what the admin screen totals into weekly hours.
+ */
+async function closeHostStint(
+  userId: string,
+  roomId: string,
+  startedAt: Date,
+): Promise<void> {
+  const elapsed = Date.now() - startedAt.getTime();
+  if (elapsed < MIN_HOST_STINT_MS) return;
+  try {
+    const [host] = await db
+      .select({ id: hostsTable.id })
+      .from(hostsTable)
+      .where(and(eq(hostsTable.userId, userId), eq(hostsTable.active, true)))
+      .limit(1);
+    if (!host) return;
+    await db.insert(hostSessionsTable).values({
+      userId,
+      roomId,
+      startedAt,
+      endedAt: new Date(),
+      minutes: Math.round(elapsed / 60_000),
+    });
+  } catch (err) {
+    logger.error({ err, userId, roomId }, "Failed to record host session");
+  }
 }
 
 export function attachSocketServer(httpServer: HttpServer): Server {
@@ -122,6 +158,8 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     const authUserId = socket.data.userId as string;
     let joinedRoom: string | null = null;
     let voiceUserId: string | null = null;
+    // When this socket entered its current room, used to bill host time.
+    let roomEnteredAt: Date | null = null;
 
     // Personal channel: every socket of this user receives their DMs, so
     // delivery works across devices and outside any specific room.
@@ -134,6 +172,10 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       if (!joinedRoom) return;
       const previous = joinedRoom;
       const channel = roomChannel(previous);
+      if (roomEnteredAt) {
+        void closeHostStint(authUserId, previous, roomEnteredAt);
+        roomEnteredAt = null;
+      }
       if (voiceUserId) {
         leaveMic(io, previous, voiceUserId);
         voiceUserId = null;
@@ -148,6 +190,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       const userId = authUserId;
       if (joinedRoom && joinedRoom !== roomId) await leaveCurrentRoom();
       joinedRoom = roomId;
+      roomEnteredAt = new Date();
       const channel = roomChannel(roomId);
       await socket.join(channel);
 
@@ -228,6 +271,38 @@ export function attachSocketServer(httpServer: HttpServer): Server {
           description: `هدية ${item.name}${payload.toName ? ` إلى ${payload.toName}` : ""}`,
           refId: String(item.id),
         });
+
+        // Credit the recipient their share as vPoints. Only after the sender's
+        // debit succeeded, and never to the sender themselves.
+        const toUserId = payload.toUserId;
+        if (toUserId && toUserId !== userId) {
+          try {
+            const [host] = await db
+              .select({ bonus: hostsTable.bonusSharePercent })
+              .from(hostsTable)
+              .where(and(eq(hostsTable.userId, toUserId), eq(hostsTable.active, true)))
+              .limit(1);
+            const earned = giftEarnings(item.price, host?.bonus ?? 0);
+            if (earned > 0) {
+              const recipient = await adjustWallet({
+                userId: toUserId,
+                currency: "V",
+                amount: earned,
+                type: "gift_received",
+                description: `هدية ${item.name} من ${userName}`,
+                refId: String(item.id),
+              });
+              io.to(`user:${toUserId}`).emit("wallet:update", {
+                userId: toUserId,
+                coins: recipient.coins,
+                vPoints: recipient.vPoints,
+              });
+            }
+          } catch (err) {
+            // The sender already paid; a failed payout must not undo the gift.
+            logger.error({ err, toUserId }, "Failed to credit gift recipient");
+          }
+        }
 
         io.to(roomChannel(roomId)).emit("gift:new", {
           roomId,
@@ -335,6 +410,12 @@ export function attachSocketServer(httpServer: HttpServer): Server {
           message: wire,
           conversation: shapeForUser(conversation, toUserId),
         });
+        // Reach them even when the app is closed.
+        void pushToUser(toUserId, {
+          title: payload.userName || "رسالة جديدة",
+          body: text.slice(0, 120),
+          data: { type: "dm", conversationId: conversation.id },
+        });
         io.to(`user:${authUserId}`).emit("dm:new", {
           message: wire,
           conversation: shapeForUser(conversation, authUserId),
@@ -402,6 +483,10 @@ export function attachSocketServer(httpServer: HttpServer): Server {
 
     socket.on("disconnect", () => {
       if (joinedRoom) {
+        if (roomEnteredAt) {
+          void closeHostStint(authUserId, joinedRoom, roomEnteredAt);
+          roomEnteredAt = null;
+        }
         if (voiceUserId) leaveMic(io, joinedRoom, voiceUserId);
         const channel = roomChannel(joinedRoom);
         io.to(channel).emit("room:presence", { roomId: joinedRoom, count: presenceCount(channel) });

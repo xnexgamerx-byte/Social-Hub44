@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/authz";
 import { levelForXp } from "../lib/wallet";
+import { sendWelcomeDm } from "../lib/official";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,8 @@ function serialize(profile: Profile, xp: number | null) {
     country: profile.country,
     level: levelForXp(xp ?? 0),
     isOnline: Date.now() - profile.lastSeenAt.getTime() < ONLINE_WINDOW_MS,
+    isOfficial: profile.isOfficial,
+    isHost: profile.isHost,
     lastSeenAt: profile.lastSeenAt.toISOString(),
   };
 }
@@ -56,6 +59,14 @@ router.post("/profiles/me", async (req, res): Promise<void> => {
     return;
   }
   const body = parsed.data;
+  // Whether this account is new decides if it gets the one-time welcome.
+  const [before] = await db
+    .select({ id: profilesTable.id })
+    .from(profilesTable)
+    .where(eq(profilesTable.userId, userId))
+    .limit(1);
+  const isNewAccount = before == null;
+
   // The row is always keyed to the authenticated id, so a client cannot write
   // into somebody else's directory entry.
   const values = {
@@ -90,6 +101,12 @@ router.post("/profiles/me", async (req, res): Promise<void> => {
     .from(walletsTable)
     .where(eq(walletsTable.userId, userId))
     .limit(1);
+
+  if (isNewAccount) {
+    // Fire and forget — onboarding must never delay or fail the response.
+    void sendWelcomeDm(userId, values.name);
+  }
+
   res.json(UpsertMyProfileResponse.parse(serialize(row, wallet?.xp ?? 0)));
 });
 

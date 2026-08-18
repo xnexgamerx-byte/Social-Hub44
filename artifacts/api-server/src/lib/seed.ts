@@ -15,6 +15,7 @@ import {
   type InsertRoom,
 } from "@workspace/db";
 import { logger } from "./logger";
+import { ensureOfficialProfile } from "./official";
 
 const FEATURES: InsertVipFeature[] = [
   { key: "follow_more_users", label: "متابعة عدد أكبر من المستخدمين", icon: "person-add", sortOrder: 1, description: "تابع عدداً أكبر من المستخدمين" },
@@ -253,6 +254,10 @@ export async function seedIfEmpty(): Promise<void> {
       await db.insert(roomsTable).values(ROOMS);
       logger.info({ n: ROOMS.length }, "Seeded rooms");
     }
+
+    // The official account must exist before anyone signs up — it is the
+    // sender of the welcome message.
+    await ensureOfficialProfile();
   } catch (err) {
     logger.error({ err }, "Seeding failed");
   }

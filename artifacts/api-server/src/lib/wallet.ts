@@ -112,6 +112,19 @@ export const WELCOME_COINS = 2000;
 export const WELCOME_VPOINTS = 0;
 
 /**
+ * Share of a gift's coin value credited to the recipient as vPoints. This is
+ * the earning side of the economy — coins are bought, vPoints are earned and
+ * spent on cosmetics — and it is how paid hosts make money from a room.
+ */
+export const GIFT_RECIPIENT_SHARE = 0.3;
+
+/** vPoints a recipient earns from a gift, with an optional host bonus. */
+export function giftEarnings(price: number, bonusPercent = 0): number {
+  const share = GIFT_RECIPIENT_SHARE + Math.max(0, bonusPercent) / 100;
+  return Math.floor(price * share);
+}
+
+/**
  * Ensure a wallet row exists for the user. On first creation it is seeded with
  * the fixed WELCOME_* balance above. If the wallet already exists, its balances
  * are left untouched (first-write-wins via onConflictDoNothing).
