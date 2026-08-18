@@ -3,7 +3,7 @@ import { useSignIn, useSSO } from "@clerk/expo";
 import * as AuthSession from "expo-auth-session";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, useRouter, type Href } from "expo-router";
+import { Link } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -25,7 +25,6 @@ WebBrowser.maybeCompleteAuthSession();
 export default function SignInScreen() {
   const { signIn, errors, fetchStatus } = useSignIn();
   const { startSSOFlow } = useSSO();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [emailAddress, setEmailAddress] = useState("");
@@ -41,13 +40,11 @@ export default function SignInScreen() {
     };
   }, []);
 
-  const finishNavigate = useCallback(
-    ({ session }: { session?: { currentTask?: unknown }; decorateUrl: (u: string) => string }) => {
-      if (session?.currentTask) return;
-      router.replace("/(tabs)" as Href);
-    },
-    [router],
-  );
+  // Navigation after a session becomes active is owned solely by AuthGate in
+  // the root layout, which waits for the root navigator to mount before
+  // redirecting. Replacing the route from here too raced that mount and threw
+  // "The action 'REPLACE' ... was not handled by any navigator".
+  const finishNavigate = useCallback(() => {}, []);
 
   const handleSubmit = async () => {
     setFormError(null);
@@ -74,20 +71,15 @@ export default function SignInScreen() {
         redirectUrl: AuthSession.makeRedirectUri(),
       });
       if (createdSessionId && setActive) {
-        await setActive({
-          session: createdSessionId,
-          navigate: async ({ session }) => {
-            if (session?.currentTask) return;
-            router.replace("/(tabs)");
-          },
-        });
+        // AuthGate redirects once the session is active — see finishNavigate.
+        await setActive({ session: createdSessionId });
       }
     } catch (err) {
       setFormError(clerkErrorMessage(err, "تعذّر تسجيل الدخول عبر Google."));
     } finally {
       setGoogleLoading(false);
     }
-  }, [startSSOFlow, router]);
+  }, [startSSOFlow]);
 
   const busy = fetchStatus === "fetching";
   const fieldError = errors?.fields?.identifier?.message ?? errors?.fields?.password?.message;
