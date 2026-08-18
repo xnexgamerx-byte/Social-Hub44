@@ -82,7 +82,13 @@ export default function SignInScreen() {
   }, [startSSOFlow]);
 
   const busy = fetchStatus === "fetching";
-  const fieldError = errors?.fields?.identifier?.message ?? errors?.fields?.password?.message;
+  // Coerce to null rather than testing the string with `&&`: an empty message
+  // from Clerk would otherwise be rendered as a bare string and crash RN.
+  const errorText =
+    formError ||
+    errors?.fields?.identifier?.message ||
+    errors?.fields?.password?.message ||
+    null;
 
   return (
     <View style={styles.root}>
@@ -174,9 +180,7 @@ export default function SignInScreen() {
               </Pressable>
 
               {/* Error */}
-              {(formError || fieldError) && (
-                <Text style={styles.error}>{formError ?? fieldError}</Text>
-              )}
+              {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
 
               {/* Login button */}
               <Pressable

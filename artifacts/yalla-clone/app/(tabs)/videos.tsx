@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -13,6 +12,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+// expo-image over RN's Image: it caches, streams progressively and keeps
+// memory bounded — this feed scrolls remote photos.
+import { Image } from "expo-image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getListPostsQueryKey,
@@ -55,7 +57,14 @@ function PostImage({ uri, wide }: { uri: string; wide: boolean }) {
     );
   }
   return (
-    <Image source={{ uri }} style={style} resizeMode="cover" onError={() => setError(true)} />
+    <Image
+      source={{ uri }}
+      style={style}
+      contentFit="cover"
+      transition={180}
+      cachePolicy="memory-disk"
+      onError={() => setError(true)}
+    />
   );
 }
 

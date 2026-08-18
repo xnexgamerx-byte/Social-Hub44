@@ -348,11 +348,11 @@ function SectionCard({ title, action, onAction, children }: {
     <View style={S.sectionCard}>
       <View style={S.sectionCardHeader}>
         <Text style={S.sectionCardTitle}>{title}</Text>
-        {action && (
+        {action ? (
           <TouchableOpacity onPress={onAction}>
             <Text style={S.sectionCardAction}>{action}</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
       {children}
     </View>

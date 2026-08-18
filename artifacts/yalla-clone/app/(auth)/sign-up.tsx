@@ -122,6 +122,14 @@ export default function SignUpScreen() {
   }, [startSSOFlow]);
 
   const busy = fetchStatus === "fetching";
+  // Coerced to null rather than tested with `&&`: an empty message from Clerk
+  // would otherwise render as a bare string and crash RN.
+  const codeErrorText = formError || errors?.fields?.code?.message || null;
+  const formErrorText =
+    formError ||
+    errors?.fields?.emailAddress?.message ||
+    errors?.fields?.password?.message ||
+    null;
 
   return (
     <View style={styles.root}>
@@ -198,11 +206,9 @@ export default function SignUpScreen() {
                     textAlign="right"
                   />
 
-                  {(formError || errors?.fields?.code?.message) && (
-                    <Text style={styles.error}>
-                      {formError ?? errors?.fields?.code?.message}
-                    </Text>
-                  )}
+                  {codeErrorText ? (
+                    <Text style={styles.error}>{codeErrorText}</Text>
+                  ) : null}
 
                   <Pressable
                     style={({ pressed }) => [
@@ -320,15 +326,9 @@ export default function SignUpScreen() {
                     textAlign="right"
                   />
 
-                  {(formError ||
-                    errors?.fields?.emailAddress?.message ||
-                    errors?.fields?.password?.message) && (
-                    <Text style={styles.error}>
-                      {formError ??
-                        errors?.fields?.emailAddress?.message ??
-                        errors?.fields?.password?.message}
-                    </Text>
-                  )}
+                  {formErrorText ? (
+                    <Text style={styles.error}>{formErrorText}</Text>
+                  ) : null}
 
                   <Pressable
                     style={({ pressed }) => [

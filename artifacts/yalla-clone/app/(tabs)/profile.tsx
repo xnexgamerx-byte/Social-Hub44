@@ -5,7 +5,6 @@ import { router } from "expo-router";
 import React from "react";
 import {
   Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
