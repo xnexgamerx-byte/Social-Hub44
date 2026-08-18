@@ -45,10 +45,6 @@ function RootLayoutNav() {
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen
-        name="game/[id]"
-        options={{ headerShown: false, presentation: "card" }}
-      />
-      <Stack.Screen
         name="ludo/[id]"
         options={{ headerShown: false, presentation: "card" }}
       />

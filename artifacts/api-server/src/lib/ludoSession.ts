@@ -15,8 +15,18 @@ import { logger } from "./logger";
  */
 
 export type LudoColor = "red" | "green" | "yellow" | "blue";
+/** Table size: a 1v1 duel or the classic four-way game. */
+export type LudoMode = 2 | 4;
 
 const COLORS: LudoColor[] = ["red", "green", "yellow", "blue"];
+// In a duel the two seats must sit OPPOSITE each other (half a lap apart), the
+// way physical Ludo is played 1v1 — taking red+green would give one player a
+// 13-cell head start on the shared ring.
+const DUEL_COLORS: LudoColor[] = ["red", "yellow"];
+
+function seatColors(mode: LudoMode): LudoColor[] {
+  return mode === 2 ? DUEL_COLORS : COLORS;
+}
 const TOKENS_PER_PLAYER = 4;
 const RING_SIZE = 52;
 const FINISH = 57;
@@ -48,6 +58,7 @@ interface LudoPlayer {
 
 interface LudoGame {
   gameId: string;
+  mode: LudoMode;
   phase: Phase;
   players: Map<string, LudoPlayer>;
   order: LudoColor[];
@@ -68,11 +79,14 @@ function channel(gameId: string): string {
   return `ludo:${gameId}`;
 }
 
-function getOrCreate(gameId: string): LudoGame {
+function getOrCreate(gameId: string, mode: LudoMode = 4): LudoGame {
   let g = games.get(gameId);
   if (!g) {
     g = {
       gameId,
+      // The table's size is fixed by whoever opens it; later joiners take a
+      // seat rather than resizing the board mid-game.
+      mode,
       phase: "lobby",
       players: new Map(),
       order: [],
@@ -115,6 +129,8 @@ function clearPassTimer(g: LudoGame) {
 function snapshot(g: LudoGame) {
   return {
     gameId: g.gameId,
+    mode: g.mode,
+    maxPlayers: g.mode,
     phase: g.phase,
     players: g.order.map((color) => {
       const p = [...g.players.values()].find((pl) => pl.color === color)!;
@@ -167,8 +183,9 @@ export function joinLudo(
   socket: Socket,
   gameId: string,
   player: { userId: string; userName: string; userAvatar: string },
+  mode: LudoMode = 4,
 ): void {
-  const g = getOrCreate(gameId);
+  const g = getOrCreate(gameId, mode);
 
   // Cancel any pending grace-period removal — this is a (re)join.
   const pending = g.pendingRemoval.get(player.userId);
@@ -177,18 +194,23 @@ export function joinLudo(
     g.pendingRemoval.delete(player.userId);
   }
 
+  const seats = seatColors(g.mode);
   const existing = g.players.get(player.userId);
   if (existing) {
     existing.userName = player.userName;
     existing.userAvatar = player.userAvatar;
-  } else if (g.phase === "lobby" && g.players.size < COLORS.length) {
+  } else if (g.phase === "lobby" && g.players.size < seats.length) {
     const used = new Set([...g.players.values()].map((p) => p.color));
-    const color = COLORS.find((c) => !used.has(c));
+    const color = seats.find((c) => !used.has(c));
     if (color) {
       g.players.set(player.userId, { ...player, color });
       g.order.push(color);
       g.positions[color] = freshTokens();
     }
+  } else if (g.phase === "lobby") {
+    // Table is full: the joiner still watches via the channel, but gets told
+    // why no seat appeared instead of silently seeing a spectator view.
+    socket.emit("ludo:error", { message: "الطاولة ممتلئة" });
   }
   emitState(io, g);
 }

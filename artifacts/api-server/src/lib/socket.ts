@@ -8,7 +8,6 @@ import {
   userItemsTable,
 } from "@workspace/db";
 import { logger } from "./logger";
-import { joinGame, startGame, submitAnswer, leaveGame, markDisconnected } from "./gameSession";
 import {
   joinLudo,
   startLudo,
@@ -47,7 +46,7 @@ interface SendPayload {
   text: string;
 }
 
-interface GameJoinPayload {
+interface LudoJoinBase {
   gameId: string;
   userId: string;
   userName: string;
@@ -70,6 +69,12 @@ interface MicMutePayload {
   roomId: string;
   userId: string;
   muted: boolean;
+}
+
+interface LudoJoinPayload extends LudoJoinBase {
+  // Only honoured when the payload opens the table; an existing game keeps
+  // the size it was created with.
+  mode?: 2 | 4;
 }
 
 interface DmSendPayload {
@@ -116,7 +121,6 @@ export function attachSocketServer(httpServer: HttpServer): Server {
   io.on("connection", (socket) => {
     const authUserId = socket.data.userId as string;
     let joinedRoom: string | null = null;
-    let joinedGame: string | null = null;
     let voiceUserId: string | null = null;
 
     // Personal channel: every socket of this user receives their DMs, so
@@ -345,51 +349,26 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       }
     });
 
-    let gameUserId: string | null = null;
-
-    socket.on("game:join", ({ gameId, userName, userAvatar }: GameJoinPayload) => {
-      const userId = authUserId;
-      if (!gameId) return;
-      joinedGame = gameId;
-      gameUserId = userId;
-      void socket.join(`game:${gameId}`);
-      joinGame(io, socket, gameId, { userId, userName, userAvatar: userAvatar ?? "", score: 0 });
-    });
-
-    socket.on("game:start", ({ gameId }: { gameId: string }) => {
-      if (!gameId) return;
-      startGame(io, gameId);
-    });
-
-    socket.on("game:answer", ({ gameId, choice }: { gameId: string; choice: number }) => {
-      const userId = authUserId;
-      if (!gameId) return;
-      submitAnswer(io, gameId, userId, choice);
-    });
-
-    socket.on("game:leave", ({ gameId }: { gameId: string }) => {
-      const userId = authUserId;
-      if (!gameId) return;
-      leaveGame(io, gameId, userId);
-      joinedGame = null;
-      gameUserId = null;
-    });
-
     let joinedLudo: string | null = null;
     let ludoUserId: string | null = null;
 
-    socket.on("ludo:join", ({ gameId, userName, userAvatar }: GameJoinPayload) => {
-      const userId = authUserId;
-      if (!gameId) return;
-      joinedLudo = gameId;
-      ludoUserId = userId;
-      void socket.join(`ludo:${gameId}`);
-      joinLudo(io, socket, gameId, {
-        userId,
-        userName,
-        userAvatar: userAvatar ?? "",
-      });
-    });
+    socket.on(
+      "ludo:join",
+      ({ gameId, userName, userAvatar, mode }: LudoJoinPayload) => {
+        const userId = authUserId;
+        if (!gameId) return;
+        joinedLudo = gameId;
+        ludoUserId = userId;
+        void socket.join(`ludo:${gameId}`);
+        joinLudo(
+          io,
+          socket,
+          gameId,
+          { userId, userName, userAvatar: userAvatar ?? "" },
+          mode === 2 ? 2 : 4,
+        );
+      },
+    );
 
     socket.on("ludo:start", ({ gameId }: { gameId: string }) => {
       const userId = authUserId;
@@ -426,9 +405,6 @@ export function attachSocketServer(httpServer: HttpServer): Server {
         if (voiceUserId) leaveMic(io, joinedRoom, voiceUserId);
         const channel = roomChannel(joinedRoom);
         io.to(channel).emit("room:presence", { roomId: joinedRoom, count: presenceCount(channel) });
-      }
-      if (joinedGame && gameUserId) {
-        markDisconnected(io, joinedGame, gameUserId);
       }
       if (joinedLudo && ludoUserId) {
         markLudoDisconnected(io, joinedLudo, ludoUserId);

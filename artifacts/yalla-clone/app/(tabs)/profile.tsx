@@ -26,11 +26,12 @@ const TOOLS = [
   { icon: "diamond" as const, label: "ماسات", color: "#FF6B9D", route: "/vip" as const },
 ];
 
+// Every shortcut leads somewhere real — an inert tile reads as a broken app.
 const GAMES_SHORTCUTS = [
-  { icon: "dice" as const, label: "الألعاب", color: "#F59E0B" },
-  { icon: "trophy" as const, label: "البطولات", color: "#EC4899" },
-  { icon: "gift" as const, label: "الهدايا", color: "#7C5CFC" },
-  { icon: "musical-notes" as const, label: "الموسيقى", color: "#06B6D4" },
+  { icon: "dice" as const, label: "لودو", color: "#F59E0B", route: "/games" as const },
+  { icon: "gift" as const, label: "الهدايا", color: "#7C5CFC", route: "/store" as const },
+  { icon: "wallet" as const, label: "الشحن", color: "#22C55E", route: "/recharge" as const },
+  { icon: "images" as const, label: "اللحظات", color: "#EC4899", route: "/(tabs)/videos" as const },
 ];
 
 export default function ProfileScreen() {
@@ -216,7 +217,7 @@ export default function ProfileScreen() {
             key={g.label}
             style={styles.toolItem}
             activeOpacity={0.7}
-            onPress={() => g.label === "الألعاب" && router.push("/games")}
+            onPress={() => router.push(g.route)}
           >
             <View style={[styles.toolIcon, { backgroundColor: g.color + "1A" }]}>
               <Ionicons name={g.icon} size={22} color={g.color} />

@@ -27,7 +27,7 @@ import {
 } from "@workspace/db";
 import { attachSocketServer } from "./socket";
 import { ensureWallet, WELCOME_COINS } from "./wallet";
-import { leaveGame } from "./gameSession";
+import { leaveLudo } from "./ludoSession";
 
 const TAG = `vitest_sock_${Date.now()}`;
 const room = (suffix: string): string => `${TAG}_${suffix}`;
@@ -366,46 +366,89 @@ describe("messages and presence stay scoped to the joined room", () => {
   });
 });
 
-describe("game events stay scoped to their own game", () => {
-  async function joinTrivia(
+describe("ludo tables stay scoped and seat players correctly", () => {
+  async function joinLudoTable(
     socket: ReturnType<typeof connect>,
     gameId: string,
-    userId: string,
     userName: string,
-  ): Promise<void> {
-    const joined = once(socket, "game:state");
-    socket.emit("game:join", { gameId, userId, userName });
-    await joined;
+    mode?: 2 | 4,
+  ): Promise<LudoSnapshot> {
+    const joined = waitFor<LudoSnapshot>(
+      socket,
+      "ludo:state",
+      (s) => s.gameId === gameId,
+    );
+    socket.emit("ludo:join", { gameId, userName, mode });
+    return joined;
   }
 
-  it("does not deliver one game's question to players in a different game", async () => {
-    const aId = `${TAG}_gameA_user`;
-    const bId = `${TAG}_gameB_user`;
+  interface LudoSnapshot {
+    gameId: string;
+    mode: 2 | 4;
+    maxPlayers: number;
+    phase: string;
+    players: { userId: string; color: string }[];
+  }
+
+  it("does not deliver one table's state to players at another table", async () => {
+    const aId = `${TAG}_tableA_user`;
+    const bId = `${TAG}_tableB_user`;
     const a = connect(tokenFor(aId));
     const b = connect(tokenFor(bId));
     await Promise.all([waitConnect(a), waitConnect(b)]);
 
-    const gameA = `${TAG}_gameA`;
-    const gameB = `${TAG}_gameB`;
-    await joinTrivia(a, gameA, aId, "A");
-    await joinTrivia(b, gameB, bId, "B");
+    const tableA = `${TAG}_tableA`;
+    const tableB = `${TAG}_tableB`;
+    await joinLudoTable(a, tableA, "A");
+    await joinLudoTable(b, tableB, "B");
 
-    // Start only game A; its question must reach A but never leak to game B.
-    const aGetsQuestion = waitFor<{ gameId: string }>(
-      a,
-      "game:question",
-      (q) => q.gameId === gameA,
-    );
-    const bGetsNothing = expectNoEvent(b, "game:question", 700);
-    a.emit("game:start", { gameId: gameA });
-
-    const q = await aGetsQuestion;
-    expect(q.gameId).toBe(gameA);
+    // Rolling at table A must never surface at table B.
+    const bGetsNothing = expectNoEvent(b, "ludo:dice", 700);
+    a.emit("ludo:roll", { gameId: tableA });
     await bGetsNothing;
 
-    // Purge both sessions so the running question timer is cleared.
-    leaveGame(io, gameA, aId);
-    leaveGame(io, gameB, bId);
+    leaveLudo(io, tableA, aId);
+    leaveLudo(io, tableB, bId);
+  });
+
+  it("seats a duel on opposite colours so neither side gets a head start", async () => {
+    const aId = `${TAG}_duel_a`;
+    const bId = `${TAG}_duel_b`;
+    const a = connect(tokenFor(aId));
+    const b = connect(tokenFor(bId));
+    await Promise.all([waitConnect(a), waitConnect(b)]);
+
+    const table = `${TAG}_duel`;
+    const first = await joinLudoTable(a, table, "A", 2);
+    expect(first.mode).toBe(2);
+    expect(first.maxPlayers).toBe(2);
+
+    const second = await joinLudoTable(b, table, "B", 2);
+    const colors = second.players.map((p) => p.color).sort();
+    // red and yellow sit half a lap apart on the shared ring.
+    expect(colors).toEqual(["red", "yellow"]);
+
+    leaveLudo(io, table, aId);
+    leaveLudo(io, table, bId);
+  });
+
+  it("refuses a third player at a two-seat table", async () => {
+    const ids = [`${TAG}_full_a`, `${TAG}_full_b`, `${TAG}_full_c`];
+    const sockets = ids.map((id) => connect(tokenFor(id)));
+    // Wrap the call: passing waitConnect straight to map would feed it the
+    // array index as its `timeout` argument, making the first wait 0ms.
+    await Promise.all(sockets.map((s) => waitConnect(s)));
+
+    const table = `${TAG}_full`;
+    await joinLudoTable(sockets[0], table, "A", 2);
+    await joinLudoTable(sockets[1], table, "B", 2);
+
+    const rejected = once(sockets[2], "ludo:error");
+    sockets[2].emit("ludo:join", { gameId: table, userName: "C", mode: 2 });
+    const err = (await rejected) as { message: string };
+    expect(err.message).toBeTruthy();
+
+    for (const id of ids) leaveLudo(io, table, id);
   });
 });
 

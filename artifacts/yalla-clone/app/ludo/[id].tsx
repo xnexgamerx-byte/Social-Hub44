@@ -1,65 +1,101 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
+  Dimensions,
+  FlatList,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { UserAvatar } from "@/components/UserAvatar";
+import { EntranceOverlay } from "@/components/EntranceOverlay";
+import { GiftOverlay } from "@/components/GiftOverlay";
+import { GiftPicker, type GiftItem } from "@/components/GiftPicker";
+import { DieFace, LudoBoard, LUDO_HEX, LUDO_LABEL } from "@/components/LudoBoard";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
-import {
-  useLudoSession,
-  type LudoColor,
-  type LudoPlayer,
-} from "@/hooks/useLudoSession";
-import { UserAvatar } from "@/components/UserAvatar";
+import { useLudoSession, type LudoMode, type LudoPlayer } from "@/hooks/useLudoSession";
+import { useRoomChat, type ChatMessage } from "@/hooks/useRoomChat";
+import { useRoomGifts } from "@/hooks/useRoomGifts";
+import { useRoomVoice } from "@/hooks/useRoomVoice";
 
-const COLOR_HEX: Record<LudoColor, string> = {
-  red: "#EF4444",
-  green: "#22C55E",
-  yellow: "#F5C242",
-  blue: "#3B82F6",
-};
+const AMBER = "#F5B400";
 
-const COLOR_LABEL: Record<LudoColor, string> = {
-  red: "الأحمر",
-  green: "الأخضر",
-  yellow: "الأصفر",
-  blue: "الأزرق",
-};
-
-const FINISH = 57;
-const TRACK_LEN = 57; // positions 0..56 then 57 = home
-
-// Pip layouts for a die face (3x3 grid cells that are filled).
-const DICE_PIPS: Record<number, number[]> = {
-  1: [4],
-  2: [0, 8],
-  3: [0, 4, 8],
-  4: [0, 2, 6, 8],
-  5: [0, 2, 4, 6, 8],
-  6: [0, 2, 3, 5, 6, 8],
-};
-
-function tokenLabel(pos: number): string {
-  if (pos === -1) return "القاعدة";
-  if (pos === FINISH) return "وصل ★";
-  if (pos >= 51) return `البيت ${pos - 50}/6`;
-  return `${pos}`;
+/** Seat card shown around the board. */
+function SeatCard({
+  player,
+  isTurn,
+  isMe,
+  onMic,
+  muted,
+  compact,
+}: {
+  player: LudoPlayer;
+  isTurn: boolean;
+  isMe: boolean;
+  onMic: boolean;
+  muted: boolean;
+  compact: boolean;
+}) {
+  const colors = useColors();
+  const hex = LUDO_HEX[player.color];
+  return (
+    <View
+      style={[
+        styles.seat,
+        {
+          backgroundColor: colors.card,
+          borderColor: isTurn ? hex : colors.border,
+          borderWidth: isTurn ? 2 : 1,
+          flex: compact ? 1 : 0,
+        },
+      ]}
+    >
+      <View style={styles.seatAvatarWrap}>
+        <View style={[styles.seatRing, { borderColor: hex }]}>
+          <UserAvatar uri={player.userAvatar} name={player.userName} size={30} />
+        </View>
+        {onMic && (
+          <View style={[styles.micDot, { backgroundColor: muted ? AMBER : "#22C55E" }]}>
+            <Ionicons name={muted ? "mic-off" : "mic"} size={8} color="#fff" />
+          </View>
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.seatName, { color: colors.foreground }]} numberOfLines={1}>
+          {isMe ? "أنت" : player.userName || "لاعب"}
+        </Text>
+        <View style={styles.seatMetaRow}>
+          <View style={[styles.seatChip, { backgroundColor: hex + "22" }]}>
+            <Text style={[styles.seatChipText, { color: hex }]}>{player.finished}/4</Text>
+          </View>
+          {isTurn && (
+            <Text style={[styles.seatTurn, { color: hex }]}>دوره</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
 }
 
 export default function LudoScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode: modeParam } = useLocalSearchParams<{ id: string; mode?: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useApp();
+  const { user, refreshWallet } = useApp();
+
+  const mode: LudoMode = modeParam === "2" ? 2 : 4;
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const me = useMemo(
     () => ({ userId: user.id, userName: user.name, userAvatar: user.avatar }),
@@ -67,7 +103,24 @@ export default function LudoScreen() {
   );
 
   const { state, lastDice, error, connected, start, roll, move, clearError } =
-    useLudoSession(id, me);
+    useLudoSession(id, me, mode);
+
+  // The table doubles as a room, so the proven chat / gift / mic stack works
+  // here unchanged — keyed to a room id derived from the game.
+  const socialRoomId = id ? `ludo:${id}` : undefined;
+  const { messages, sendMessage: emitMessage } = useRoomChat(socialRoomId, me);
+  const { seats, onMic, muted, stageFull, takeMic, leaveMic, setMuted } = useRoomVoice(
+    socialRoomId,
+    me,
+  );
+  const { gift, entrance, sendGift, clearGift, clearEntrance } = useRoomGifts(
+    socialRoomId,
+    useCallback(() => refreshWallet(), [refreshWallet]),
+    useCallback((message: string) => Alert.alert("الهدية", message), []),
+  );
+
+  const [text, setText] = useState("");
+  const [giftOpen, setGiftOpen] = useState(false);
 
   useEffect(() => {
     if (error) {
@@ -76,236 +129,316 @@ export default function LudoScreen() {
     }
   }, [error, clearError]);
 
-  const myColor = state?.players.find((p) => p.userId === user.id)?.color ?? null;
+  const players = state?.players ?? [];
+  const seatedColors = useMemo(() => players.map((p) => p.color), [players]);
+  const myColor = players.find((p) => p.userId === user.id)?.color ?? null;
   const isMyTurn = !!myColor && state?.turn === myColor;
   const canRoll = state?.phase === "playing" && isMyTurn && !state.awaitingMove && state.dice == null;
   const canMove = state?.phase === "playing" && isMyTurn && state.awaitingMove;
+
+  // Flatten every seated player's tokens for the board, tagging the ones the
+  // current player may legally move right now.
+  const boardTokens = useMemo(
+    () =>
+      players.flatMap((p) =>
+        p.tokens.map((pos, index) => ({
+          color: p.color,
+          index,
+          pos,
+          movable: !!canMove && p.color === myColor && !!state?.movable.includes(index),
+        })),
+      ),
+    [players, canMove, myColor, state?.movable],
+  );
+
+  const boardSize = useMemo(() => {
+    const w = Dimensions.get("window").width - 24;
+    const h = Dimensions.get("window").height;
+    return Math.min(w, h * 0.42);
+  }, []);
+
+  const micSeatFor = useCallback(
+    (userId: string) => seats.find((s) => s.userId === userId),
+    [seats],
+  );
 
   const handleRoll = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     roll();
   };
 
-  const handleMove = (tokenIndex: number) => {
-    if (!canMove || !state?.movable.includes(tokenIndex)) return;
+  const handleTokenPress = (color: string, index: number) => {
+    if (!canMove || color !== myColor) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    move(tokenIndex);
+    move(index);
   };
 
-  const renderPlayerCard = (p: LudoPlayer) => {
-    const hex = COLOR_HEX[p.color];
-    const isTurn = state?.turn === p.color;
-    const isMe = p.userId === user.id;
-    return (
-      <View
-        key={p.userId}
-        style={[
-          styles.playerCard,
-          { backgroundColor: colors.card, borderColor: isTurn ? hex : colors.border, borderWidth: isTurn ? 2 : 1 },
-        ]}
-      >
-        <View style={styles.playerHeader}>
-          <View style={[styles.colorDot, { backgroundColor: hex }]} />
-          <UserAvatar uri={p.userAvatar} size={30} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.playerName, { color: colors.foreground }]} numberOfLines={1}>
-              {p.userName}{isMe ? " (أنت)" : ""}
-            </Text>
-            <Text style={[styles.playerMeta, { color: colors.mutedForeground }]}>
-              {COLOR_LABEL[p.color]} · {p.finished}/4 وصلوا
-            </Text>
-          </View>
-          {isTurn && state?.phase === "playing" && (
-            <View style={[styles.turnPill, { backgroundColor: hex + "22" }]}>
-              <Text style={[styles.turnPillText, { color: hex }]}>دوره</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.tokensRow}>
-          {p.tokens.map((pos, i) => {
-            const movable = canMove && isMe && state?.movable.includes(i);
-            const home = pos === FINISH;
-            return (
-              <TouchableOpacity
-                key={i}
-                disabled={!movable}
-                onPress={() => handleMove(i)}
-                activeOpacity={0.8}
-                style={[
-                  styles.token,
-                  {
-                    backgroundColor: home ? hex : hex + "22",
-                    borderColor: movable ? colors.foreground : hex,
-                    borderWidth: movable ? 2 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.tokenInner}>
-                  <Ionicons
-                    name={home ? "checkmark" : "ellipse"}
-                    size={home ? 14 : 10}
-                    color={home ? "#fff" : hex}
-                  />
-                  <Text style={[styles.tokenText, { color: home ? "#fff" : colors.foreground }]} numberOfLines={1}>
-                    {tokenLabel(pos)}
-                  </Text>
-                </View>
-                {movable && (
-                  <View style={[styles.movableBadge, { backgroundColor: hex }]}>
-                    <Ionicons name="arrow-up" size={9} color="#fff" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* progress bar = best token progress */}
-        <View style={[styles.progressTrack, { backgroundColor: colors.muted }]}>
-          <View
-            style={[
-              styles.progressBar,
-              {
-                backgroundColor: hex,
-                width: `${(p.tokens.reduce((s, t) => s + (t < 0 ? 0 : t), 0) / (TRACK_LEN * 4)) * 100}%`,
-              },
-            ]}
-          />
-        </View>
-      </View>
-    );
+  const onMicPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!onMic) takeMic();
+    else setMuted(!muted);
   };
 
-  const renderDie = (value: number | null) => (
-    <View style={[styles.die, { backgroundColor: "#fff", borderColor: colors.border }]}>
-      <View style={styles.dieGrid}>
-        {Array.from({ length: 9 }).map((_, i) => {
-          const filled = value != null && DICE_PIPS[value]?.includes(i);
-          return (
-            <View key={i} style={styles.dieCell}>
-              {filled && <View style={styles.diePip} />}
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
+  const send = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    emitMessage({ ...me, text: trimmed });
+    setText("");
+  };
 
-  const players = state?.players ?? [];
+  const handleSendGift = (item: GiftItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    sendGift({ ...me, itemId: item.id });
+    setGiftOpen(false);
+  };
+
+  const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
+
+  const statusText = (() => {
+    if (!connected) return "جارٍ الاتصال...";
+    if (state?.phase === "lobby") {
+      return `${players.length}/${state.maxPlayers} لاعبين — بانتظار البدء`;
+    }
+    if (state?.phase === "playing") {
+      if (canMove) return "اختر قطعة لتحريكها";
+      return isMyTurn ? "دورك — ارمِ النرد" : `دور ${state.turn ? LUDO_LABEL[state.turn] : ""}`;
+    }
+    if (state?.phase === "ended") {
+      return state.winner ? `🏆 فاز ${LUDO_LABEL[state.winner]}` : "انتهت اللعبة";
+    }
+    return "";
+  })();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 10, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={[styles.gameIcon, { backgroundColor: "#F59E0B33" }]}>
-          <Ionicons name="dice" size={22} color="#F59E0B" />
-        </View>
-        <Text style={[styles.gameName, { color: colors.foreground }]}>لودو</Text>
-        <View style={[styles.scoreBadge, { backgroundColor: colors.primary + "22" }]}>
-          <Ionicons name="people" size={14} color={colors.primary} />
-          <Text style={[styles.scoreVal, { color: colors.primary }]}>{players.length}</Text>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 30, gap: 12 }}
-        showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior="padding"
+    >
+      {/* Header */}
+      <LinearGradient
+        colors={["#2A0E6B", "#4C1D95"]}
+        style={[styles.header, { paddingTop: topPad + 10 }]}
       >
-        {error && (
-          <View style={[styles.errorBox, { backgroundColor: "#EF444422", borderColor: "#EF4444" }]}>
-            <Ionicons name="alert-circle" size={16} color="#EF4444" />
-            <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.headerTitle}>لودو</Text>
+            {/* The table id is the invite code friends type on the games screen. */}
+            <View style={styles.codePill}>
+              <Ionicons name="key" size={10} color="#FFD75E" />
+              <Text style={styles.codeText}>{id}</Text>
+            </View>
           </View>
-        )}
-
-        {/* Status / turn banner */}
-        <View style={[styles.statusBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.statusRow}>
-            <View style={[styles.onlineDot, { backgroundColor: connected ? "#22C55E" : colors.mutedForeground }]} />
-            <Text style={[styles.statusText, { color: colors.foreground }]}>
-              {state?.phase === "lobby" && (connected ? `${players.length} لاعب — بانتظار البدء` : "جارٍ الاتصال...")}
-              {state?.phase === "playing" && (isMyTurn ? "دورك! ارمِ النرد" : `دور ${state.turn ? COLOR_LABEL[state.turn] : ""}`)}
-              {state?.phase === "ended" && "انتهت اللعبة"}
-            </Text>
-          </View>
-          {state?.phase === "playing" && renderDie(state.dice)}
+          <Text style={styles.headerSub}>
+            {(state?.maxPlayers ?? mode) === 2 ? "مواجهة ثنائية" : "طاولة رباعية"} ·{" "}
+            {players.length}/{state?.maxPlayers ?? mode}
+          </Text>
         </View>
+        <View style={styles.headerBadge}>
+          <View style={[styles.dot, { backgroundColor: connected ? "#4ADE80" : "#9CA3AF" }]} />
+          <Text style={styles.headerBadgeText}>{statusText}</Text>
+        </View>
+      </LinearGradient>
 
-        {/* Players */}
-        {players.map(renderPlayerCard)}
+      {error && (
+        <View style={styles.errorBar}>
+          <Ionicons name="alert-circle" size={15} color="#fff" />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      {stageFull && (
+        <View style={[styles.errorBar, { backgroundColor: AMBER }]}>
+          <Text style={styles.errorText}>المنصة ممتلئة</Text>
+        </View>
+      )}
 
+      {/* Seats */}
+      <View style={styles.seatsRow}>
+        {players.map((p) => {
+          const seat = micSeatFor(p.userId);
+          return (
+            <SeatCard
+              key={p.userId}
+              player={p}
+              isTurn={state?.turn === p.color}
+              isMe={p.userId === user.id}
+              onMic={!!seat}
+              muted={seat?.muted ?? false}
+              compact={players.length > 2}
+            />
+          );
+        })}
         {players.length === 0 && (
-          <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-            جارٍ الانضمام إلى الطاولة...
+          <Text style={[styles.waiting, { color: colors.mutedForeground }]}>
+            جارٍ الانضمام للطاولة...
           </Text>
         )}
+      </View>
 
-        {/* Lobby controls */}
-        {state?.phase === "lobby" && (
-          <View style={{ gap: 10, marginTop: 4 }}>
-            <TouchableOpacity
-              style={[styles.bigBtn, { backgroundColor: "#F59E0B", opacity: connected && players.length >= 2 ? 1 : 0.5 }]}
-              onPress={start}
-              disabled={!connected || players.length < 2}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="play" size={18} color="#fff" />
-              <Text style={styles.bigBtnText}>ابدأ اللعبة</Text>
-            </TouchableOpacity>
-            <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-              نحتاج من ٢ إلى ٤ لاعبين. ادعُ أصدقاءك لنفس الطاولة وتنافسوا مباشرة.
-            </Text>
-          </View>
-        )}
+      {/* Board */}
+      <View style={styles.boardWrap}>
+        <LudoBoard
+          size={boardSize}
+          tokens={boardTokens}
+          seated={seatedColors}
+          onTokenPress={handleTokenPress}
+        />
+      </View>
 
-        {/* Roll control */}
-        {state?.phase === "playing" && (
+      {/* Dice + primary action */}
+      <View style={styles.controlRow}>
+        <DieFace value={state?.dice ?? null} size={46} />
+        {state?.phase === "lobby" ? (
           <TouchableOpacity
             style={[
-              styles.bigBtn,
-              { backgroundColor: canRoll ? "#F59E0B" : colors.muted, opacity: canRoll ? 1 : 0.6 },
+              styles.actionBtn,
+              { backgroundColor: players.length >= 2 ? AMBER : colors.muted },
             ]}
+            onPress={start}
+            disabled={players.length < 2}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="play"
+              size={18}
+              color={players.length >= 2 ? "#fff" : colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.actionText,
+                { color: players.length >= 2 ? "#fff" : colors.mutedForeground },
+              ]}
+            >
+              {players.length >= 2 ? "ابدأ اللعبة" : "بانتظار لاعب آخر"}
+            </Text>
+          </TouchableOpacity>
+        ) : state?.phase === "ended" ? (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.back()}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="trophy" size={18} color="#fff" />
+            <Text style={styles.actionText}>العودة للألعاب</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: canRoll ? AMBER : colors.muted }]}
             onPress={handleRoll}
             disabled={!canRoll}
             activeOpacity={0.85}
           >
-            <Ionicons name="dice" size={20} color={canRoll ? "#fff" : colors.mutedForeground} />
-            <Text style={[styles.bigBtnText, { color: canRoll ? "#fff" : colors.mutedForeground }]}>
-              {canMove ? "اختر قطعة لتحريكها" : isMyTurn ? "ارمِ النرد" : "بانتظار دورك"}
+            <Ionicons
+              name="dice"
+              size={20}
+              color={canRoll ? "#fff" : colors.mutedForeground}
+            />
+            <Text
+              style={[styles.actionText, { color: canRoll ? "#fff" : colors.mutedForeground }]}
+            >
+              {canMove ? "اختر قطعة" : isMyTurn ? "ارمِ النرد" : "بانتظار دورك"}
             </Text>
           </TouchableOpacity>
         )}
+      </View>
 
-        {lastDice && state?.phase === "playing" && (
-          <Text style={[styles.diceLog, { color: colors.mutedForeground }]}>
-            {COLOR_LABEL[lastDice.color]} رمى {lastDice.dice}
-            {lastDice.forfeit ? " — ثلاث ستات! فقد الدور" : ""}
-          </Text>
-        )}
+      {lastDice && state?.phase === "playing" && (
+        <Text style={[styles.diceLog, { color: colors.mutedForeground }]}>
+          {LUDO_LABEL[lastDice.color]} رمى {lastDice.dice}
+          {lastDice.forfeit ? " — ثلاث ستات! فقد الدور" : ""}
+        </Text>
+      )}
 
-        {/* Ended */}
-        {state?.phase === "ended" && (
-          <View style={{ alignItems: "center", gap: 14, marginTop: 8 }}>
-            <View style={[styles.trophyCircle, { backgroundColor: colors.accent + "22" }]}>
-              <Ionicons name="trophy" size={48} color={colors.accent} />
-            </View>
-            <Text style={[styles.winnerText, { color: colors.primary }]}>
-              🏆 الفائز: {state.winner ? COLOR_LABEL[state.winner] : "—"}
+      {/* Chat */}
+      <View style={[styles.chatWrap, { borderTopColor: colors.border }]}>
+        <FlatList
+          data={orderedMessages}
+          keyExtractor={(m: ChatMessage) => String(m.id)}
+          inverted
+          style={styles.chatList}
+          contentContainerStyle={styles.chatContent}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={[styles.chatEmpty, { color: colors.mutedForeground }]}>
+              شجّع خصمك أو ارسله هدية 🎁
             </Text>
-            <TouchableOpacity
-              style={[styles.bigBtn, { backgroundColor: "#F59E0B" }]}
-              onPress={() => router.back()}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.bigBtnText}>العودة للألعاب</Text>
-            </TouchableOpacity>
-          </View>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.msgRow}>
+              <Text style={[styles.msgUser, { color: colors.primary }]}>{item.userName}: </Text>
+              <Text style={[styles.msgText, { color: colors.foreground }]}>{item.text}</Text>
+            </View>
+          )}
+        />
+      </View>
+
+      {/* Composer */}
+      <View
+        style={[
+          styles.composer,
+          { borderTopColor: colors.border, paddingBottom: botPad + 8 },
+        ]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.roundBtn,
+            { backgroundColor: !onMic ? colors.muted : muted ? AMBER : "#22C55E" },
+          ]}
+          onPress={onMicPress}
+          onLongPress={() => onMic && leaveMic()}
+          delayLongPress={400}
+        >
+          <Ionicons
+            name={!onMic || muted ? "mic-off" : "mic"}
+            size={18}
+            color={!onMic ? colors.mutedForeground : "#fff"}
+          />
+        </TouchableOpacity>
+
+        <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.input, { color: colors.foreground }]}
+            placeholder="رسالة..."
+            placeholderTextColor={colors.mutedForeground}
+            value={text}
+            onChangeText={setText}
+            onSubmitEditing={send}
+            returnKeyType="send"
+            textAlign="right"
+          />
+        </View>
+
+        {text.trim() ? (
+          <TouchableOpacity
+            style={[styles.roundBtn, { backgroundColor: colors.primary }]}
+            onPress={send}
+          >
+            <Ionicons name="send" size={17} color="#fff" style={{ transform: [{ scaleX: -1 }] }} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.roundBtn, { backgroundColor: AMBER }]}
+            onPress={() => setGiftOpen(true)}
+          >
+            <Ionicons name="gift" size={18} color="#fff" />
+          </TouchableOpacity>
         )}
-      </ScrollView>
-    </View>
+      </View>
+
+      {entrance && <EntranceOverlay event={entrance} onDone={clearEntrance} />}
+      {gift && <GiftOverlay event={gift} onDone={clearGift} />}
+
+      <GiftPicker
+        visible={giftOpen}
+        coins={user.coins}
+        onClose={() => setGiftOpen(false)}
+        onSend={handleSendGift}
+      />
+    </KeyboardAvoidingView>
   );
 }
 
@@ -314,89 +447,137 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
     gap: 10,
   },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  gameIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  gameName: { flex: 1, fontSize: 16, fontWeight: "700" as const },
-  scoreBadge: {
+  iconBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800" as const },
+  codePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    borderRadius: 20,
-    paddingHorizontal: 12,
+    gap: 3,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  codeText: {
+    color: "#FFD75E",
+    fontSize: 11,
+    fontWeight: "800" as const,
+    letterSpacing: 1,
+  },
+  headerSub: { color: "rgba(255,255,255,0.75)", fontSize: 11, marginTop: 2 },
+  headerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 6,
+    maxWidth: 170,
   },
-  scoreVal: { fontSize: 15, fontWeight: "800" as const },
-  errorBox: {
+  headerBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" as const, flexShrink: 1 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  errorBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#EF4444",
+    paddingVertical: 7,
+  },
+  errorText: { color: "#fff", fontSize: 12, fontWeight: "700" as const },
+  seatsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  seat: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  errorText: { color: "#EF4444", fontSize: 13, fontWeight: "600" as const, flex: 1, textAlign: "right" },
-  statusBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-  },
-  statusRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  onlineDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 14, fontWeight: "700" as const, flex: 1 },
-  die: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, padding: 5 },
-  dieGrid: { flex: 1, flexDirection: "row", flexWrap: "wrap" },
-  dieCell: { width: "33.33%", height: "33.33%", alignItems: "center", justifyContent: "center" },
-  diePip: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#1A1A2E" },
-  playerCard: { borderRadius: 16, padding: 14, gap: 10 },
-  playerHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  colorDot: { width: 12, height: 12, borderRadius: 6 },
-  playerName: { fontSize: 14, fontWeight: "700" as const },
-  playerMeta: { fontSize: 11, marginTop: 1 },
-  turnPill: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
-  turnPillText: { fontSize: 11, fontWeight: "800" as const },
-  tokensRow: { flexDirection: "row", gap: 8 },
-  token: {
-    flex: 1,
-    borderRadius: 12,
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    paddingHorizontal: 4,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
+    minWidth: 140,
   },
-  tokenInner: { alignItems: "center", gap: 2 },
-  tokenText: { fontSize: 10, fontWeight: "700" as const },
-  movableBadge: {
+  seatAvatarWrap: { position: "relative" },
+  seatRing: { borderWidth: 2, borderRadius: 20, padding: 2 },
+  micDot: {
     position: "absolute",
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    bottom: -2,
+    right: -2,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-  progressTrack: { height: 5, borderRadius: 3, overflow: "hidden" },
-  progressBar: { height: "100%", borderRadius: 3 },
-  bigBtn: {
+  seatName: { fontSize: 13, fontWeight: "700" as const },
+  seatMetaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  seatChip: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 },
+  seatChipText: { fontSize: 10, fontWeight: "800" as const },
+  seatTurn: { fontSize: 10, fontWeight: "800" as const },
+  waiting: { fontSize: 13, textAlign: "center" as const, flex: 1, paddingVertical: 12 },
+  boardWrap: { alignItems: "center", paddingVertical: 4 },
+  controlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 26,
-    paddingVertical: 15,
+    borderRadius: 24,
+    paddingVertical: 13,
   },
-  bigBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" as const },
-  hint: { fontSize: 12, textAlign: "center" as const, lineHeight: 18 },
-  diceLog: { fontSize: 12, textAlign: "center" as const },
-  trophyCircle: { width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center" },
-  winnerText: { fontSize: 18, fontWeight: "800" as const },
+  actionText: { color: "#fff", fontSize: 15, fontWeight: "800" as const },
+  diceLog: { fontSize: 11, textAlign: "center" as const, paddingTop: 6 },
+  chatWrap: { flex: 1, borderTopWidth: 1, marginTop: 8, minHeight: 60 },
+  chatList: { flex: 1 },
+  chatContent: { paddingHorizontal: 14, paddingVertical: 8, gap: 4 },
+  chatEmpty: {
+    fontSize: 12,
+    textAlign: "center" as const,
+    paddingVertical: 14,
+    transform: [{ scaleY: -1 }],
+  },
+  msgRow: { flexDirection: "row", flexWrap: "wrap" },
+  msgUser: { fontSize: 12, fontWeight: "800" as const },
+  msgText: { fontSize: 12, flexShrink: 1 },
+  composer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  roundBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inputWrap: {
+    flex: 1,
+    borderRadius: 19,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 38,
+    justifyContent: "center",
+  },
+  input: { fontSize: 13 },
 });

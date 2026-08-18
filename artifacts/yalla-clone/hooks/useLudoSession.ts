@@ -13,8 +13,12 @@ export interface LudoPlayer {
   finished: number;
 }
 
+export type LudoMode = 2 | 4;
+
 export interface LudoState {
   gameId: string;
+  mode: LudoMode;
+  maxPlayers: number;
   phase: LudoPhase;
   players: LudoPlayer[];
   turn: LudoColor | null;
@@ -30,7 +34,11 @@ interface JoinArgs {
   userAvatar: string;
 }
 
-export function useLudoSession(gameId: string | undefined, me: JoinArgs) {
+export function useLudoSession(
+  gameId: string | undefined,
+  me: JoinArgs,
+  mode: LudoMode = 4,
+) {
   const [state, setState] = useState<LudoState | null>(null);
   const [lastDice, setLastDice] = useState<{ color: LudoColor; dice: number; forfeit: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +48,10 @@ export function useLudoSession(gameId: string | undefined, me: JoinArgs) {
   meRef.current = me;
   const gameRef = useRef(gameId);
   gameRef.current = gameId;
+  // The mode only takes effect when this client opens the table; joining an
+  // existing game keeps whatever size it was created with.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   useEffect(() => {
     if (!gameId) return;
@@ -47,7 +59,7 @@ export function useLudoSession(gameId: string | undefined, me: JoinArgs) {
 
     const join = () => {
       setConnected(true);
-      socket.emit("ludo:join", { gameId, ...meRef.current });
+      socket.emit("ludo:join", { gameId, ...meRef.current, mode: modeRef.current });
     };
 
     const onState = (data: LudoState) => setState(data);
