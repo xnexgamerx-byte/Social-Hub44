@@ -1,180 +1,275 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ImageErrorEventData,
-  NativeSyntheticEvent,
 } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getListPostsQueryKey,
+  getListPostsQueryOptions,
+  useDeletePost,
+  useOpenConversation,
+  useTogglePostLike,
+  type Post,
+} from "@workspace/api-client-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { POSTS, type Post } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import * as Haptics from "expo-haptics";
 
-const TABS = ["موصى به", "متابَعون"];
+function relativeTime(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return "الآن";
+  if (mins < 60) return `منذ ${mins} د`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `منذ ${hours} س`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "أمس" : `منذ ${days} يوم`;
+}
 
-const HOT_TOPICS = [
-  "لحظات الحياة",
-  "محظوظ للدردشة",
-  "الطعام اليوم",
-  "موسيقى",
-  "سفر",
-];
-
-function PostImage({ uri }: { uri: string }) {
+function PostImage({ uri, wide }: { uri: string; wide: boolean }) {
   const colors = useColors();
   const [error, setError] = useState(false);
+  const style = wide ? styles.postImageSingle : styles.postImageGridItem;
   if (error) {
     return (
-      <View style={[styles.postImageSingle, { backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }]}>
-        <Ionicons name="image-outline" size={40} color={colors.mutedForeground} />
+      <View
+        style={[
+          style,
+          { backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" },
+        ]}
+      >
+        <Ionicons name="image-outline" size={36} color={colors.mutedForeground} />
       </View>
     );
   }
   return (
-    <Image
-      source={{ uri }}
-      style={styles.postImageSingle}
-      resizeMode="cover"
-      onError={() => setError(true)}
-    />
+    <Image source={{ uri }} style={style} resizeMode="cover" onError={() => setError(true)} />
   );
 }
 
-function PostCard({ post }: { post: Post }) {
-  const colors = useColors();
-  const [liked, setLiked] = useState(false);
+interface PostCardProps {
+  post: Post;
+  isMine: boolean;
+  onLike: (post: Post) => void;
+  onChat: (post: Post) => void;
+  onDelete: (post: Post) => void;
+}
 
-  const handleLike = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLiked((p) => !p);
-  };
+function PostCard({ post, isMine, onLike, onChat, onDelete }: PostCardProps) {
+  const colors = useColors();
 
   return (
     <View style={[styles.postCard, { backgroundColor: colors.card }]}>
       <View style={styles.postHeader}>
         <View style={styles.postUser}>
-          <View style={styles.postAvatarContainer}>
-            <UserAvatar uri={post.avatar} name={post.user} size={42} online={post.isOnline} />
-          </View>
+          <UserAvatar uri={post.authorAvatar} name={post.authorName || "مستخدم"} size={42} />
           <View style={styles.postUserInfo}>
-            <View style={styles.postNameRow}>
-              <Text style={[styles.postUserName, { color: colors.foreground }]}>{post.user}</Text>
-            </View>
+            <Text style={[styles.postUserName, { color: colors.foreground }]} numberOfLines={1}>
+              {post.authorName || "مستخدم"}
+            </Text>
             <View style={styles.postBadges}>
               <View style={styles.lvBadge}>
-                <Text style={styles.lvText}>Lv.{post.level}</Text>
+                <Text style={styles.lvText}>Lv.{post.authorLevel}</Text>
               </View>
-              {post.isVip && (
-                <View style={styles.vipBadge}>
-                  <Text style={styles.vipText}>VIP</Text>
-                </View>
-              )}
+              <Text style={[styles.postMeta, { color: colors.mutedForeground }]}>
+                {relativeTime(post.createdAt)}
+              </Text>
             </View>
           </View>
         </View>
-        <TouchableOpacity style={[styles.chatBtn, { backgroundColor: colors.primary }]}>
-          <Ionicons name="chatbubble-ellipses" size={18} color={colors.primaryForeground} />
-        </TouchableOpacity>
+        {isMine ? (
+          <TouchableOpacity
+            style={[styles.chatBtn, { backgroundColor: "#EF444422" }]}
+            onPress={() => onDelete(post)}
+          >
+            <Ionicons name="trash-outline" size={17} color="#EF4444" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.chatBtn, { backgroundColor: colors.primary }]}
+            onPress={() => onChat(post)}
+          >
+            <Ionicons name="chatbubble-ellipses" size={18} color={colors.primaryForeground} />
+          </TouchableOpacity>
+        )}
       </View>
 
+      {!!post.text && (
+        <Text style={[styles.postText, { color: colors.foreground }]}>{post.text}</Text>
+      )}
+
       {post.images.length === 1 ? (
-        <PostImage uri={post.images[0]} />
-      ) : (
+        <PostImage uri={post.images[0]} wide />
+      ) : post.images.length > 1 ? (
         <View style={styles.postImageGrid}>
           {post.images.map((img, i) => (
-            <PostImage key={i} uri={img} />
+            <PostImage key={`${img}-${i}`} uri={img} wide={false} />
           ))}
+        </View>
+      ) : null}
+
+      {!!post.tag && (
+        <View style={[styles.postTag, { backgroundColor: colors.secondary }]}>
+          <Text style={styles.hashTag}>#</Text>
+          <Text style={[styles.postTagText, { color: colors.mutedForeground }]}>{post.tag}</Text>
         </View>
       )}
 
-      <View style={[styles.postTag, { backgroundColor: colors.secondary }]}>
-        <Text style={styles.hashTag}>#</Text>
-        <Text style={[styles.postTagText, { color: colors.mutedForeground }]}>{post.tag}</Text>
-      </View>
-
       <View style={styles.postFooter}>
-        <Text style={[styles.postMeta, { color: colors.mutedForeground }]}>
-          {post.time} · {post.distance}
-        </Text>
-        <View style={styles.postActions}>
-          <TouchableOpacity style={styles.actionItem} activeOpacity={0.8}>
-            <Ionicons name="ellipsis-horizontal" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionItem} onPress={handleLike} activeOpacity={0.8}>
-            <Ionicons name={liked ? "thumbs-up" : "thumbs-up-outline"} size={18} color={liked ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.actionCount, { color: colors.mutedForeground }]}>{liked ? post.likes + 1 : post.likes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionItem} activeOpacity={0.8}>
-            <Feather name="edit-2" size={16} color={colors.mutedForeground} />
-            <Text style={[styles.actionCount, { color: colors.mutedForeground }]}>{post.comments}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.actionItem} onPress={() => onLike(post)} activeOpacity={0.8}>
+          <Ionicons
+            name={post.likedByMe ? "heart" : "heart-outline"}
+            size={19}
+            color={post.likedByMe ? "#EC4899" : colors.mutedForeground}
+          />
+          <Text
+            style={[
+              styles.actionCount,
+              { color: post.likedByMe ? "#EC4899" : colors.mutedForeground },
+            ]}
+          >
+            {post.likeCount}
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-export default function MovementScreen() {
+export default function MomentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState(0);
+  const qc = useQueryClient();
+  const { user: me } = useApp();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const postsQ = useQuery(getListPostsQueryOptions());
+  const likeM = useTogglePostLike();
+  const deleteM = useDeletePost();
+  const openConversationM = useOpenConversation();
+
+  const refresh = () => qc.invalidateQueries({ queryKey: getListPostsQueryKey() });
+
+  const handleLike = async (post: Post) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await likeM.mutateAsync({ id: post.id });
+      refresh();
+    } catch {
+      Alert.alert("خطأ", "تعذّر تسجيل الإعجاب");
+    }
+  };
+
+  const handleChat = async (post: Post) => {
+    if (post.userId === me.id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const conv = await openConversationM.mutateAsync({
+        data: {
+          otherUserId: post.userId,
+          otherName: post.authorName,
+          otherAvatar: post.authorAvatar,
+        },
+      });
+      router.push(
+        `/dm/${conv.id}?otherUserId=${encodeURIComponent(conv.otherUserId)}&otherName=${encodeURIComponent(conv.otherName || post.authorName)}&otherAvatar=${encodeURIComponent(conv.otherAvatar || post.authorAvatar)}`,
+      );
+    } catch {
+      Alert.alert("خطأ", "تعذّر فتح المحادثة");
+    }
+  };
+
+  const handleDelete = (post: Post) => {
+    Alert.alert("حذف المنشور", "هل تريد حذف هذا المنشور؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "حذف",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteM.mutateAsync({ id: post.id });
+            refresh();
+          } catch {
+            Alert.alert("خطأ", "تعذّر حذف المنشور");
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
-        <View style={styles.tabs}>
-          {TABS.map((t, i) => (
-            <TouchableOpacity key={t} onPress={() => setActiveTab(i)} style={styles.tabBtn} activeOpacity={0.8}>
-              <View style={styles.tabLabelRow}>
-                <Text style={[styles.tabLabel, { color: i === activeTab ? colors.foreground : colors.mutedForeground, fontWeight: i === activeTab ? "700" : "400" }]}>
-                  {t}
-                </Text>
-                {i === 1 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>12</Text>
-                  </View>
-                )}
-              </View>
-              {i === activeTab && <View style={[styles.tabUnder, { backgroundColor: colors.primary }]} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
-          <Ionicons name="camera-outline" size={19} color={colors.primary} />
+        <Text style={[styles.title, { color: colors.foreground }]}>اللحظات</Text>
+        <TouchableOpacity
+          style={[styles.newBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.push("/post-create")}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={18} color="#fff" />
+          <Text style={styles.newBtnText}>نشر</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={POSTS}
-        keyExtractor={(p) => p.id}
+        data={postsQ.data ?? []}
+        keyExtractor={(p) => String(p.id)}
         contentContainerStyle={{
           paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
+          paddingHorizontal: 12,
+          gap: 12,
+          flexGrow: 1,
         }}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View style={[styles.hotTopics, { backgroundColor: colors.card }]}>
-            <Text style={[styles.hotTitle, { color: colors.foreground }]}>المواضيع الساخنة</Text>
-            {HOT_TOPICS.slice(0, 3).map((topic) => (
-              <TouchableOpacity key={topic} style={styles.topicRow} activeOpacity={0.7}>
-                <View style={styles.topicLeft}>
-                  <Text style={[styles.topicHash, { color: colors.primary }]}>#</Text>
-                  <Text style={[styles.topicText, { color: colors.foreground }]}>{topic}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            ))}
-          </View>
+        refreshControl={
+          <RefreshControl
+            refreshing={postsQ.isFetching && !postsQ.isLoading}
+            onRefresh={() => postsQ.refetch()}
+            tintColor={colors.primary}
+          />
         }
-        renderItem={({ item }) => <PostCard post={item} />}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        ListEmptyComponent={
+          postsQ.isLoading ? (
+            <View style={styles.empty}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="images-outline" size={38} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                ما كو لحظات بعد{"\n"}كن أول من ينشر!
+              </Text>
+              <TouchableOpacity
+                style={[styles.newBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push("/post-create")}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.newBtnText}>نشر لحظة</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            isMine={item.userId === me.id}
+            onLike={handleLike}
+            onChat={handleChat}
+            onDelete={handleDelete}
+          />
+        )}
       />
     </View>
   );
@@ -184,100 +279,43 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  tabs: { flexDirection: "row", gap: 24 },
-  tabBtn: { alignItems: "center", paddingBottom: 8 },
-  tabLabelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  tabLabel: { fontSize: 17 },
-  tabUnder: { height: 3, width: "100%", borderRadius: 2, marginTop: 4 },
-  badge: {
-    backgroundColor: "#FF6B9D",
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" as const },
-  iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  hotTopics: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 16,
-    padding: 16,
-    gap: 2,
-  },
-  hotTitle: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-    marginBottom: 8,
-  },
-  topicRow: {
+  title: { fontSize: 22, fontWeight: "800" as const },
+  newBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 4,
+    borderRadius: 18,
+    paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  topicLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
-  topicHash: { fontSize: 14, fontWeight: "700" as const },
-  topicText: { fontSize: 14 },
+  newBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" as const },
   postCard: {
-    marginHorizontal: 16,
     borderRadius: 16,
-    overflow: "hidden",
-    paddingTop: 14,
+    padding: 14,
+    gap: 10,
   },
   postHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    marginBottom: 12,
   },
-  postUser: { flexDirection: "row", alignItems: "center", gap: 10 },
-  postAvatarContainer: { position: "relative" },
-  postAvatar: { width: 46, height: 46, borderRadius: 23 },
-  postOnlineDot: {
-    position: "absolute",
-    bottom: 1,
-    right: 1,
-    width: 11,
-    height: 11,
-    borderRadius: 5.5,
-    backgroundColor: "#22C55E",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  postUserInfo: { gap: 4 },
-  postNameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  postUser: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  postUserInfo: { gap: 3, flex: 1 },
   postUserName: { fontSize: 15, fontWeight: "700" as const },
-  postBadges: { flexDirection: "row", gap: 5 },
+  postBadges: { flexDirection: "row", alignItems: "center", gap: 6 },
   lvBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 6,
+    borderRadius: 8,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     backgroundColor: "rgba(139,92,246,0.22)",
   },
-  lvText: { fontSize: 10, fontWeight: "700" as const, color: "#C4B5FD" },
-  vipBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: "rgba(245,158,11,0.18)",
-  },
-  vipText: { fontSize: 10, fontWeight: "700" as const, color: "#FCD34D" },
+  lvText: { fontSize: 11, fontWeight: "700" as const, color: "#C4B5FD" },
+  postMeta: { fontSize: 11 },
   chatBtn: {
     width: 38,
     height: 38,
@@ -285,24 +323,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  postText: { fontSize: 15, lineHeight: 22 },
   postImageSingle: {
     width: "100%",
-    height: 200,
+    height: 220,
+    borderRadius: 12,
   },
-  postImageGrid: {
-    flexDirection: "row",
-    height: 160,
-    gap: 2,
+  postImageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  postImageGridItem: {
+    width: "48%",
+    height: 130,
+    borderRadius: 10,
   },
-  postImageHalf: { flex: 1 },
   postTag: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start" as const,
-    marginHorizontal: 14,
-    marginTop: 10,
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    alignSelf: "flex-start",
+    borderRadius: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     gap: 2,
   },
@@ -311,12 +349,16 @@ const styles = StyleSheet.create({
   postFooter: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    justifyContent: "flex-end",
   },
-  postMeta: { fontSize: 12 },
-  postActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  actionItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  actionCount: { fontSize: 13 },
+  actionItem: { flexDirection: "row", alignItems: "center", gap: 5, padding: 4 },
+  actionCount: { fontSize: 13, fontWeight: "600" as const },
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    paddingVertical: 60,
+  },
+  emptyText: { fontSize: 15, textAlign: "center" as const, lineHeight: 24 },
 });

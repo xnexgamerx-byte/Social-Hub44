@@ -686,6 +686,139 @@ export const MarkConversationReadParams = zod.object({
 
 
 /**
+ * @summary List app users, most recently active first
+ */
+export const ListProfilesResponseItem = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string(),
+  "bio": zod.string(),
+  "gender": zod.string(),
+  "age": zod.number(),
+  "country": zod.string(),
+  "level": zod.number(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.string()
+})
+export const ListProfilesResponse = zod.array(ListProfilesResponseItem)
+
+
+/**
+ * @summary Create or refresh the authenticated user's directory entry
+ */
+export const upsertMyProfileBodyNameMax = 60;
+
+export const upsertMyProfileBodyBioMax = 200;
+
+export const upsertMyProfileBodyAgeMin = 0;
+export const upsertMyProfileBodyAgeMax = 120;
+
+export const upsertMyProfileBodyCountryMax = 8;
+
+
+
+export const UpsertMyProfileBody = zod.object({
+  "name": zod.string().max(upsertMyProfileBodyNameMax).optional(),
+  "avatar": zod.string().optional(),
+  "bio": zod.string().max(upsertMyProfileBodyBioMax).optional(),
+  "gender": zod.enum(['', 'male', 'female']).optional(),
+  "age": zod.number().min(upsertMyProfileBodyAgeMin).max(upsertMyProfileBodyAgeMax).optional(),
+  "country": zod.string().max(upsertMyProfileBodyCountryMax).optional()
+})
+
+export const UpsertMyProfileResponse = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string(),
+  "bio": zod.string(),
+  "gender": zod.string(),
+  "age": zod.number(),
+  "country": zod.string(),
+  "level": zod.number(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.string()
+})
+
+
+/**
+ * @summary Get one user's public profile
+ */
+export const GetProfileParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const GetProfileResponse = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string(),
+  "bio": zod.string(),
+  "gender": zod.string(),
+  "age": zod.number(),
+  "country": zod.string(),
+  "level": zod.number(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.string()
+})
+
+
+/**
+ * @summary Moments feed, newest first
+ */
+export const ListPostsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "authorName": zod.string(),
+  "authorAvatar": zod.string(),
+  "text": zod.string(),
+  "images": zod.array(zod.string()),
+  "tag": zod.string(),
+  "createdAt": zod.string(),
+  "likeCount": zod.number(),
+  "likedByMe": zod.boolean(),
+  "authorLevel": zod.number()
+})
+export const ListPostsResponse = zod.array(ListPostsResponseItem)
+
+
+/**
+ * @summary Publish a moment
+ */
+export const createPostBodyTextMax = 500;
+
+export const createPostBodyTagMax = 40;
+
+
+
+export const CreatePostBody = zod.object({
+  "text": zod.string().max(createPostBodyTextMax).optional(),
+  "images": zod.array(zod.string()).optional(),
+  "tag": zod.string().max(createPostBodyTagMax).optional()
+})
+
+
+/**
+ * @summary Delete a post (author or admin only)
+ */
+export const DeletePostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Like or unlike a post
+ */
+export const TogglePostLikeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const TogglePostLikeResponse = zod.object({
+  "postId": zod.number(),
+  "likeCount": zod.number(),
+  "likedByMe": zod.boolean()
+})
+
+
+/**
  * @summary Follow a user (idempotent)
  */
 

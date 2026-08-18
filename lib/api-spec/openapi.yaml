@@ -26,6 +26,10 @@ tags:
     description: Private direct-message conversations
   - name: social
     description: Follow relationships and social stats
+  - name: profiles
+    description: User directory mirrored from the auth provider
+  - name: posts
+    description: Moments feed (user posts and likes)
 paths:
   /healthz:
     get:
@@ -860,6 +864,175 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /profiles:
+    get:
+      operationId: listProfiles
+      tags: [profiles]
+      summary: List app users, most recently active first
+      responses:
+        "200":
+          description: User directory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /profiles/me:
+    post:
+      operationId: upsertMyProfile
+      tags: [profiles]
+      summary: Create or refresh the authenticated user's directory entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: The stored profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /profiles/{userId}:
+    get:
+      operationId: getProfile
+      tags: [profiles]
+      summary: Get one user's public profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /posts:
+    get:
+      operationId: listPosts
+      tags: [posts]
+      summary: Moments feed, newest first
+      responses:
+        "200":
+          description: Posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createPost
+      tags: [posts]
+      summary: Publish a moment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        "201":
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /posts/{id}:
+    delete:
+      operationId: deletePost
+      tags: [posts]
+      summary: Delete a post (author or admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Not the author
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /posts/{id}/like:
+    post:
+      operationId: togglePostLike
+      tags: [posts]
+      summary: Like or unlike a post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated like state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostLikeState"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /follow:
     post:
       operationId: followUser
@@ -1613,6 +1786,87 @@ components:
         vipType: { type: string }
         xp: { type: integer }
         level: { type: integer }
+    Profile:
+      type: object
+      required:
+        - userId
+        - name
+        - avatar
+        - bio
+        - gender
+        - age
+        - country
+        - level
+        - isOnline
+        - lastSeenAt
+      properties:
+        userId: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        bio: { type: string }
+        gender: { type: string }
+        age: { type: integer }
+        country: { type: string }
+        level: { type: integer }
+        isOnline: { type: boolean }
+        lastSeenAt: { type: string }
+    ProfileInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 60 }
+        avatar: { type: string }
+        bio: { type: string, maxLength: 200 }
+        gender: { type: string, enum: ["", male, female] }
+        age: { type: integer, minimum: 0, maximum: 120 }
+        country: { type: string, maxLength: 8 }
+
+    Post:
+      type: object
+      required:
+        - id
+        - userId
+        - authorName
+        - authorAvatar
+        - text
+        - images
+        - tag
+        - createdAt
+        - likeCount
+        - likedByMe
+        - authorLevel
+      properties:
+        id: { type: integer }
+        userId: { type: string }
+        authorName: { type: string }
+        authorAvatar: { type: string }
+        text: { type: string }
+        images:
+          type: array
+          items: { type: string }
+        tag: { type: string }
+        createdAt: { type: string }
+        likeCount: { type: integer }
+        likedByMe: { type: boolean }
+        authorLevel: { type: integer }
+    PostInput:
+      type: object
+      properties:
+        text: { type: string, maxLength: 500 }
+        images:
+          type: array
+          items: { type: string }
+        tag: { type: string, maxLength: 40 }
+    PostLikeState:
+      type: object
+      required:
+        - postId
+        - likeCount
+        - likedByMe
+      properties:
+        postId: { type: integer }
+        likeCount: { type: integer }
+        likedByMe: { type: boolean }
+
     FollowStats:
       type: object
       required:

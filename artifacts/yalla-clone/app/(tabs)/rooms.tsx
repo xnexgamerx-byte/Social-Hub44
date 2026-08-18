@@ -87,8 +87,11 @@ export default function ChatroomScreen() {
           >
             <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: "#FFF8E1" }]}>
-            <Ionicons name="trophy-outline" size={18} color="#F59E0B" />
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: "#FFF8E1" }]}
+            onPress={() => router.push("/games")}
+          >
+            <Ionicons name="game-controller-outline" size={18} color="#F59E0B" />
           </TouchableOpacity>
         </View>
       </View>

@@ -12,6 +12,8 @@ import adminsRouter from "./admins";
 import roomsRouter from "./rooms";
 import dmRouter from "./dm";
 import followsRouter from "./follows";
+import profilesRouter from "./profiles";
+import postsRouter from "./posts";
 
 const router: IRouter = Router();
 
@@ -28,5 +30,7 @@ router.use(adminsRouter);
 router.use(roomsRouter);
 router.use(dmRouter);
 router.use(followsRouter);
+router.use(profilesRouter);
+router.use(postsRouter);
 
 export default router;

@@ -17,7 +17,7 @@ function NativeTabLayout() {
         <Label>الرئيسية</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="videos">
-        <Icon sf={{ default: "play.circle", selected: "play.circle.fill" }} />
+        <Icon sf={{ default: "photo.on.rectangle", selected: "photo.fill.on.rectangle.fill" }} />
         <Label>اللحظات</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="rooms">
@@ -83,9 +83,9 @@ function ClassicTabLayout() {
           title: "اللحظات",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name={focused ? "play.circle.fill" : "play.circle"} tintColor={color} size={24} />
+              <SymbolView name={focused ? "photo.fill.on.rectangle.fill" : "photo.on.rectangle"} tintColor={color} size={24} />
             ) : (
-              <Ionicons name={focused ? "play-circle" : "play-circle-outline"} size={22} color={color} />
+              <Ionicons name={focused ? "images" : "images-outline"} size={22} color={color} />
             ),
         }}
       />

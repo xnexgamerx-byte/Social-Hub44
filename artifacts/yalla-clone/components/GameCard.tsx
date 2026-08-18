@@ -9,7 +9,6 @@ export interface Game {
   id: string;
   name: string;
   description: string;
-  players: number;
   maxPlayers: number;
   icon: string;
   color: string;
@@ -45,7 +44,7 @@ export function GameCard({ game }: { game: Game }) {
         <View style={styles.players}>
           <Ionicons name="people" size={12} color={colors.mutedForeground} />
           <Text style={[styles.playersText, { color: colors.mutedForeground }]}>
-            {game.players.toLocaleString()}
+            {`حتى ${game.maxPlayers} لاعبين`}
           </Text>
         </View>
         <TouchableOpacity

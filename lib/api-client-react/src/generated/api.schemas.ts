@@ -292,6 +292,72 @@ export interface Wallet {
   level: number;
 }
 
+export interface Profile {
+  userId: string;
+  name: string;
+  avatar: string;
+  bio: string;
+  gender: string;
+  age: number;
+  country: string;
+  level: number;
+  isOnline: boolean;
+  lastSeenAt: string;
+}
+
+export type ProfileInputGender = typeof ProfileInputGender[keyof typeof ProfileInputGender];
+
+
+export const ProfileInputGender = {
+  '': '',
+  male: 'male',
+  female: 'female',
+} as const;
+
+export interface ProfileInput {
+  /** @maxLength 60 */
+  name?: string;
+  avatar?: string;
+  /** @maxLength 200 */
+  bio?: string;
+  gender?: ProfileInputGender;
+  /**
+     * @minimum 0
+     * @maximum 120
+     */
+  age?: number;
+  /** @maxLength 8 */
+  country?: string;
+}
+
+export interface Post {
+  id: number;
+  userId: string;
+  authorName: string;
+  authorAvatar: string;
+  text: string;
+  images: string[];
+  tag: string;
+  createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+  authorLevel: number;
+}
+
+export interface PostInput {
+  /** @maxLength 500 */
+  text?: string;
+  images?: string[];
+  /** @maxLength 40 */
+  tag?: string;
+}
+
+export interface PostLikeState {
+  postId: number;
+  likeCount: number;
+  likedByMe: boolean;
+}
+
 export interface FollowStats {
   userId: string;
   followers: number;

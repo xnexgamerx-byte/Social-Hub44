@@ -21,11 +21,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { getSocket } from "@/lib/socket";
 
+// Only shortcuts that lead somewhere real — a tile that does nothing reads as
+// a broken app.
 const QUICK = [
-  { icon: "people" as const, label: "العائلة", color: "#7C5CFC" },
-  { icon: "heart" as const, label: "المعجبون", color: "#FF6B9D" },
-  { icon: "eye" as const, label: "الزوار", color: "#06B6D4" },
-  { icon: "notifications" as const, label: "الإشعارات", color: "#F59E0B" },
+  { icon: "people" as const, label: "المستخدمون", color: "#7C5CFC", route: "/(tabs)" as const },
+  { icon: "home" as const, label: "الغرف", color: "#06B6D4", route: "/(tabs)/rooms" as const },
+  { icon: "images" as const, label: "اللحظات", color: "#FF6B9D", route: "/(tabs)/videos" as const },
+  { icon: "gift" as const, label: "المهام", color: "#F59E0B", route: "/tasks" as const },
 ];
 
 function formatTime(iso: string): string {
@@ -85,7 +87,12 @@ export default function MessagesScreen() {
         ListHeaderComponent={
           <View style={styles.quickRow}>
             {QUICK.map((q) => (
-              <TouchableOpacity key={q.label} style={styles.quickItem} activeOpacity={0.8}>
+              <TouchableOpacity
+                key={q.label}
+                style={styles.quickItem}
+                activeOpacity={0.8}
+                onPress={() => router.push(q.route)}
+              >
                 <View style={[styles.quickIcon, { backgroundColor: `${q.color}22` }]}>
                   <Ionicons name={q.icon} size={22} color={q.color} />
                 </View>

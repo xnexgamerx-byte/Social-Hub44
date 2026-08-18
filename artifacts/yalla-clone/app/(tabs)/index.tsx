@@ -1,20 +1,30 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getListProfilesQueryOptions,
+  useOpenConversation,
+  type Profile,
+} from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NEARBY_USERS, type NearbyUser } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { UserAvatar } from "@/components/UserAvatar";
 import * as Haptics from "expo-haptics";
 
-const TABS = ["قريبون", "مستخدمون جدد"];
+const TABS = ["الكل", "متصلون الآن"];
 
 function LevelBadge({ level }: { level: number }) {
   return (
@@ -24,20 +34,18 @@ function LevelBadge({ level }: { level: number }) {
   );
 }
 
-function VipBadge() {
-  return (
-    <View style={styles.vipBadge}>
-      <Text style={styles.vipText}>VIP</Text>
-    </View>
-  );
+function relativeSeen(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return "متصل الآن";
+  if (mins < 60) return `نشط قبل ${mins} د`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `نشط قبل ${hours} س`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "نشط أمس" : `نشط قبل ${days} يوم`;
 }
 
-function UserRow({ user }: { user: NearbyUser }) {
+function UserRow({ user, onChat }: { user: Profile; onChat: (u: Profile) => void }) {
   const colors = useColors();
-
-  const handleChat = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
 
   return (
     <View style={[styles.userRow, { backgroundColor: colors.card }]}>
@@ -47,27 +55,32 @@ function UserRow({ user }: { user: NearbyUser }) {
 
       <View style={styles.userInfo}>
         <View style={styles.nameRow}>
-          <Text style={[styles.userName, { color: colors.foreground }]}>{user.name}</Text>
-          <Text style={styles.flag}>{user.flag}</Text>
-          {user.isVoiceChatting && (
-            <View style={[styles.voiceBadge, { backgroundColor: colors.primary + "22" }]}>
-              <Ionicons name="mic" size={10} color={colors.primary} />
-              <Text style={[styles.voiceText, { color: colors.primary }]}>دردشة صوتية</Text>
-            </View>
-          )}
+          <Text style={[styles.userName, { color: colors.foreground }]} numberOfLines={1}>
+            {user.name || "مستخدم"}
+          </Text>
+          {!!user.country && <Text style={styles.flag}>{user.country}</Text>}
         </View>
         <View style={styles.badgesRow}>
           <LevelBadge level={user.level} />
-          {user.isVip && <VipBadge />}
+          {user.age > 0 && (
+            <View style={styles.ageBadge}>
+              <Ionicons
+                name={user.gender === "female" ? "female" : "male"}
+                size={9}
+                color="#fff"
+              />
+              <Text style={styles.ageText}>{user.age}</Text>
+            </View>
+          )}
         </View>
         <Text style={[styles.status, { color: colors.mutedForeground }]} numberOfLines={1}>
-          {user.status}
+          {user.bio || relativeSeen(user.lastSeenAt)}
         </Text>
       </View>
 
       <TouchableOpacity
         style={[styles.chatBtn, { backgroundColor: colors.primary }]}
-        onPress={handleChat}
+        onPress={() => onChat(user)}
         activeOpacity={0.8}
       >
         <Ionicons name="chatbubble-ellipses" size={18} color={colors.primaryForeground} />
@@ -79,8 +92,36 @@ function UserRow({ user }: { user: NearbyUser }) {
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user: me } = useApp();
   const [activeTab, setActiveTab] = useState(0);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const profilesQ = useQuery(getListProfilesQueryOptions());
+  const openConversationM = useOpenConversation();
+
+  const people = useMemo(() => {
+    const all = profilesQ.data ?? [];
+    return activeTab === 1 ? all.filter((p) => p.isOnline) : all;
+  }, [profilesQ.data, activeTab]);
+
+  const openChat = async (other: Profile) => {
+    if (!me.id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const conv = await openConversationM.mutateAsync({
+        data: {
+          otherUserId: other.userId,
+          otherName: other.name,
+          otherAvatar: other.avatar,
+        },
+      });
+      router.push(
+        `/dm/${conv.id}?otherUserId=${encodeURIComponent(conv.otherUserId)}&otherName=${encodeURIComponent(conv.otherName || other.name)}&otherAvatar=${encodeURIComponent(conv.otherAvatar || other.avatar)}`,
+      );
+    } catch {
+      Alert.alert("خطأ", "تعذّر فتح المحادثة");
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -97,24 +138,54 @@ export default function HomeScreen() {
           ))}
         </View>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
-            <Feather name="filter" size={17} color={colors.primary} />
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.secondary }]}
+            onPress={() => router.push("/games")}
+          >
+            <Ionicons name="game-controller-outline" size={17} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]}>
-            <Ionicons name="trophy-outline" size={17} color="#F59E0B" />
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.secondary }]}
+            onPress={() => router.push("/tasks")}
+          >
+            <Ionicons name="gift-outline" size={17} color="#F59E0B" />
           </TouchableOpacity>
         </View>
       </View>
 
       <FlatList
-        data={NEARBY_USERS}
-        keyExtractor={(u) => u.id}
+        data={people}
+        keyExtractor={(u) => u.userId}
         contentContainerStyle={{
           paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 90,
+          flexGrow: 1,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={profilesQ.isFetching && !profilesQ.isLoading}
+            onRefresh={() => profilesQ.refetch()}
+            tintColor={colors.primary}
+          />
+        }
         ItemSeparatorComponent={() => <View style={[styles.sep, { backgroundColor: colors.border }]} />}
-        renderItem={({ item }) => <UserRow user={item} />}
+        ListEmptyComponent={
+          profilesQ.isLoading ? (
+            <View style={styles.empty}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="people-outline" size={36} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                {activeTab === 1
+                  ? "ما كو أحد متصل الآن"
+                  : "ما كو مستخدمون بعد — ادعُ أصدقاءك للتطبيق!"}
+              </Text>
+            </View>
+          )
+        }
+        renderItem={({ item }) => <UserRow user={item} onChat={openChat} />}
       />
     </View>
   );
@@ -150,21 +221,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatarContainer: { position: "relative" },
-  avatar: { width: 58, height: 58, borderRadius: 29 },
-  onlineDot: {
-    position: "absolute",
-    bottom: 1,
-    right: 1,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: "#22C55E",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
   userInfo: { flex: 1, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  userName: { fontSize: 16, fontWeight: "700" as const },
+  userName: { fontSize: 16, fontWeight: "700" as const, flexShrink: 1 },
   flag: { fontSize: 14 },
   badgesRow: { flexDirection: "row", gap: 6, alignItems: "center" },
   lvBadge: {
@@ -174,22 +233,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(139,92,246,0.22)",
   },
   lvText: { fontSize: 11, fontWeight: "700" as const, color: "#C4B5FD" },
-  vipBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    backgroundColor: "rgba(245,158,11,0.18)",
-  },
-  vipText: { fontSize: 11, fontWeight: "700" as const, color: "#FCD34D" },
-  voiceBadge: {
+  ageBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
     borderRadius: 8,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
+    backgroundColor: "#60A5FA",
   },
-  voiceText: { fontSize: 11, fontWeight: "600" as const },
+  ageText: { fontSize: 11, fontWeight: "700" as const, color: "#fff" },
   status: { fontSize: 13 },
   chatBtn: {
     width: 42,
@@ -199,4 +252,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sep: { height: StyleSheet.hairlineWidth },
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyText: { fontSize: 14, textAlign: "center" as const, paddingHorizontal: 40 },
 });

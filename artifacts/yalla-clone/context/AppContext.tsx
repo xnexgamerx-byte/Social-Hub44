@@ -5,19 +5,22 @@ import {
   ensureWallet as ensureWalletReq,
   getGetAuthMeQueryKey,
   getGetFollowStatsQueryOptions,
+  getListProfilesQueryKey,
   getGetWalletQueryKey,
   getGetWalletQueryOptions,
   getListUserItemsQueryKey,
   getListUserItemsQueryOptions,
   useActivateVip,
+  useUpsertMyProfile,
   useClaimTask,
   useEquipItem,
   useGetAuthMe,
   usePurchaseItem,
   useRechargeWallet,
   useReconcileRecharges,
+  type ProfileInput,
 } from "@workspace/api-client-react";
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=3";
 
@@ -247,6 +250,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const claimM = useClaimTask();
   const equipM = useEquipItem();
   const vipM = useActivateVip();
+  const profileM = useUpsertMyProfile();
 
   const ownedItems = useMemo(
     () => new Set((itemsQ.data ?? []).map((i) => i.itemId)),
@@ -288,6 +292,36 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       isAdmin,
     };
   }, [clerkUser, userId, walletQ.data, followStatsQ.data, isAdmin]);
+
+  // Mirror the Clerk identity into the backend directory so other users can
+  // discover this account, and so posts/DMs can resolve a display name without
+  // a Clerk lookup. Re-runs whenever the display fields change; `lastSeenAt`
+  // is refreshed server-side on every upsert, which drives the online dot.
+  const profileSyncRef = useRef<string>("");
+  useEffect(() => {
+    if (!userId || !clerkUser) return;
+    const meta = clerkUser.unsafeMetadata ?? {};
+    const metaGender = meta.gender;
+    const payload: ProfileInput = {
+      name: user.name,
+      avatar: clerkUser.imageUrl ?? "",
+      bio: (meta.bio as string | undefined) ?? "",
+      gender: metaGender === "male" || metaGender === "female" ? metaGender : "",
+      age: typeof meta.age === "number" ? meta.age : 0,
+    };
+    const signature = `${userId}|${JSON.stringify(payload)}`;
+    if (profileSyncRef.current === signature) return;
+    profileSyncRef.current = signature;
+    profileM
+      .mutateAsync({ data: payload })
+      .then(() => qc.invalidateQueries({ queryKey: getListProfilesQueryKey() }))
+      .catch(() => {
+        // Directory sync is best-effort; retry on the next identity change.
+        profileSyncRef.current = "";
+      });
+    // profileM is a stable React Query mutation object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, clerkUser, user.name, qc]);
 
   const toggleLikeVideo = (id: string) => {
     setLikedVideos((prev) => {

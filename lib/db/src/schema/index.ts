@@ -16,3 +16,5 @@ export * from "./rooms";
 export * from "./conversations";
 export * from "./dmMessages";
 export * from "./follows";
+export * from "./profiles";
+export * from "./posts";

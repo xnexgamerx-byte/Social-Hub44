@@ -34,7 +34,7 @@ export default function GamesScreen() {
         <View style={[styles.onlineBadge, { backgroundColor: colors.secondary }]}>
           <View style={styles.onlineDot} />
           <Text style={[styles.onlineText, { color: colors.mutedForeground }]}>
-            {GAMES.reduce((s, g) => s + g.players, 0).toLocaleString()} لاعب الآن
+            {`${GAMES.length} ألعاب`}
           </Text>
         </View>
       </View>
