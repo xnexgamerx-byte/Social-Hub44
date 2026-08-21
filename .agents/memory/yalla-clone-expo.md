@@ -24,6 +24,17 @@ description: Architecture and key decisions for the نبضة mobile app (chat ro
 - **KeyboardAvoidingView** from `react-native-keyboard-controller` (not RN built-in).
 - **NativeTabs** on iOS 26+ with liquid glass; classic BlurView Tabs fallback.
 
+## Safety layer (store-policy critical — do not regress)
+
+- **Enforcement is server-side, never the screen.** `lib/safety.ts` holds it all: `activeBan`, `isBlockedBetween`, `blockedIdsFor`, `isKickedFromRoom`, `kickFromRoom`, `purgeUserData`.
+- **Blocks are recorded one-way but enforced BOTH ways.** `sendDm` refuses either direction; `GET /profiles` filters both sides out via `notInArray`. A one-way-only block is the classic bug here — the blocked user must not be able to keep messaging in.
+- **Bans are checked per request in `requireAuth` AND on the socket handshake**, so a suspension immediately kills chat/mics/gifts rather than waiting for the session to expire. An elapsed `expiresAt` reads as expired but the row is kept for audit. Admins cannot be banned.
+- **Room kicks are persisted with an expiry** (`room_kicks`), not in memory — a redeploy would otherwise readmit everyone. `room:join` re-checks, so rejoining fails too.
+- **Reports snapshot the offending content at report time** (`snapshotTarget`) because the author can delete the original. Admin-only queue records reviewer + timestamp.
+- **Account deletion** purges through an explicit table list in one transaction, then deletes the Clerk identity **last** — a mid-failure leaves an unusable account rather than orphaned live content. Wallet + ledger rows are deliberately retained as financial records.
+- Client: `components/UserActionsSheet.tsx` is the single report/block surface (DM header, long-press a moment). `app/settings.tsx` manages blocks, legal, and deletion. Legal text lives in `constants/legal.ts` — a draft to be reviewed, not legal advice.
+- **Password reset** uses Clerk v3 `signIn.resetPasswordEmailCode` (create → sendCode → verifyCode → submitPassword → finalize). The classic `attemptFirstFactor`/`setActive` API does NOT exist on the v3 signals resource.
+
 ## Growth systems — and the line we do NOT cross
 
 - **No fake-human accounts, ever.** The user asked for bot personas ("بنات وشباب بجنسيات مختلفة") that DM real users. Declined and must stay declined: the app sells coins for real money, so personas that pose as people are consumer fraud (regulators have fined dating apps for exactly this) and get the app pulled from both stores. The legitimate substitutes are all built instead — see below. What apps like Sugo actually run is a **paid-host** programme with real people, not bots.
