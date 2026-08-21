@@ -292,6 +292,107 @@ export interface Wallet {
   level: number;
 }
 
+export interface BlockedUser {
+  userId: string;
+  name: string;
+  avatar: string;
+  createdAt: string;
+}
+
+export interface BlockInput {
+  /** @minLength 1 */
+  targetUserId: string;
+}
+
+export interface Report {
+  id: number;
+  reporterId: string;
+  reporterName: string;
+  targetType: string;
+  targetId: string;
+  targetUserId: string;
+  reason: string;
+  note: string;
+  snapshot: string;
+  status: string;
+  createdAt: string;
+}
+
+export type ReportInputTargetType = typeof ReportInputTargetType[keyof typeof ReportInputTargetType];
+
+
+export const ReportInputTargetType = {
+  user: 'user',
+  room: 'room',
+  post: 'post',
+  message: 'message',
+} as const;
+
+export type ReportInputReason = typeof ReportInputReason[keyof typeof ReportInputReason];
+
+
+export const ReportInputReason = {
+  harassment: 'harassment',
+  sexual: 'sexual',
+  spam: 'spam',
+  scam: 'scam',
+  hate: 'hate',
+  underage: 'underage',
+  other: 'other',
+} as const;
+
+export interface ReportInput {
+  targetType: ReportInputTargetType;
+  /** @minLength 1 */
+  targetId: string;
+  reason: ReportInputReason;
+  /** @maxLength 500 */
+  note?: string;
+}
+
+export type ReportReviewInputStatus = typeof ReportReviewInputStatus[keyof typeof ReportReviewInputStatus];
+
+
+export const ReportReviewInputStatus = {
+  open: 'open',
+  actioned: 'actioned',
+  dismissed: 'dismissed',
+} as const;
+
+export interface ReportReviewInput {
+  status: ReportReviewInputStatus;
+}
+
+export interface BanEntry {
+  userId: string;
+  name: string;
+  reason: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface BanInput {
+  /** @minLength 1 */
+  publicId: string;
+  /** @maxLength 200 */
+  reason?: string;
+  /**
+     * @minimum 0
+     * @maximum 3650
+     */
+  days?: number;
+}
+
+export interface KickInput {
+  /** @minLength 1 */
+  userId: string;
+}
+
+export interface KickResult {
+  expiresAt: string;
+  minutes: number;
+}
+
 export interface ReferralStatus {
   code: string;
   invitedCount: number;

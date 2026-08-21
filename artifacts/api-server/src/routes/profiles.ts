@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne, notInArray } from "drizzle-orm";
 import { db, profilesTable, walletsTable, type Profile } from "@workspace/db";
 import {
   ListProfilesResponse,
@@ -11,6 +11,7 @@ import {
 import { requireAuth, type AuthedRequest } from "../lib/authz";
 import { levelForXp } from "../lib/wallet";
 import { sendWelcomeDm } from "../lib/official";
+import { blockedIdsFor } from "../lib/safety";
 
 const router: IRouter = Router();
 
@@ -40,12 +41,18 @@ function serialize(profile: Profile, xp: number | null) {
 
 router.get("/profiles", async (req, res): Promise<void> => {
   const userId = (req as AuthedRequest).userId!;
+  // Blocking hides both ways: neither party surfaces in the other list.
+  const hidden = await blockedIdsFor(userId);
   const rows = await db
     .select({ profile: profilesTable, xp: walletsTable.xp })
     .from(profilesTable)
     .leftJoin(walletsTable, eq(walletsTable.userId, profilesTable.userId))
     // The directory is for discovering other people; exclude the caller.
-    .where(ne(profilesTable.userId, userId))
+    .where(
+      hidden.length > 0
+        ? and(ne(profilesTable.userId, userId), notInArray(profilesTable.userId, hidden))
+        : ne(profilesTable.userId, userId),
+    )
     .orderBy(desc(profilesTable.lastSeenAt))
     .limit(MAX_DIRECTORY);
   res.json(ListProfilesResponse.parse(rows.map((r) => serialize(r.profile, r.xp))));

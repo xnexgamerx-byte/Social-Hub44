@@ -21,6 +21,7 @@ import {
 import { joinMic, leaveMic, setMute, emitSnapshot } from "./roomVoice";
 import { adjustWallet, giftEarnings, InsufficientBalanceError } from "./wallet";
 import { verifySessionToken } from "./authz";
+import { activeBan, isKickedFromRoom } from "./safety";
 import { sendDm, shapeForUser, DmValidationError } from "./dm";
 import { pushToUser } from "./push";
 
@@ -150,6 +151,12 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       next(new Error("unauthorized"));
       return;
     }
+    // A suspended account gets no live connection at all, so a ban also cuts
+    // off chat, mics and gifts — not just REST calls.
+    if (await activeBan(userId)) {
+      next(new Error("banned"));
+      return;
+    }
     socket.data.userId = userId;
     next();
   });
@@ -188,6 +195,15 @@ export function attachSocketServer(httpServer: HttpServer): Server {
     socket.on("room:join", async ({ roomId, userName, userAvatar }: JoinPayload) => {
       if (!roomId) return;
       const userId = authUserId;
+      // Enforce room removals here, not only at kick time, so someone who was
+      // removed cannot simply rejoin.
+      if (await isKickedFromRoom(roomId, userId)) {
+        socket.emit("room:kicked", {
+          roomId,
+          message: "تم إخراجك من هذه الغرفة مؤقتاً",
+        });
+        return;
+      }
       if (joinedRoom && joinedRoom !== roomId) await leaveCurrentRoom();
       joinedRoom = roomId;
       roomEnteredAt = new Date();

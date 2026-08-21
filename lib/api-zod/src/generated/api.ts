@@ -686,6 +686,143 @@ export const MarkConversationReadParams = zod.object({
 
 
 /**
+ * @summary Accounts I have blocked
+ */
+export const ListBlocksResponseItem = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListBlocksResponse = zod.array(ListBlocksResponseItem)
+
+
+/**
+ * @summary Block an account
+ */
+
+
+
+export const BlockUserBody = zod.object({
+  "targetUserId": zod.string().min(1)
+})
+
+
+/**
+ * @summary Unblock an account
+ */
+export const UnblockUserParams = zod.object({
+  "targetUserId": zod.coerce.string()
+})
+
+
+/**
+ * @summary Review queue (admin only)
+ */
+export const ListReportsResponseItem = zod.object({
+  "id": zod.number(),
+  "reporterId": zod.string(),
+  "reporterName": zod.string(),
+  "targetType": zod.string(),
+  "targetId": zod.string(),
+  "targetUserId": zod.string(),
+  "reason": zod.string(),
+  "note": zod.string(),
+  "snapshot": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListReportsResponse = zod.array(ListReportsResponseItem)
+
+
+/**
+ * @summary Report a user, room, post or message
+ */
+
+export const createReportBodyNoteMax = 500;
+
+
+
+export const CreateReportBody = zod.object({
+  "targetType": zod.enum(['user', 'room', 'post', 'message']),
+  "targetId": zod.string().min(1),
+  "reason": zod.enum(['harassment', 'sexual', 'spam', 'scam', 'hate', 'underage', 'other']),
+  "note": zod.string().max(createReportBodyNoteMax).optional()
+})
+
+
+/**
+ * @summary Resolve a report (admin only)
+ */
+export const ReviewReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewReportBody = zod.object({
+  "status": zod.enum(['open', 'actioned', 'dismissed'])
+})
+
+
+/**
+ * @summary Suspended accounts (admin only)
+ */
+export const ListBansResponseItem = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "reason": zod.string(),
+  "expiresAt": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListBansResponse = zod.array(ListBansResponseItem)
+
+
+/**
+ * @summary Suspend an account by public id (admin only)
+ */
+
+export const createBanBodyReasonMax = 200;
+
+export const createBanBodyDaysMin = 0;
+export const createBanBodyDaysMax = 3650;
+
+
+
+export const CreateBanBody = zod.object({
+  "publicId": zod.string().min(1),
+  "reason": zod.string().max(createBanBodyReasonMax).optional(),
+  "days": zod.number().min(createBanBodyDaysMin).max(createBanBodyDaysMax).optional()
+})
+
+
+/**
+ * @summary Lift a suspension (admin only)
+ */
+export const DeleteBanParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+
+/**
+ * @summary Remove someone from a room (owner or admin)
+ */
+export const KickFromRoomParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const KickFromRoomBody = zod.object({
+  "userId": zod.string().min(1)
+})
+
+export const KickFromRoomResponse = zod.object({
+  "expiresAt": zod.string(),
+  "minutes": zod.number()
+})
+
+
+/**
  * @summary My invite code, how many joined, and whether I already used one
  */
 export const GetMyReferralResponse = zod.object({

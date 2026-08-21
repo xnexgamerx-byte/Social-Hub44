@@ -6,6 +6,7 @@ import {
   type Conversation,
   type DmMessage,
 } from "@workspace/db";
+import { isBlockedBetween } from "./safety";
 
 const MAX_DM_LENGTH = 2000;
 
@@ -149,6 +150,11 @@ export async function sendDm(input: {
   if (text.length > MAX_DM_LENGTH) throw new DmValidationError("الرسالة طويلة جداً");
   if (input.toUserId === input.fromUserId)
     throw new DmValidationError("لا يمكنك مراسلة نفسك");
+  // Blocking is recorded one-way but enforced both ways: neither side can
+  // keep reaching the other once a block exists.
+  if (await isBlockedBetween(input.fromUserId, input.toUserId)) {
+    throw new DmValidationError("لا يمكن إرسال رسالة إلى هذا الحساب");
+  }
 
   const conversation = await getOrCreateConversation(
     { userId: input.fromUserId, name: input.fromName, avatar: input.fromAvatar },

@@ -4,6 +4,7 @@ import { verifyToken } from "@clerk/backend";
 import { eq } from "drizzle-orm";
 import { db, adminsTable } from "@workspace/db";
 import { logger } from "./logger";
+import { activeBan, banMessage } from "./safety";
 
 /**
  * Authenticated requests carry the verified Clerk user id. Set by
@@ -59,12 +60,27 @@ export async function isAdminUserId(userId: string): Promise<boolean> {
   }
 }
 
-/** Reject requests without a valid Clerk session; attach `req.userId`. */
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+/**
+ * Reject requests without a valid Clerk session; attach `req.userId`.
+ *
+ * Also refuses suspended accounts. The check runs per request rather than at
+ * login, so a ban takes effect on the banned user's very next action instead
+ * of waiting for their session to expire.
+ */
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   const auth = getAuth(req);
   const userId = auth?.userId;
   if (!userId) {
     res.status(401).json({ error: "يجب تسجيل الدخول" });
+    return;
+  }
+  const ban = await activeBan(userId);
+  if (ban) {
+    res.status(403).json({ error: banMessage(ban) });
     return;
   }
   (req as AuthedRequest).userId = userId;

@@ -1,31 +1,36 @@
 import Constants from "expo-constants";
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { registerPushToken } from "@workspace/api-client-react";
 
 /**
- * Remote push is not delivered to Expo Go (SDK 53+), so this is a no-op there.
- * Everything below is ready for the first real build — no further wiring
- * needed once the app ships as its own binary.
+ * Remote push was removed from Expo Go in SDK 53, and merely touching the
+ * native module there logs a hard error. So expo-notifications is imported
+ * lazily, *after* the environment check — nothing at module scope may reach
+ * for it. Everything below activates untouched on the first real build.
  */
 const isExpoGo = Constants.executionEnvironment === "storeClient";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
 
 /**
  * Ask for permission and hand this device's Expo push token to the server.
  * Safe to call on every launch: registration is idempotent server-side.
  */
 export async function registerForPush(): Promise<void> {
-  if (isExpoGo || !Device.isDevice) return;
+  if (isExpoGo) return;
+
+  const [Notifications, Device] = await Promise.all([
+    import("expo-notifications"),
+    import("expo-device"),
+  ]);
+  if (!Device.isDevice) return;
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -44,8 +49,7 @@ export async function registerForPush(): Promise<void> {
   if (!granted) return;
 
   const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ??
-    Constants.easConfig?.projectId;
+    Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   const token = await Notifications.getExpoPushTokenAsync(
     projectId ? { projectId } : undefined,
   );

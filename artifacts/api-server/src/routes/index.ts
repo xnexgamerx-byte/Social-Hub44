@@ -15,6 +15,7 @@ import followsRouter from "./follows";
 import profilesRouter from "./profiles";
 import postsRouter from "./posts";
 import growthRouter from "./growth";
+import safetyRouter from "./safety";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(followsRouter);
 router.use(profilesRouter);
 router.use(postsRouter);
 router.use(growthRouter);
+router.use(safetyRouter);
 
 export default router;
