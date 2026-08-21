@@ -28,3 +28,15 @@ services:
         sync: false
       - key: ADMIN_EMAILS
         sync: false
+      # Optional: image hosting. Without them, images stay inline as data URIs.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: media
+      # Optional: real voice. Without them, mic seats sync but carry no audio.
+      - key: AGORA_APP_ID
+        sync: false
+      - key: AGORA_APP_CERTIFICATE
+        sync: false

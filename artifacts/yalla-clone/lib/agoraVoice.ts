@@ -1,29 +1,19 @@
+import Constants from "expo-constants";
+import { customFetch } from "@workspace/api-client-react";
+
 /**
- * Agora voice bridge — the client side of the "Agora-ready" voice stage.
+ * Real voice transport.
  *
- * `fetchAgoraToken` works today (it just calls our server). The real audio
- * transport is added when the app is built natively (outside Expo Go, for the
- * App Store / Play Store), because `react-native-agora` is a native module that
- * Expo Go cannot load.
+ * The mic seats, mute state and speaker list are already synced over our own
+ * WebSocket (see `hooks/useRoomVoice.ts`); Agora only carries the audio.
  *
- * Native drop-in (after `expo prebuild` + installing `react-native-agora`):
- *
- *   import { createAgoraRtcEngine, ChannelProfileType, ClientRoleType } from "react-native-agora";
- *
- *   const { appId, token, uid } = await fetchAgoraToken(roomId, numericUid);
- *   const engine = createAgoraRtcEngine();
- *   engine.initialize({ appId });
- *   engine.enableAudio();
- *   engine.joinChannel(token, roomId, uid, {
- *     channelProfile: ChannelProfileType.ChannelProfileLiveBroadcasting,
- *     clientRoleType: ClientRoleType.ClientRoleBroadcaster, // listener => ClientRoleAudience
- *   });
- *   // mute/unmute -> engine.muteLocalAudioStream(muted)
- *   // leave        -> engine.leaveChannel()
- *
- * The mic seat / mute state is already synced live over our WebSocket
- * (see hooks/useRoomVoice.ts); Agora only adds the actual audio.
+ * `react-native-agora` is a native module, so it is imported lazily and only
+ * outside Expo Go — touching it there throws. Everything below activates on
+ * the first real build with no further wiring, provided AGORA_APP_ID and
+ * AGORA_APP_CERTIFICATE are set on the server.
  */
+
+const isExpoGo = Constants.executionEnvironment === "storeClient";
 
 export interface AgoraToken {
   appId: string;
@@ -33,26 +23,116 @@ export interface AgoraToken {
   expiresAt: number;
 }
 
-/**
- * Agora RTC uses a numeric uid. Derive a stable one from our string user id so
- * the same user always maps to the same channel uid.
- */
-export function uidFromUserId(userId: string): number {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) | 0;
-  }
-  // Keep it positive and within Agora's 32-bit unsigned range.
-  return Math.abs(hash) % 1_000_000_000;
+/** True when real audio can run in this build. */
+export function isVoiceAvailable(): boolean {
+  return !isExpoGo;
 }
 
-export async function fetchAgoraToken(channel: string, uid: number): Promise<AgoraToken> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
-  const url = `https://${domain}/api/agora/token?channel=${encodeURIComponent(channel)}&uid=${uid}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string };
-    throw new Error(body.message ?? "تعذّر الحصول على إذن الصوت");
+/**
+ * Agora uids are 32-bit unsigned integers, but ours are Clerk strings, so
+ * derive a stable numeric id. Collisions inside one room would make two people
+ * share an audio slot, hence a 31-bit spread rather than something narrow.
+ */
+export function numericUid(userId: string): number {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
   }
-  return (await res.json()) as AgoraToken;
+  // Keep it inside 1..2^31-1; 0 tells Agora to assign one itself.
+  return (hash % 2147483646) + 1;
+}
+
+export async function fetchAgoraToken(
+  channel: string,
+  uid: number,
+): Promise<AgoraToken> {
+  return customFetch<AgoraToken>(
+    `/agora/token?channel=${encodeURIComponent(channel)}&uid=${uid}`,
+    { method: "GET" },
+  );
+}
+
+type Engine = {
+  initialize: (config: { appId: string }) => void;
+  enableAudio: () => void;
+  joinChannel: (
+    token: string,
+    channel: string,
+    uid: number,
+    options: Record<string, unknown>,
+  ) => void;
+  muteLocalAudioStream: (muted: boolean) => void;
+  setClientRole: (role: number) => void;
+  leaveChannel: () => void;
+  release: () => void;
+};
+
+let engine: Engine | null = null;
+let joinedChannel: string | null = null;
+
+/**
+ * Join a room's audio channel. `speaking` decides whether this device
+ * publishes audio (on a mic seat) or only listens.
+ */
+export async function joinVoiceChannel(
+  roomId: string,
+  userId: string,
+  speaking: boolean,
+): Promise<void> {
+  if (isExpoGo) return;
+  const uid = numericUid(userId);
+  const { appId, token } = await fetchAgoraToken(roomId, uid);
+
+  const agora = (await import("react-native-agora")) as unknown as {
+    createAgoraRtcEngine: () => Engine;
+    ChannelProfileType: { ChannelProfileLiveBroadcasting: number };
+    ClientRoleType: { ClientRoleBroadcaster: number; ClientRoleAudience: number };
+  };
+
+  if (!engine) {
+    engine = agora.createAgoraRtcEngine();
+    engine.initialize({ appId });
+    engine.enableAudio();
+  }
+  if (joinedChannel && joinedChannel !== roomId) {
+    engine.leaveChannel();
+  }
+  engine.joinChannel(token, roomId, uid, {
+    channelProfile: agora.ChannelProfileType.ChannelProfileLiveBroadcasting,
+    clientRoleType: speaking
+      ? agora.ClientRoleType.ClientRoleBroadcaster
+      : agora.ClientRoleType.ClientRoleAudience,
+    publishMicrophoneTrack: speaking,
+    autoSubscribeAudio: true,
+  });
+  joinedChannel = roomId;
+}
+
+/** Switch between speaking on a mic seat and listening only. */
+export async function setVoiceSpeaking(speaking: boolean): Promise<void> {
+  if (isExpoGo || !engine) return;
+  const agora = (await import("react-native-agora")) as unknown as {
+    ClientRoleType: { ClientRoleBroadcaster: number; ClientRoleAudience: number };
+  };
+  engine.setClientRole(
+    speaking
+      ? agora.ClientRoleType.ClientRoleBroadcaster
+      : agora.ClientRoleType.ClientRoleAudience,
+  );
+  engine.muteLocalAudioStream(!speaking);
+}
+
+/** Mute or unmute the outgoing microphone. */
+export function setVoiceMuted(muted: boolean): void {
+  if (isExpoGo || !engine) return;
+  engine.muteLocalAudioStream(muted);
+}
+
+/** Leave the channel and release the engine. */
+export function leaveVoiceChannel(): void {
+  if (isExpoGo || !engine) return;
+  engine.leaveChannel();
+  engine.release();
+  engine = null;
+  joinedChannel = null;
 }

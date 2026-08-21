@@ -66,6 +66,7 @@
     "expo-notifications": "~0.32.17",
     "expo-video": "~3.0.16",
     "lottie-react-native": "~7.3.8",
+    "react-native-agora": "^4.6.2",
     "react-native-purchases": "^10.2.0",
     "socket.io-client": "^4.8.3"
   }

@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, isAdminUserId, type AuthedRequest } from "../lib/authz";
 import { levelForXp } from "../lib/wallet";
+import { isStorageConfigured, uploadImage, UploadError } from "../lib/storage";
 
 const router: IRouter = Router();
 
@@ -94,10 +95,28 @@ router.post("/posts", async (req, res): Promise<void> => {
     return;
   }
   const text = (parsed.data.text ?? "").trim();
-  const images = parsed.data.images ?? [];
-  if (!text && images.length === 0) {
+  const submitted = parsed.data.images ?? [];
+  if (!text && submitted.length === 0) {
     res.status(400).json({ error: "اكتب نصاً أو أضف صورة" });
     return;
+  }
+
+  // Host any inline image and store only its URL. Keeping `data:` URIs in the
+  // row bloats the database and ships megabytes of base64 on every feed read.
+  // Without storage configured the URI is kept as-is so the app still works.
+  let images = submitted;
+  if (isStorageConfigured()) {
+    try {
+      images = await Promise.all(
+        submitted.map((img) =>
+          img.startsWith("data:") ? uploadImage(userId, img) : Promise.resolve(img),
+        ),
+      );
+    } catch (err) {
+      const message = err instanceof UploadError ? err.message : "تعذّر رفع الصورة";
+      res.status(400).json({ error: message });
+      return;
+    }
   }
   const [[profile], [wallet]] = await Promise.all([
     db

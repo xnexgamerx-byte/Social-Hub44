@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket";
+import {
+  isVoiceAvailable,
+  joinVoiceChannel,
+  leaveVoiceChannel,
+  setVoiceMuted,
+  setVoiceSpeaking,
+} from "@/lib/agoraVoice";
 
 export interface MicSeat {
   userId: string;
@@ -57,6 +64,27 @@ export function useRoomVoice(roomId: string | undefined, me: Me) {
   const mySeat = seats.find((s) => s.userId === meRef.current.userId);
   const onMic = !!mySeat;
   const muted = mySeat?.muted ?? false;
+
+  // Audio follows the seat state already synced over our socket: everyone in
+  // the room listens, and taking a seat promotes you to speaker. All no-ops in
+  // Expo Go, where the native module cannot load.
+  useEffect(() => {
+    if (!roomId || !isVoiceAvailable()) return;
+    void joinVoiceChannel(roomId, meRef.current.userId, false).catch(() => {
+      // Voice is optional: text chat and seats must keep working without it.
+    });
+    return () => leaveVoiceChannel();
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!isVoiceAvailable()) return;
+    void setVoiceSpeaking(onMic).catch(() => {});
+  }, [onMic]);
+
+  useEffect(() => {
+    if (!isVoiceAvailable()) return;
+    setVoiceMuted(!onMic || muted);
+  }, [onMic, muted]);
 
   const takeMic = useCallback(() => {
     const rid = roomRef.current;
