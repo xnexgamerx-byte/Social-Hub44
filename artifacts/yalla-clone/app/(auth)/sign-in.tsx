@@ -3,7 +3,7 @@ import { useSignIn, useSSO } from "@clerk/expo";
 import * as AuthSession from "expo-auth-session";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -175,7 +175,10 @@ export default function SignInScreen() {
               />
 
               {/* Forgot password */}
-              <Pressable style={styles.forgotRow}>
+              <Pressable
+                style={styles.forgotRow}
+                onPress={() => router.push("/(auth)/reset-password")}
+              >
                 <Text style={styles.forgotText}>نسيت كلمة المرور؟</Text>
               </Pressable>
 

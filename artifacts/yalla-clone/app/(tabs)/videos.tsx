@@ -9,6 +9,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  Pressable,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -28,6 +29,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { UserActionsSheet } from "@/components/UserActionsSheet";
 import * as Haptics from "expo-haptics";
 
 function relativeTime(iso: string): string {
@@ -74,13 +76,18 @@ interface PostCardProps {
   onLike: (post: Post) => void;
   onChat: (post: Post) => void;
   onDelete: (post: Post) => void;
+  onReport: (post: Post) => void;
 }
 
-function PostCard({ post, isMine, onLike, onChat, onDelete }: PostCardProps) {
+function PostCard({ post, isMine, onLike, onChat, onDelete, onReport }: PostCardProps) {
   const colors = useColors();
 
   return (
-    <View style={[styles.postCard, { backgroundColor: colors.card }]}>
+    <Pressable
+      style={[styles.postCard, { backgroundColor: colors.card }]}
+      onLongPress={() => !isMine && onReport(post)}
+      delayLongPress={400}
+    >
       <View style={styles.postHeader}>
         <View style={styles.postUser}>
           <UserAvatar uri={post.authorAvatar} name={post.authorName || "مستخدم"} size={42} />
@@ -153,7 +160,7 @@ function PostCard({ post, isMine, onLike, onChat, onDelete }: PostCardProps) {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -168,6 +175,8 @@ export default function MomentsScreen() {
   const likeM = useTogglePostLike();
   const deleteM = useDeletePost();
   const openConversationM = useOpenConversation();
+
+  const [reported, setReported] = useState<Post | null>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: getListPostsQueryKey() });
 
@@ -277,8 +286,19 @@ export default function MomentsScreen() {
             onLike={handleLike}
             onChat={handleChat}
             onDelete={handleDelete}
+            onReport={setReported}
           />
         )}
+      />
+
+      <UserActionsSheet
+        visible={reported != null}
+        onClose={() => setReported(null)}
+        targetUserId={reported?.userId ?? ""}
+        targetName={reported?.authorName ?? ""}
+        targetType="post"
+        targetId={reported ? String(reported.id) : ""}
+        onBlocked={refresh}
       />
     </View>
   );

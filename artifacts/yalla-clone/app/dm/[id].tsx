@@ -30,6 +30,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { getSocket } from "@/lib/socket";
+import { UserActionsSheet } from "@/components/UserActionsSheet";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -50,6 +51,7 @@ export default function DmScreen() {
   const { user } = useApp();
 
   const [text, setText] = useState("");
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [liveMessages, setLiveMessages] = useState<DmMessage[]>([]);
 
   const historyQ = useQuery({
@@ -189,7 +191,22 @@ export default function DmScreen() {
             </Text>
           </TouchableOpacity>
         ) : null}
+        <TouchableOpacity
+          style={styles.moreBtn}
+          onPress={() => setActionsOpen(true)}
+          hitSlop={8}
+        >
+          <Ionicons name="ellipsis-horizontal" size={20} color={colors.mutedForeground} />
+        </TouchableOpacity>
       </View>
+
+      <UserActionsSheet
+        visible={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        targetUserId={otherUserId ?? ""}
+        targetName={otherName ?? ""}
+        onBlocked={() => router.back()}
+      />
 
       {/* Messages - inverted FlatList */}
       <FlatList
@@ -298,6 +315,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   followText: { fontSize: 12, fontWeight: "700" as const },
+  moreBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   empty: { paddingVertical: 40, alignItems: "center", transform: [{ scaleY: -1 }] },

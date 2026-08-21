@@ -55,6 +55,8 @@ function RootLayoutNav() {
       <Stack.Screen name="room-create" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="post-create" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="invite" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="legal/[doc]" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="profile-edit" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="store" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="recharge" options={{ headerShown: false, presentation: "card" }} />
