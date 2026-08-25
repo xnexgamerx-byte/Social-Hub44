@@ -1838,8 +1838,14 @@ components:
       properties:
         status:
           type: string
+        voice:
+          type: boolean
+        storage:
+          type: boolean
       required:
         - status
+        - voice
+        - storage
     AuthMe:
       type: object
       properties:

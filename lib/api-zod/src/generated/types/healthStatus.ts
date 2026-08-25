@@ -8,4 +8,6 @@
 
 export interface HealthStatus {
   status: string;
+  voice: boolean;
+  storage: boolean;
 }

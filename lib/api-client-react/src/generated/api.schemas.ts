@@ -7,6 +7,8 @@
  */
 export interface HealthStatus {
   status: string;
+  voice: boolean;
+  storage: boolean;
 }
 
 export interface AuthMe {
