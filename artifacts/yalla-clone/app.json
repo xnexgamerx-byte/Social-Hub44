@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "نبضة",
-    "slug": "yalla-clone",
+    "slug": "viber-tok",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,10 +15,19 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.nabda.yalla"
+      "bundleIdentifier": "com.nabda.yalla",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "نحتاج إذن الميكروفون للتحدث في الغرف الصوتية."
+      }
     },
     "android": {
-      "package": "com.nabda.yalla"
+      "package": "com.nabda.yalla",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -26,9 +35,7 @@
     "plugins": [
       [
         "expo-router",
-        {
-          "origin": "https://replit.com/"
-        }
+        {}
       ],
       "expo-font",
       "expo-web-browser",
@@ -43,6 +50,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "xacex",
+    "extra": {
+      "eas": {
+        "projectId": "b2229c98-2374-42ca-9d72-54c018d5036a"
+      }
     }
   }
 }
