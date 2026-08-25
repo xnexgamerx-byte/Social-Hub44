@@ -63,6 +63,10 @@ export async function uploadImage(
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
+      // Supabase accepts both the legacy service_role JWT and the newer
+      // sb_secret_* keys, but only the `apikey` header works for both — a
+      // bare Bearer is rejected as "Invalid Compact JWS" for the new format.
+      apikey: key,
       Authorization: `Bearer ${key}`,
       "Content-Type": contentType,
       "x-upsert": "false",
