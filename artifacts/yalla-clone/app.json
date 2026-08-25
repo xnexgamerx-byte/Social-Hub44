@@ -45,6 +45,18 @@
         {
           "photosPermission": "نحتاج إذن الوصول إلى صورك لتغيير صورة ملفك الشخصي."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "exclude": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
+            }
+          }
+        }
       ]
     ],
     "experiments": {
