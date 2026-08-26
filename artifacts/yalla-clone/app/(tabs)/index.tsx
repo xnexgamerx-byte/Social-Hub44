@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { UserAvatar } from "@/components/UserAvatar";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 import * as Haptics from "expo-haptics";
 
 const TABS = ["الكل", "متصلون الآن"];
@@ -141,16 +142,7 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
-        <View style={styles.tabs}>
-          {TABS.map((t, i) => (
-            <TouchableOpacity key={t} onPress={() => setActiveTab(i)} style={styles.tabBtn} activeOpacity={0.8}>
-              <Text style={[styles.tabLabel, { color: i === activeTab ? colors.foreground : colors.mutedForeground, fontWeight: i === activeTab ? "700" : "400" }]}>
-                {t}
-              </Text>
-              {i === activeTab && <View style={[styles.tabUnder, { backgroundColor: colors.primary }]} />}
-            </TouchableOpacity>
-          ))}
-        </View>
+        <SegmentedTabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
         <View style={styles.headerIcons}>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: colors.secondary }]}
@@ -215,10 +207,6 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     marginBottom: 8,
   },
-  tabs: { flexDirection: "row", gap: 24 },
-  tabBtn: { alignItems: "center", paddingBottom: 8 },
-  tabLabel: { fontSize: 17 },
-  tabUnder: { height: 3, width: "100%", borderRadius: 2, marginTop: 4 },
   headerIcons: { flexDirection: "row", gap: 8, paddingBottom: 8 },
   iconBtn: {
     width: 34,

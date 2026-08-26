@@ -21,15 +21,15 @@ export interface ThemeOption {
 export const THEME_OPTIONS: ThemeOption[] = [
   {
     name: "light",
-    label: "أبيض وردي هادئ",
-    description: "إضاءة ناعمة بلمسة وردية مريحة",
-    swatch: "#EC4899",
+    label: "فاتح",
+    description: "خلفية هادئة وبطاقات بيضاء — أوضح للقراءة نهاراً",
+    swatch: "#7C5CF0",
   },
   {
     name: "dark",
     label: "بنفسجي داكن",
-    description: "المظهر الكلاسيكي للتطبيق",
-    swatch: "#8B5CF6",
+    description: "المظهر الأساسي للتطبيق",
+    swatch: "#8B6DF5",
   },
   {
     name: "luxury",

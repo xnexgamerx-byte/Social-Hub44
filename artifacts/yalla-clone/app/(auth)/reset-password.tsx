@@ -91,7 +91,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={["#0D0320", "#1A0640", "#2A0E6B"]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={["#120C22", "#1E1240", "#2E1866"]} style={StyleSheet.absoluteFill} />
       <LinearGradient colors={["#6B21E8", "#4C1D95"]} style={styles.blobTopRight} />
       <LinearGradient colors={["#7C3AED", "#5B21B6"]} style={styles.blobBottomLeft} />
 
@@ -209,7 +209,7 @@ export default function ResetPasswordScreen() {
 const CARD_RADIUS = 28;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0D0320" },
+  root: { flex: 1, backgroundColor: "#120C22" },
   flex: { flex: 1 },
   scroll: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 24 },
   blobTopRight: {
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: CARD_RADIUS,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(180,140,255,0.25)",
+    borderColor: "rgba(160,130,255,0.25)",
   },
   cardInner: {
     backgroundColor: "rgba(60,20,120,0.35)",
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1.5,
-    borderColor: "rgba(180,140,255,0.4)",
+    borderColor: "rgba(160,130,255,0.4)",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,

@@ -55,7 +55,18 @@ function RootLayoutNav() {
       <Stack.Screen name="room-create" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="post-create" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="invite" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="settings" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings/index" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings/account" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen
+        name="settings/notifications"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen name="settings/messages" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings/privacy" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings/blocked" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings/general" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="settings/about" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="support" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="legal/[doc]" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="profile-edit" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="store" options={{ headerShown: false, presentation: "card" }} />

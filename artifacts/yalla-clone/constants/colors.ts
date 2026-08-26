@@ -1,67 +1,81 @@
-// Calm white / pink — soft, airy light theme.
+/**
+ * Palettes are tuned against the SUGO reference screens.
+ *
+ * Two surfaces recur there: utility screens (settings, account, profile) sit
+ * on a neutral light ground with pure-white cards, while the screens that sell
+ * something (store, levels, entrance effects) go deep purple. Both palettes
+ * below carry the same violet accent so the app reads as one product whichever
+ * ground a screen uses.
+ */
+
+// Neutral light ground with a violet accent — the settings/profile surface.
 const lightPalette = {
-  text: "#3D2B3E",
-  tint: "#EC4899",
-  background: "#FFF5F9",
-  foreground: "#3D2B3E",
+  text: "#1A1A1F",
+  tint: "#7C5CF0",
+  // Slightly cool grey so pure-white cards lift off it without a border.
+  background: "#F2F2F6",
+  foreground: "#1A1A1F",
   card: "#FFFFFF",
-  cardForeground: "#3D2B3E",
-  primary: "#EC4899",
+  cardForeground: "#1A1A1F",
+  primary: "#7C5CF0",
   primaryForeground: "#FFFFFF",
-  secondary: "#FFE4F1",
-  secondaryForeground: "#D6336C",
-  muted: "#FCE7F0",
-  mutedForeground: "#A67C90",
-  accent: "#F472B6",
+  secondary: "#EDE9FD",
+  secondaryForeground: "#5B3FD6",
+  // Also the "off" track of a switch, so it must stay visible on white.
+  muted: "#DFDFE6",
+  mutedForeground: "#84848F",
+  accent: "#F0447E",
   accentForeground: "#FFFFFF",
-  destructive: "#EF4444",
+  destructive: "#E5484D",
   destructiveForeground: "#FFFFFF",
-  border: "#FBD9E8",
-  input: "#FCE7F0",
+  border: "#E6E6EC",
+  input: "#F2F2F6",
 };
 
-// Current dark purple — the app's signature look.
+// Deep violet — the app's signature, and the ground the store and level
+// screens use. Less saturated than a pure indigo so gold and pink accents
+// stay legible on top.
 const darkPalette = {
-  text: "#F0EEFF",
-  tint: "#8B5CF6",
-  background: "#0D0320",
-  foreground: "#F0EEFF",
-  card: "#1C0B3E",
-  cardForeground: "#F0EEFF",
-  primary: "#8B5CF6",
+  text: "#F2EEFF",
+  tint: "#8B6DF5",
+  background: "#120C22",
+  foreground: "#F2EEFF",
+  card: "#1E1636",
+  cardForeground: "#F2EEFF",
+  primary: "#8B6DF5",
   primaryForeground: "#FFFFFF",
-  secondary: "rgba(255,255,255,0.08)",
-  secondaryForeground: "#C4B5FD",
-  muted: "rgba(255,255,255,0.06)",
-  mutedForeground: "rgba(200,180,255,0.55)",
+  secondary: "rgba(139,109,245,0.16)",
+  secondaryForeground: "#C4B0FF",
+  muted: "rgba(255,255,255,0.09)",
+  mutedForeground: "rgba(203,191,236,0.62)",
   accent: "#FF6B9D",
   accentForeground: "#FFFFFF",
-  destructive: "#EF4444",
+  destructive: "#F0575C",
   destructiveForeground: "#FFFFFF",
-  border: "rgba(180,140,255,0.15)",
-  input: "rgba(255,255,255,0.06)",
+  border: "rgba(160,130,255,0.16)",
+  input: "rgba(255,255,255,0.07)",
 };
 
-// Luxury dark — near-black with warm gold accents.
+// Near-black with warm gold — for users who want the high-roller look.
 const luxuryPalette = {
   text: "#F5ECD8",
   tint: "#D4AF37",
-  background: "#0A0A0B",
+  background: "#0B0A08",
   foreground: "#F5ECD8",
-  card: "#16140F",
+  card: "#191612",
   cardForeground: "#F5ECD8",
   primary: "#D4AF37",
   primaryForeground: "#1A1505",
-  secondary: "rgba(212,175,55,0.12)",
+  secondary: "rgba(212,175,55,0.14)",
   secondaryForeground: "#E5C97B",
-  muted: "rgba(255,255,255,0.05)",
-  mutedForeground: "rgba(229,201,123,0.55)",
+  muted: "rgba(255,255,255,0.08)",
+  mutedForeground: "rgba(229,201,123,0.58)",
   accent: "#C9A227",
   accentForeground: "#1A1505",
   destructive: "#E5484D",
   destructiveForeground: "#FFFFFF",
   border: "rgba(212,175,55,0.18)",
-  input: "rgba(255,255,255,0.05)",
+  input: "rgba(255,255,255,0.06)",
 };
 
 export type Palette = typeof darkPalette;

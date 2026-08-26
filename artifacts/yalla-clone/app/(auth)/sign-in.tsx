@@ -100,7 +100,7 @@ export default function SignInScreen() {
     <View style={styles.root}>
       {/* Deep purple base */}
       <LinearGradient
-        colors={["#0D0320", "#1A0640", "#2A0E6B"]}
+        colors={["#120C22", "#1E1240", "#2E1866"]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -255,7 +255,7 @@ export default function SignInScreen() {
 const CARD_RADIUS = 28;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0D0320" },
+  root: { flex: 1, backgroundColor: "#120C22" },
   flex: { flex: 1 },
   scroll: {
     flexGrow: 1,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: CARD_RADIUS,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(180,140,255,0.25)",
+    borderColor: "rgba(160,130,255,0.25)",
   },
   cardInner: {
     backgroundColor: "rgba(60,20,120,0.35)",
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   /* Inputs */
   input: {
     borderWidth: 1.5,
-    borderColor: "rgba(180,140,255,0.4)",
+    borderColor: "rgba(160,130,255,0.4)",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     marginVertical: 18,
     gap: 12,
   },
-  divider: { flex: 1, height: 1, backgroundColor: "rgba(180,140,255,0.2)" },
+  divider: { flex: 1, height: 1, backgroundColor: "rgba(160,130,255,0.2)" },
   dividerText: { color: "rgba(200,180,255,0.6)", fontSize: 13 },
 
   /* Google button */
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     borderWidth: 1.5,
-    borderColor: "rgba(180,140,255,0.35)",
+    borderColor: "rgba(160,130,255,0.35)",
     borderRadius: 14,
     paddingVertical: 14,
     backgroundColor: "rgba(255,255,255,0.07)",

@@ -63,12 +63,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
-const BG = "#0D0320";
-const CARD = "#1C0B3E";
+const BG = "#120C22";
+const CARD = "#1E1636";
 const CARD2 = "#241550";
 const PURPLE = "#8B5CF6";
 const GOLD = "#F5C242";
-const BORDER = "rgba(180,140,255,0.18)";
+const BORDER = "rgba(160,130,255,0.18)";
 const MUTED = "rgba(200,180,255,0.55)";
 const TEXT = "#F0EEFF";
 const GREEN = "#22C55E";
@@ -80,7 +80,7 @@ const COLOR_PALETTE = [
   "#3B82F6", "#60A5FA", "#0EA5E9", "#06B6D4",
   "#22C55E", "#4ADE80",
   "#F5C242", "#F59E0B", "#FF7A00",
-  "#EF4444", "#374151", "#1C0B3E",
+  "#EF4444", "#374151", "#1E1636",
 ];
 
 const ICON_OPTIONS: { name: string; label: string }[] = [
