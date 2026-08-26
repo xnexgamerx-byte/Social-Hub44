@@ -24,6 +24,7 @@ import { verifySessionToken } from "./authz";
 import { activeBan, isKickedFromRoom } from "./safety";
 import { sendDm, shapeForUser, DmValidationError } from "./dm";
 import { pushToUser } from "./push";
+import { getSettings } from "./settings";
 
 interface JoinPayload {
   roomId: string;
@@ -226,8 +227,10 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       io.to(channel).emit("room:presence", { roomId, count: presenceCount(channel) });
       emitSnapshot(socket, roomId);
 
-      // Play the joining user's equipped entrance effect for everyone in the room.
-      if (userId) {
+      // Play the joining user's equipped entrance effect for everyone in the
+      // room, unless they chose to enter quietly. Checking the preference
+      // first also skips the heavier two-table lookup below.
+      if (userId && !(await getSettings(userId)).invisibleRoomEntry) {
         try {
           const [entrance] = await db
             .select({
@@ -426,12 +429,17 @@ export function attachSocketServer(httpServer: HttpServer): Server {
           message: wire,
           conversation: shapeForUser(conversation, toUserId),
         });
-        // Reach them even when the app is closed.
-        void pushToUser(toUserId, {
-          title: payload.userName || "رسالة جديدة",
-          body: text.slice(0, 120),
-          data: { type: "dm", conversationId: conversation.id },
-        });
+        // Reach them even when the app is closed — unless they silenced
+        // direct-message notifications. Kept off the send path: the message
+        // is already delivered, and a settings lookup must not delay it.
+        void (async () => {
+          if ((await getSettings(toUserId)).notifyDm === "none") return;
+          await pushToUser(toUserId, {
+            title: payload.userName || "رسالة جديدة",
+            body: text.slice(0, 120),
+            data: { type: "dm", conversationId: conversation.id },
+          });
+        })();
         io.to(`user:${authUserId}`).emit("dm:new", {
           message: wire,
           conversation: shapeForUser(conversation, authUserId),

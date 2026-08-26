@@ -12,6 +12,7 @@ import { requireAuth, type AuthedRequest } from "../lib/authz";
 import { levelForXp } from "../lib/wallet";
 import { sendWelcomeDm } from "../lib/official";
 import { blockedIdsFor } from "../lib/safety";
+import { getSettings, settingsForUsers } from "../lib/settings";
 
 const router: IRouter = Router();
 
@@ -22,7 +23,13 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 router.use("/profiles", requireAuth);
 
-function serialize(profile: Profile, xp: number | null) {
+/**
+ * `hideOnline` comes from the profile owner's own privacy setting. When it is
+ * on the account always reads as offline to everyone else — the raw
+ * `lastSeenAt` is still returned because conversations and ordering depend on
+ * it, but the dot the app renders is driven by `isOnline`.
+ */
+function serialize(profile: Profile, xp: number | null, hideOnline = false) {
   return {
     userId: profile.userId,
     name: profile.name,
@@ -32,7 +39,9 @@ function serialize(profile: Profile, xp: number | null) {
     age: profile.age,
     country: profile.country,
     level: levelForXp(xp ?? 0),
-    isOnline: Date.now() - profile.lastSeenAt.getTime() < ONLINE_WINDOW_MS,
+    isOnline: hideOnline
+      ? false
+      : Date.now() - profile.lastSeenAt.getTime() < ONLINE_WINDOW_MS,
     isOfficial: profile.isOfficial,
     isHost: profile.isHost,
     lastSeenAt: profile.lastSeenAt.toISOString(),
@@ -55,7 +64,16 @@ router.get("/profiles", async (req, res): Promise<void> => {
     )
     .orderBy(desc(profilesTable.lastSeenAt))
     .limit(MAX_DIRECTORY);
-  res.json(ListProfilesResponse.parse(rows.map((r) => serialize(r.profile, r.xp))));
+  // One query for the whole page rather than one per row — the directory
+  // returns up to MAX_DIRECTORY profiles.
+  const settings = await settingsForUsers(rows.map((r) => r.profile.userId));
+  res.json(
+    ListProfilesResponse.parse(
+      rows.map((r) =>
+        serialize(r.profile, r.xp, settings.get(r.profile.userId)?.hideOnline),
+      ),
+    ),
+  );
 });
 
 router.post("/profiles/me", async (req, res): Promise<void> => {
@@ -133,7 +151,11 @@ router.get("/profiles/:userId", async (req, res): Promise<void> => {
     res.status(404).json({ error: "المستخدم غير موجود" });
     return;
   }
-  res.json(GetProfileResponse.parse(serialize(row.profile, row.xp)));
+  // Viewing your own profile always shows your true state; the setting hides
+  // you from other people, not from yourself.
+  const isSelf = params.data.userId === (req as AuthedRequest).userId;
+  const hideOnline = isSelf ? false : (await getSettings(params.data.userId)).hideOnline;
+  res.json(GetProfileResponse.parse(serialize(row.profile, row.xp, hideOnline)));
 });
 
 export default router;

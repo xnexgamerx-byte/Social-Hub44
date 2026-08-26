@@ -11,10 +11,10 @@ import { logger } from "./logger";
  * straightforward deception.
  */
 export const OFFICIAL_USER_ID = "official_nabda";
-const OFFICIAL_NAME = "نبضة";
+const OFFICIAL_NAME = "Viber Tok";
 
 const WELCOME_TEXT = [
-  "أهلاً بك في نبضة 👋",
+  "أهلاً بك في Viber Tok 👋",
   "",
   "• ادخل «الغرف» وشارك بالدردشة الصوتية",
   "• انشر لحظتك الأولى من تبويب «اللحظات»",
@@ -30,7 +30,7 @@ export async function ensureOfficialProfile(): Promise<void> {
     .values({
       userId: OFFICIAL_USER_ID,
       name: OFFICIAL_NAME,
-      bio: "الحساب الرسمي لتطبيق نبضة",
+      bio: "الحساب الرسمي لتطبيق Viber Tok",
       isOfficial: true,
     })
     .onConflictDoUpdate({
@@ -53,6 +53,8 @@ export async function sendWelcomeDm(toUserId: string, toName: string): Promise<v
       fromAvatar: "",
       toUserId,
       toName,
+      // The welcome message must land regardless of inbox preferences.
+      bypassPrivacy: true,
       text: WELCOME_TEXT,
     });
   } catch (err) {

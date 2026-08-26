@@ -23,3 +23,4 @@ export * from "./hosts";
 export * from "./roomEvents";
 export * from "./pushTokens";
 export * from "./safety";
+export * from "./userSettings";

@@ -1831,8 +1831,126 @@ paths:
                 items:
                   $ref: "#/components/schemas/TaskClaim"
 
+  /settings:
+    get:
+      operationId: getMySettings
+      tags: [settings]
+      summary: My preferences, falling back to defaults when none are stored
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateMySettings
+      tags: [settings]
+      summary: Update some of my preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettingsPatch"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "400":
+          description: Invalid value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /support/contact:
+    get:
+      operationId: getSupportContact
+      tags: [settings]
+      summary: The official account users can message for help
+      responses:
+        "200":
+          description: Support contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportContact"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
+    SupportContact:
+      type: object
+      properties:
+        userId:
+          type: string
+        name:
+          type: string
+        avatar:
+          type: string
+      required:
+        - userId
+        - name
+        - avatar
+    UserSettings:
+      type: object
+      properties:
+        notifyDm:
+          type: string
+          enum: [all, none]
+        whoCanDm:
+          type: string
+          enum: [all, following, none]
+        hideOnline:
+          type: boolean
+        invisibleRoomEntry:
+          type: boolean
+        language:
+          type: string
+      required:
+        - notifyDm
+        - whoCanDm
+        - hideOnline
+        - invisibleRoomEntry
+        - language
+    UserSettingsPatch:
+      type: object
+      description: >-
+        Every field is optional. Fields that are omitted keep whatever value is
+        already stored, so a client toggling one switch cannot blank the rest.
+      properties:
+        notifyDm:
+          type: string
+          enum: [all, none]
+        whoCanDm:
+          type: string
+          enum: [all, following, none]
+        hideOnline:
+          type: boolean
+        invisibleRoomEntry:
+          type: boolean
+        language:
+          type: string
+          enum: [ar]
     HealthStatus:
       type: object
       properties:

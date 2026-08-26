@@ -7,6 +7,7 @@ import {
   type DmMessage,
 } from "@workspace/db";
 import { isBlockedBetween } from "./safety";
+import { canDm } from "./settings";
 
 const MAX_DM_LENGTH = 2000;
 
@@ -144,6 +145,16 @@ export async function sendDm(input: {
   toName?: string;
   toAvatar?: string;
   text: string;
+  /**
+   * Skip the recipient's "who can message me" preference. Reserved for the
+   * app's own account, whose welcome message must arrive however the
+   * recipient has configured their inbox. Blocking is never bypassed.
+   *
+   * Passed as a flag rather than checking the official id here because
+   * lib/official.ts already imports this module — reading the id back would
+   * make the two files circular.
+   */
+  bypassPrivacy?: boolean;
 }): Promise<{ message: DmMessage; conversation: Conversation }> {
   const text = input.text.trim();
   if (!text) throw new DmValidationError("الرسالة فارغة");
@@ -154,6 +165,11 @@ export async function sendDm(input: {
   // keep reaching the other once a block exists.
   if (await isBlockedBetween(input.fromUserId, input.toUserId)) {
     throw new DmValidationError("لا يمكن إرسال رسالة إلى هذا الحساب");
+  }
+  // The recipient's own inbox preference. Checked after blocking so a blocked
+  // sender always gets the blocking message, never a hint about settings.
+  if (!input.bypassPrivacy && !(await canDm(input.fromUserId, input.toUserId))) {
+    throw new DmValidationError("هذا الحساب لا يستقبل رسائل منك");
   }
 
   const conversation = await getOrCreateConversation(

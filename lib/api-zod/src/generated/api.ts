@@ -1377,3 +1377,45 @@ export const ListTaskClaimsResponseItem = zod.object({
 export const ListTaskClaimsResponse = zod.array(ListTaskClaimsResponseItem)
 
 
+/**
+ * @summary My preferences, falling back to defaults when none are stored
+ */
+export const GetMySettingsResponse = zod.object({
+  "notifyDm": zod.enum(['all', 'none']),
+  "whoCanDm": zod.enum(['all', 'following', 'none']),
+  "hideOnline": zod.boolean(),
+  "invisibleRoomEntry": zod.boolean(),
+  "language": zod.string()
+})
+
+
+/**
+ * @summary Update some of my preferences
+ */
+export const UpdateMySettingsBody = zod.object({
+  "notifyDm": zod.enum(['all', 'none']).optional(),
+  "whoCanDm": zod.enum(['all', 'following', 'none']).optional(),
+  "hideOnline": zod.boolean().optional(),
+  "invisibleRoomEntry": zod.boolean().optional(),
+  "language": zod.enum(['ar']).optional()
+}).describe('Every field is optional. Fields that are omitted keep whatever value is already stored, so a client toggling one switch cannot blank the rest.')
+
+export const UpdateMySettingsResponse = zod.object({
+  "notifyDm": zod.enum(['all', 'none']),
+  "whoCanDm": zod.enum(['all', 'following', 'none']),
+  "hideOnline": zod.boolean(),
+  "invisibleRoomEntry": zod.boolean(),
+  "language": zod.string()
+})
+
+
+/**
+ * @summary The official account users can message for help
+ */
+export const GetSupportContactResponse = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string()
+})
+
+

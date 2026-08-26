@@ -71,8 +71,11 @@ import type {
   StoreItem,
   StoreItemInput,
   StoreItemUpdate,
+  SupportContact,
   TaskClaim,
   UserItem,
+  UserSettings,
+  UserSettingsPatch,
   VipFeature,
   VipFeatureInput,
   VipFeatureUpdate,
@@ -5867,6 +5870,231 @@ export function useListTaskClaims<TData = Awaited<ReturnType<typeof listTaskClai
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListTaskClaimsQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMySettingsUrl = () => {
+
+
+
+
+  return `/api/settings`
+}
+
+/**
+ * @summary My preferences, falling back to defaults when none are stored
+ */
+export const getMySettings = async ( options?: RequestInit): Promise<UserSettings> => {
+
+  return customFetch<UserSettings>(getGetMySettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMySettingsQueryKey = () => {
+    return [
+    `/api/settings`
+    ] as const;
+    }
+
+
+export const getGetMySettingsQueryOptions = <TData = Awaited<ReturnType<typeof getMySettings>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMySettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMySettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMySettings>>> = ({ signal }) => getMySettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMySettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMySettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getMySettings>>>
+export type GetMySettingsQueryError = ErrorType<Error>
+
+
+/**
+ * @summary My preferences, falling back to defaults when none are stored
+ */
+
+export function useGetMySettings<TData = Awaited<ReturnType<typeof getMySettings>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMySettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMySettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMySettingsUrl = () => {
+
+
+
+
+  return `/api/settings`
+}
+
+/**
+ * @summary Update some of my preferences
+ */
+export const updateMySettings = async (userSettingsPatch: UserSettingsPatch, options?: RequestInit): Promise<UserSettings> => {
+
+  return customFetch<UserSettings>(getUpdateMySettingsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      userSettingsPatch,)
+  }
+);}
+
+
+
+
+export const getUpdateMySettingsMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMySettings>>, TError,{data: BodyType<UserSettingsPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMySettings>>, TError,{data: BodyType<UserSettingsPatch>}, TContext> => {
+
+const mutationKey = ['updateMySettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMySettings>>, {data: BodyType<UserSettingsPatch>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMySettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMySettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateMySettings>>>
+    export type UpdateMySettingsMutationBody = BodyType<UserSettingsPatch>
+    export type UpdateMySettingsMutationError = ErrorType<Error>
+
+    /**
+ * @summary Update some of my preferences
+ */
+export const useUpdateMySettings = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMySettings>>, TError,{data: BodyType<UserSettingsPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMySettings>>,
+        TError,
+        {data: BodyType<UserSettingsPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateMySettingsMutationOptions(options));
+    }
+
+export const getGetSupportContactUrl = () => {
+
+
+
+
+  return `/api/support/contact`
+}
+
+/**
+ * @summary The official account users can message for help
+ */
+export const getSupportContact = async ( options?: RequestInit): Promise<SupportContact> => {
+
+  return customFetch<SupportContact>(getGetSupportContactUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSupportContactQueryKey = () => {
+    return [
+    `/api/support/contact`
+    ] as const;
+    }
+
+
+export const getGetSupportContactQueryOptions = <TData = Awaited<ReturnType<typeof getSupportContact>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupportContact>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSupportContactQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupportContact>>> = ({ signal }) => getSupportContact({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSupportContact>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSupportContactQueryResult = NonNullable<Awaited<ReturnType<typeof getSupportContact>>>
+export type GetSupportContactQueryError = ErrorType<Error>
+
+
+/**
+ * @summary The official account users can message for help
+ */
+
+export function useGetSupportContact<TData = Awaited<ReturnType<typeof getSupportContact>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupportContact>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSupportContactQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

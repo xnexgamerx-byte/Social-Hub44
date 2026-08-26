@@ -8,6 +8,7 @@ import {
   MarkConversationReadParams,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/authz";
+import { canDm } from "../lib/settings";
 import {
   getConversation,
   getOrCreateConversation,
@@ -39,6 +40,13 @@ router.post("/dm/open", async (req, res): Promise<void> => {
   const { otherUserId, otherName, otherAvatar } = parsed.data;
   if (otherUserId === userId) {
     res.status(400).json({ error: "لا يمكنك مراسلة نفسك" });
+    return;
+  }
+  // Checked here as well as in sendDm: opening a conversation writes a row
+  // that shows up in the other person's inbox, so without this an account
+  // that accepts no messages could still have empty threads pushed into it.
+  if (!(await canDm(userId, otherUserId))) {
+    res.status(403).json({ error: "هذا الحساب لا يستقبل رسائل منك" });
     return;
   }
   const conversation = await getOrCreateConversation(

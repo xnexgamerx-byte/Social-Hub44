@@ -16,6 +16,7 @@ import profilesRouter from "./profiles";
 import postsRouter from "./posts";
 import growthRouter from "./growth";
 import safetyRouter from "./safety";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(profilesRouter);
 router.use(postsRouter);
 router.use(growthRouter);
 router.use(safetyRouter);
+router.use(settingsRouter);
 
 export default router;

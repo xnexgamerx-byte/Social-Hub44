@@ -5,6 +5,72 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface SupportContact {
+  userId: string;
+  name: string;
+  avatar: string;
+}
+
+export type UserSettingsNotifyDm = typeof UserSettingsNotifyDm[keyof typeof UserSettingsNotifyDm];
+
+
+export const UserSettingsNotifyDm = {
+  all: 'all',
+  none: 'none',
+} as const;
+
+export type UserSettingsWhoCanDm = typeof UserSettingsWhoCanDm[keyof typeof UserSettingsWhoCanDm];
+
+
+export const UserSettingsWhoCanDm = {
+  all: 'all',
+  following: 'following',
+  none: 'none',
+} as const;
+
+export interface UserSettings {
+  notifyDm: UserSettingsNotifyDm;
+  whoCanDm: UserSettingsWhoCanDm;
+  hideOnline: boolean;
+  invisibleRoomEntry: boolean;
+  language: string;
+}
+
+export type UserSettingsPatchNotifyDm = typeof UserSettingsPatchNotifyDm[keyof typeof UserSettingsPatchNotifyDm];
+
+
+export const UserSettingsPatchNotifyDm = {
+  all: 'all',
+  none: 'none',
+} as const;
+
+export type UserSettingsPatchWhoCanDm = typeof UserSettingsPatchWhoCanDm[keyof typeof UserSettingsPatchWhoCanDm];
+
+
+export const UserSettingsPatchWhoCanDm = {
+  all: 'all',
+  following: 'following',
+  none: 'none',
+} as const;
+
+export type UserSettingsPatchLanguage = typeof UserSettingsPatchLanguage[keyof typeof UserSettingsPatchLanguage];
+
+
+export const UserSettingsPatchLanguage = {
+  ar: 'ar',
+} as const;
+
+/**
+ * Every field is optional. Fields that are omitted keep whatever value is already stored, so a client toggling one switch cannot blank the rest.
+ */
+export interface UserSettingsPatch {
+  notifyDm?: UserSettingsPatchNotifyDm;
+  whoCanDm?: UserSettingsPatchWhoCanDm;
+  hideOnline?: boolean;
+  invisibleRoomEntry?: boolean;
+  language?: UserSettingsPatchLanguage;
+}
+
 export interface HealthStatus {
   status: string;
   voice: boolean;
