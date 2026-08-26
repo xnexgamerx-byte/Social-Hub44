@@ -82,11 +82,16 @@ function SeatChip({
 }
 
 export default function LudoScreen() {
-  const { id, mode: modeParam } = useLocalSearchParams<{ id: string; mode?: string }>();
+  const {
+    id,
+    mode: modeParam,
+    teams: teamsParam,
+  } = useLocalSearchParams<{ id: string; mode?: string; teams?: string }>();
   const insets = useSafeAreaInsets();
   const { user, refreshWallet } = useApp();
 
   const mode: LudoMode = modeParam === "2" ? 2 : 4;
+  const teams = teamsParam === "1";
   const topPad = Platform.OS === "web" ? 20 : insets.top;
   const botPad = Platform.OS === "web" ? 20 : insets.bottom;
 
@@ -96,7 +101,7 @@ export default function LudoScreen() {
   );
 
   const { state, lastDice, error, connected, start, roll, move, clearError } =
-    useLudoSession(id, me, mode);
+    useLudoSession(id, me, mode, teams);
 
   // The table doubles as a room, so the room chat / gift / mic stack works here
   // unchanged — no parallel systems.
@@ -216,7 +221,11 @@ export default function LudoScreen() {
           <View style={styles.tagRow}>
             <View style={styles.tag}>
               <Text style={styles.tagText}>
-                {(state?.maxPlayers ?? mode) === 2 ? "ثنائي" : "كلاسيك"}
+                {state?.teams ?? teams
+                  ? "فرق"
+                  : (state?.maxPlayers ?? mode) === 2
+                    ? "ثنائي"
+                    : "كلاسيك"}
               </Text>
             </View>
             <View style={styles.tag}>

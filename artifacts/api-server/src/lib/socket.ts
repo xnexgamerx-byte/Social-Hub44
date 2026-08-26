@@ -78,8 +78,9 @@ interface MicMutePayload {
 
 interface LudoJoinPayload extends LudoJoinBase {
   // Only honoured when the payload opens the table; an existing game keeps
-  // the size it was created with.
+  // the size and format it was created with.
   mode?: 2 | 4;
+  teams?: boolean;
 }
 
 interface DmSendPayload {
@@ -459,7 +460,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
 
     socket.on(
       "ludo:join",
-      ({ gameId, userName, userAvatar, mode }: LudoJoinPayload) => {
+      ({ gameId, userName, userAvatar, mode, teams }: LudoJoinPayload) => {
         const userId = authUserId;
         if (!gameId) return;
         joinedLudo = gameId;
@@ -471,6 +472,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
           gameId,
           { userId, userName, userAvatar: userAvatar ?? "" },
           mode === 2 ? 2 : 4,
+          teams === true,
         );
       },
     );

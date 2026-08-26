@@ -9,6 +9,8 @@ export interface LudoPlayer {
   userName: string;
   userAvatar: string;
   color: LudoColor;
+  /** 0 or 1 in team play; null in a free-for-all. */
+  team: 0 | 1 | null;
   tokens: number[];
   finished: number;
 }
@@ -19,6 +21,8 @@ export interface LudoState {
   gameId: string;
   mode: LudoMode;
   maxPlayers: number;
+  /** Four seats played as two partnerships. */
+  teams: boolean;
   phase: LudoPhase;
   players: LudoPlayer[];
   turn: LudoColor | null;
@@ -38,6 +42,7 @@ export function useLudoSession(
   gameId: string | undefined,
   me: JoinArgs,
   mode: LudoMode = 4,
+  teams = false,
 ) {
   const [state, setState] = useState<LudoState | null>(null);
   const [lastDice, setLastDice] = useState<{ color: LudoColor; dice: number; forfeit: boolean } | null>(null);
@@ -52,6 +57,8 @@ export function useLudoSession(
   // existing game keeps whatever size it was created with.
   const modeRef = useRef(mode);
   modeRef.current = mode;
+  const teamsRef = useRef(teams);
+  teamsRef.current = teams;
 
   useEffect(() => {
     if (!gameId) return;
@@ -59,7 +66,12 @@ export function useLudoSession(
 
     const join = () => {
       setConnected(true);
-      socket.emit("ludo:join", { gameId, ...meRef.current, mode: modeRef.current });
+      socket.emit("ludo:join", {
+        gameId,
+        ...meRef.current,
+        mode: modeRef.current,
+        teams: teamsRef.current,
+      });
     };
 
     const onState = (data: LudoState) => setState(data);

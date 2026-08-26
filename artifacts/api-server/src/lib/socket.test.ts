@@ -539,3 +539,107 @@ describe("mic seats are freed and the stage limit holds", () => {
     await noNewSeat;
   });
 });
+
+interface LudoSnapshot {
+  gameId: string;
+  mode: number;
+  teams: boolean;
+  phase: string;
+  players: Array<{ userId: string; color: string; team: 0 | 1 | null }>;
+}
+
+/** Seat a player at a ludo table and wait until the broadcast shows them. */
+async function seatLudo(
+  socket: ClientSocket,
+  gameId: string,
+  userId: string,
+  userName: string,
+  opts: { mode?: 2 | 4; teams?: boolean } = {},
+): Promise<LudoSnapshot> {
+  const seated = waitFor<LudoSnapshot>(socket, "ludo:state", (s) =>
+    s.players.some((p) => p.userId === userId),
+  );
+  socket.emit("ludo:join", { gameId, userId, userName, mode: opts.mode ?? 4, teams: opts.teams });
+  return seated;
+}
+
+describe("ludo team play", () => {
+  it("pairs opposite seats and reports the format", async () => {
+    const table = room("teamtable");
+    const ids = ["t1", "t2", "t3", "t4"].map((n) => `${TAG}_${n}`);
+    let last: LudoSnapshot | null = null;
+
+    for (const id of ids) {
+      const c = connect(tokenFor(id));
+      await waitConnect(c);
+      last = await seatLudo(c, table, id, id, { mode: 4, teams: true });
+    }
+
+    expect(last!.teams).toBe(true);
+    expect(last!.players).toHaveLength(4);
+
+    const teamOf = Object.fromEntries(last!.players.map((p) => [p.color, p.team]));
+    // Opposite seats partner up; adjacent seats are opponents.
+    expect(teamOf.red).toBe(teamOf.yellow);
+    expect(teamOf.green).toBe(teamOf.blue);
+    expect(teamOf.red).not.toBe(teamOf.green);
+
+    for (const id of ids) leaveLudo(io, table, id);
+  });
+
+  it("refuses to start a partnership game with an empty seat", async () => {
+    const table = room("teamshort");
+    const ids = ["s1", "s2", "s3"].map((n) => `${TAG}_${n}`);
+    const sockets: ClientSocket[] = [];
+
+    for (const id of ids) {
+      const c = connect(tokenFor(id));
+      await waitConnect(c);
+      await seatLudo(c, table, id, id, { mode: 4, teams: true });
+      sockets.push(c);
+    }
+
+    // Three players is enough for a free-for-all but leaves one team short.
+    const refused = once<{ message: string }>(sockets[0], "ludo:error");
+    sockets[0].emit("ludo:start", { gameId: table });
+    const err = await refused;
+    expect(err.message).toContain("٤ لاعبين");
+
+    for (const id of ids) leaveLudo(io, table, id);
+  });
+
+  it("keeps a normal four-way table out of team play", async () => {
+    const table = room("freeforall");
+    const ids = ["f1", "f2"].map((n) => `${TAG}_${n}`);
+    let last: LudoSnapshot | null = null;
+
+    for (const id of ids) {
+      const c = connect(tokenFor(id));
+      await waitConnect(c);
+      last = await seatLudo(c, table, id, id, { mode: 4 });
+    }
+
+    expect(last!.teams).toBe(false);
+    expect(last!.players.every((p) => p.team === null)).toBe(true);
+
+    for (const id of ids) leaveLudo(io, table, id);
+  });
+
+  it("ignores partnerships on a two-seat duel", async () => {
+    const table = room("duelteams");
+    const ids = ["d1", "d2"].map((n) => `${TAG}_${n}`);
+    let last: LudoSnapshot | null = null;
+
+    for (const id of ids) {
+      const c = connect(tokenFor(id));
+      await waitConnect(c);
+      // A duel has two seats, so there is nobody to partner with.
+      last = await seatLudo(c, table, id, id, { mode: 2, teams: true });
+    }
+
+    expect(last!.teams).toBe(false);
+    expect(last!.players).toHaveLength(2);
+
+    for (const id of ids) leaveLudo(io, table, id);
+  });
+});

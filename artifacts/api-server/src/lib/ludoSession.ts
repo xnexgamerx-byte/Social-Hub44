@@ -27,6 +27,19 @@ const DUEL_COLORS: LudoColor[] = ["red", "yellow"];
 function seatColors(mode: LudoMode): LudoColor[] {
   return mode === 2 ? DUEL_COLORS : COLORS;
 }
+
+/**
+ * Partnerships for team play: opposite seats play together, the way physical
+ * Ludo partnerships are formed. Because COLORS alternates red, green, yellow,
+ * blue, turn order already alternates between the two teams.
+ */
+const TEAM_OF: Record<LudoColor, 0 | 1> = { red: 0, yellow: 0, green: 1, blue: 1 };
+const PARTNER_OF: Record<LudoColor, LudoColor> = {
+  red: "yellow",
+  yellow: "red",
+  green: "blue",
+  blue: "green",
+};
 const TOKENS_PER_PLAYER = 4;
 const RING_SIZE = 52;
 const FINISH = 57;
@@ -59,6 +72,8 @@ interface LudoPlayer {
 interface LudoGame {
   gameId: string;
   mode: LudoMode;
+  /** Four seats played as two partnerships instead of a free-for-all. */
+  teams: boolean;
   phase: Phase;
   players: Map<string, LudoPlayer>;
   order: LudoColor[];
@@ -79,7 +94,7 @@ function channel(gameId: string): string {
   return `ludo:${gameId}`;
 }
 
-function getOrCreate(gameId: string, mode: LudoMode = 4): LudoGame {
+function getOrCreate(gameId: string, mode: LudoMode = 4, teams = false): LudoGame {
   let g = games.get(gameId);
   if (!g) {
     g = {
@@ -87,6 +102,8 @@ function getOrCreate(gameId: string, mode: LudoMode = 4): LudoGame {
       // The table's size is fixed by whoever opens it; later joiners take a
       // seat rather than resizing the board mid-game.
       mode,
+      // Partnerships only make sense with four seats.
+      teams: teams && mode === 4,
       phase: "lobby",
       players: new Map(),
       order: [],
@@ -103,6 +120,45 @@ function getOrCreate(gameId: string, mode: LudoMode = 4): LudoGame {
     games.set(gameId, g);
   }
   return g;
+}
+
+/**
+ * Whether a colour has every token home. A colour that never took a seat has
+ * an empty position array, and [].every() is vacuously true — so seating is
+ * checked first, otherwise an absent partner would hand its team the win.
+ */
+function allHome(
+  seated: readonly LudoColor[],
+  positions: Record<LudoColor, number[]>,
+  color: LudoColor,
+): boolean {
+  if (!seated.includes(color)) return false;
+  const tokens = positions[color];
+  return tokens.length > 0 && tokens.every((t) => t === FINISH);
+}
+
+/**
+ * Win condition: every token home, and in team play the partner's too.
+ *
+ * Exported as a pure function because the vacuous-truth trap above is easy to
+ * reintroduce and impossible to see from the outside — a win is broadcast as
+ * final, so getting it wrong ends a game that should still be running.
+ */
+export function hasWonWith(
+  teams: boolean,
+  seated: readonly LudoColor[],
+  positions: Record<LudoColor, number[]>,
+  color: LudoColor,
+): boolean {
+  if (!allHome(seated, positions, color)) return false;
+  if (!teams) return true;
+  const mate = PARTNER_OF[color];
+  // With an unseated partner there is nobody to wait for.
+  return seated.includes(mate) ? allHome(seated, positions, mate) : true;
+}
+
+function hasWon(g: LudoGame, color: LudoColor): boolean {
+  return hasWonWith(g.teams, g.order, g.positions, color);
 }
 
 function freshTokens(): number[] {
@@ -131,6 +187,7 @@ function snapshot(g: LudoGame) {
     gameId: g.gameId,
     mode: g.mode,
     maxPlayers: g.mode,
+    teams: g.teams,
     phase: g.phase,
     players: g.order.map((color) => {
       const p = [...g.players.values()].find((pl) => pl.color === color)!;
@@ -139,6 +196,7 @@ function snapshot(g: LudoGame) {
         userName: p.userName,
         userAvatar: p.userAvatar,
         color,
+        team: g.teams ? TEAM_OF[color] : null,
         tokens: g.positions[color],
         finished: g.positions[color].filter((t) => t === FINISH).length,
       };
@@ -184,8 +242,9 @@ export function joinLudo(
   gameId: string,
   player: { userId: string; userName: string; userAvatar: string },
   mode: LudoMode = 4,
+  teams = false,
 ): void {
-  const g = getOrCreate(gameId, mode);
+  const g = getOrCreate(gameId, mode, teams);
 
   // Cancel any pending grace-period removal — this is a (re)join.
   const pending = g.pendingRemoval.get(player.userId);
@@ -222,6 +281,13 @@ export function startLudo(io: Server, gameId: string, userId: string): void {
   if (g.players.size < 2) {
     io.to(channel(gameId)).emit("ludo:error", {
       message: "نحتاج لاعبَين على الأقل لبدء اللعبة",
+    });
+    return;
+  }
+  // A partnership game with an empty seat would leave one team a player short.
+  if (g.teams && g.players.size < 4) {
+    io.to(channel(gameId)).emit("ludo:error", {
+      message: "طور الفرق يحتاج ٤ لاعبين",
     });
     return;
   }
@@ -313,6 +379,8 @@ export function moveLudo(
   if (landedRing != null && !SAFE_CELLS.has(landedRing)) {
     for (const other of g.order) {
       if (other === color) continue;
+      // Partners never knock each other back to base.
+      if (g.teams && TEAM_OF[other] === TEAM_OF[color]) continue;
       g.positions[other].forEach((p, i) => {
         if (ringCell(other, p) === landedRing) {
           g.positions[other][i] = -1;
@@ -325,7 +393,7 @@ export function moveLudo(
   const justFinished = next === FINISH;
 
   // Win check.
-  if (g.positions[color].every((t) => t === FINISH)) {
+  if (hasWon(g, color)) {
     g.phase = "ended";
     g.winner = color;
     g.awaitingMove = false;
