@@ -24,11 +24,11 @@ import {
 
 // The RevenueCat project is created by the user in the dashboard. We never
 // create it here — we locate the existing one (by name, else the only project).
-const PROJECT_NAME = "نبضة";
+const PROJECT_NAME = "Viber Tok";
 
-const APP_STORE_APP_NAME = "نبضة iOS";
+const APP_STORE_APP_NAME = "Viber Tok iOS";
 const APP_STORE_BUNDLE_ID = "com.nabda.yalla";
-const PLAY_STORE_APP_NAME = "نبضة Android";
+const PLAY_STORE_APP_NAME = "Viber Tok Android";
 const PLAY_STORE_PACKAGE_NAME = "com.nabda.yalla";
 
 const OFFERING_IDENTIFIER = "default";

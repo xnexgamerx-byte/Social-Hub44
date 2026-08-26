@@ -54,7 +54,7 @@ export default function InviteScreen() {
   const shareCode = async () => {
     if (!data?.code) return;
     await Share.share({
-      message: `انضم إليّ في نبضة! استخدم رمز الدعوة ${data.code} واحصل على ${data.referredReward} كوينز مجاناً 🎁`,
+      message: `انضم إليّ في Viber Tok! استخدم رمز الدعوة ${data.code} واحصل على ${data.referredReward} كوينز مجاناً 🎁`,
     });
   };
 

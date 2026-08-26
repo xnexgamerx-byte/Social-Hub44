@@ -1,5 +1,5 @@
 ---
-name: RevenueCat coin IAP (نبضة)
+name: RevenueCat coin IAP (Viber Tok)
 description: How real paid coin purchases work end-to-end and the non-obvious constraints around verification, idempotency, and environment support.
 ---
 

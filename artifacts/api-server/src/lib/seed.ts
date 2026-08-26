@@ -179,17 +179,17 @@ const DAILY_TASKS: InsertDailyTask[] = [
   { label: "أرسل هدية", description: "أرسل هدية واحدة لأي مستخدم", reward: 200, icon: "gift", color: "#EC407A", active: true, sortOrder: 3 },
   { label: "شاهد 3 فيديوهات", description: "تصفّح وشاهد ثلاثة فيديوهات", reward: 120, icon: "play-circle", color: "#FF8A65", active: true, sortOrder: 4 },
   { label: "العب لعبة", description: "العب جولة واحدة في الألعاب", reward: 180, icon: "game-controller", color: "#42A5F5", active: true, sortOrder: 5 },
-  { label: "شارك التطبيق", description: "ادعُ صديقاً لتجربة نبضة", reward: 300, icon: "share-social", color: "#FFB300", active: true, sortOrder: 6 },
+  { label: "شارك التطبيق", description: "ادعُ صديقاً لتجربة Viber Tok", reward: 300, icon: "share-social", color: "#FFB300", active: true, sortOrder: 6 },
 ];
 
 // Official starter rooms owned by the system account so the directory is
 // never empty on a fresh install.
 const ROOMS: InsertRoom[] = [
-  { name: "صالة نبضة الرئيسية", description: "الغرفة الرسمية للترحيب بالأعضاء الجدد", category: "chat", ownerId: "system", ownerName: "نبضة", tags: ["Chat"], active: true },
-  { name: "سهرة ونسة", description: "دردشة عامة وسوالف مع الأصدقاء", category: "chat", ownerId: "system", ownerName: "نبضة", tags: ["Chat"], active: true },
-  { name: "عشاق الألعاب", description: "تحديات لودو وأسئلة مع الجوائز", category: "gaming", ownerId: "system", ownerName: "نبضة", tags: ["PK"], active: true },
-  { name: "ركن الطرب", description: "أجمل الأغاني والجلسات الطربية", category: "music", ownerId: "system", ownerName: "نبضة", tags: ["Super W"], active: true },
-  { name: "عائلة نبضة", description: "غرفة العائلة — الكل حياه الله", category: "family", ownerId: "system", ownerName: "نبضة", tags: ["Chat"], active: true },
+  { name: "صالة Viber Tok الرئيسية", description: "الغرفة الرسمية للترحيب بالأعضاء الجدد", category: "chat", ownerId: "system", ownerName: "Viber Tok", tags: ["Chat"], active: true },
+  { name: "سهرة ونسة", description: "دردشة عامة وسوالف مع الأصدقاء", category: "chat", ownerId: "system", ownerName: "Viber Tok", tags: ["Chat"], active: true },
+  { name: "عشاق الألعاب", description: "تحديات لودو وأسئلة مع الجوائز", category: "gaming", ownerId: "system", ownerName: "Viber Tok", tags: ["PK"], active: true },
+  { name: "ركن الطرب", description: "أجمل الأغاني والجلسات الطربية", category: "music", ownerId: "system", ownerName: "Viber Tok", tags: ["Super W"], active: true },
+  { name: "عائلة Viber Tok", description: "غرفة العائلة — الكل حياه الله", category: "family", ownerId: "system", ownerName: "Viber Tok", tags: ["Chat"], active: true },
 ];
 
 export async function seedIfEmpty(): Promise<void> {

@@ -1,4 +1,4 @@
-# نبضة - دردشة وترفيه
+# Viber Tok - دردشة وترفيه
 
 تطبيق موبايل اجتماعي عربي يشمل غرف الدردشة الصوتية، الفيديوهات، والألعاب — مشابه ليلا وسوغو.
 
@@ -24,7 +24,7 @@
 
 ## Where things live
 
-- `artifacts/yalla-clone/` — Expo mobile app (نبضة)
+- `artifacts/yalla-clone/` — Expo mobile app (Viber Tok)
   - `app/(tabs)/` — main tab screens (index, rooms, messages, videos, profile)
   - `app/room/[id].tsx` — voice/text chat room detail screen (room loaded from API)
   - `app/room-create.tsx` — create/edit a room (owner-scoped)

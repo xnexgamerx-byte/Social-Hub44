@@ -1,6 +1,6 @@
 ---
 name: Yalla-clone Expo app
-description: Architecture and key decisions for the نبضة mobile app (chat rooms, videos, games).
+description: Architecture and key decisions for the Viber Tok mobile app (chat rooms, videos, games).
 ---
 
 ## Key decisions
