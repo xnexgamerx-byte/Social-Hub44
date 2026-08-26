@@ -14,6 +14,8 @@ import type { UserSettingsPatchWhoCanDm } from './userSettingsPatchWhoCanDm';
  */
 export interface UserSettingsPatch {
   notifyDm?: UserSettingsPatchNotifyDm;
+  notifyLikes?: boolean;
+  notifyMoments?: boolean;
   whoCanDm?: UserSettingsPatchWhoCanDm;
   hideOnline?: boolean;
   invisibleRoomEntry?: boolean;

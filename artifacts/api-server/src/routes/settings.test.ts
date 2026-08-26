@@ -111,11 +111,25 @@ describe("settings endpoint", () => {
 
     expect(res.body).toEqual({
       notifyDm: "none",
+      notifyLikes: true,
+      notifyMoments: true,
       whoCanDm: "none",
       hideOnline: true,
       invisibleRoomEntry: true,
       language: "ar",
     });
+  });
+
+  it("stores the moment notification toggles independently", async () => {
+    actAs(ALICE);
+    await request(app).patch("/settings").send({ notifyLikes: false }).expect(200);
+    const res = await request(app).patch("/settings").send({ notifyMoments: false }).expect(200);
+    expect(res.body.notifyLikes).toBe(false);
+    expect(res.body.notifyMoments).toBe(false);
+    // Turning one back on must not disturb the other.
+    const back = await request(app).patch("/settings").send({ notifyLikes: true }).expect(200);
+    expect(back.body.notifyLikes).toBe(true);
+    expect(back.body.notifyMoments).toBe(false);
   });
 
   it("rejects a value outside the allowed set", async () => {

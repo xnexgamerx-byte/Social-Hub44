@@ -1917,6 +1917,10 @@ components:
         notifyDm:
           type: string
           enum: [all, none]
+        notifyLikes:
+          type: boolean
+        notifyMoments:
+          type: boolean
         whoCanDm:
           type: string
           enum: [all, following, none]
@@ -1928,6 +1932,8 @@ components:
           type: string
       required:
         - notifyDm
+        - notifyLikes
+        - notifyMoments
         - whoCanDm
         - hideOnline
         - invisibleRoomEntry
@@ -1941,6 +1947,10 @@ components:
         notifyDm:
           type: string
           enum: [all, none]
+        notifyLikes:
+          type: boolean
+        notifyMoments:
+          type: boolean
         whoCanDm:
           type: string
           enum: [all, following, none]

@@ -8,13 +8,6 @@ import { SettingsGroup, SettingsRow } from "@/components/SettingsRow";
 import { useColors } from "@/hooks/useColors";
 import { useSettings } from "@/hooks/useSettings";
 
-/**
- * Notification types the app does not send yet. Listed so the screen matches
- * what the app will do, but shown disabled with the reason rather than as
- * switches that silently control nothing.
- */
-const PENDING = "قيد التحضير";
-
 const DM_OPTIONS: { value: UserSettingsPatchNotifyDm; label: string }[] = [
   { value: "all", label: "الكل" },
   { value: "none", label: "إيقاف" },
@@ -29,11 +22,15 @@ export default function NotificationSettingsScreen() {
   const current = settings?.notifyDm ?? "all";
   const currentLabel = DM_OPTIONS.find((o) => o.value === current)?.label ?? "الكل";
 
+  const save = async (patch: Parameters<typeof update>[0]) => {
+    const res = await update(patch);
+    if (!res.ok) Alert.alert("خطأ", res.error);
+  };
+
   const chooseDm = async (value: UserSettingsPatchNotifyDm) => {
     setPickingDm(false);
     if (current === value) return;
-    const res = await update({ notifyDm: value });
-    if (!res.ok) Alert.alert("خطأ", res.error);
+    await save({ notifyDm: value });
   };
 
   return (
@@ -67,19 +64,19 @@ export default function NotificationSettingsScreen() {
                 : null}
             </SettingsGroup>
 
-            <SettingsGroup title="إشعار ديناميكي">
-              <SettingsRow label="تحديث اللحظات التالية" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="إشعار الإعجاب" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="إشعار التعليق" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="إشعارات الإشارة (@)" switchValue={false} disabled disabledReason={PENDING} />
-            </SettingsGroup>
-
-            <SettingsGroup title="تنبيه الرسائل الأخرى">
-              <SettingsRow label="إشعار زائر" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="إشعارات غرفة الدردشة" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="إشعار مكالمة فيديو" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="إشعارات المكالمة الصوتية" switchValue={false} disabled disabledReason={PENDING} />
-              <SettingsRow label="متابعة إشعارات الغرفة" switchValue={false} disabled disabledReason={PENDING} />
+            <SettingsGroup title="اللحظات">
+              <SettingsRow
+                label="إشعار الإعجاب"
+                hint="تنبيه لمّا أحد يعجبه منشورك"
+                switchValue={settings?.notifyLikes ?? true}
+                onSwitchChange={(v) => void save({ notifyLikes: v })}
+              />
+              <SettingsRow
+                label="لحظات ممّن أتابعهم"
+                hint="تنبيه لمّا ينشر أحد تتابعه لحظة جديدة"
+                switchValue={settings?.notifyMoments ?? true}
+                onSwitchChange={(v) => void save({ notifyMoments: v })}
+              />
             </SettingsGroup>
 
             <Text style={[styles.footnote, { color: colors.mutedForeground }]}>

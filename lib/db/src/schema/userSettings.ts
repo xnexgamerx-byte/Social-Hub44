@@ -22,6 +22,12 @@ export const userSettingsTable = pgTable("user_settings", {
   // Enforced in lib/socket.ts before pushToUser on a new direct message.
   notifyDm: text("notify_dm").notNull().default("all"),
 
+  // Someone liked one of my moments. Enforced in routes/posts.ts.
+  notifyLikes: boolean("notify_likes").notNull().default(true),
+
+  // Someone I follow posted a new moment. Enforced in routes/posts.ts.
+  notifyMoments: boolean("notify_moments").notNull().default(true),
+
   // Who may open a direct message with this user.
   // "all" | "following" (only accounts this user follows) | "none".
   // Enforced in lib/dm.ts sendDm. The official account always bypasses it.

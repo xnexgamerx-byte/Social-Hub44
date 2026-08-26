@@ -17,6 +17,8 @@ export type WhoCanDm = (typeof WHO_CAN_DM_VALUES)[number];
 /** The shape every caller sees, whether or not a row exists yet. */
 export interface SettingsView {
   notifyDm: NotifyDm;
+  notifyLikes: boolean;
+  notifyMoments: boolean;
   whoCanDm: WhoCanDm;
   hideOnline: boolean;
   invisibleRoomEntry: boolean;
@@ -30,6 +32,8 @@ export interface SettingsView {
  */
 export const DEFAULT_SETTINGS: SettingsView = {
   notifyDm: "all",
+  notifyLikes: true,
+  notifyMoments: true,
   whoCanDm: "all",
   hideOnline: false,
   invisibleRoomEntry: false,
@@ -44,6 +48,8 @@ function toView(row: UserSettings): SettingsView {
     notifyDm: NOTIFY_DM_VALUES.includes(row.notifyDm as NotifyDm)
       ? (row.notifyDm as NotifyDm)
       : DEFAULT_SETTINGS.notifyDm,
+    notifyLikes: row.notifyLikes,
+    notifyMoments: row.notifyMoments,
     whoCanDm: WHO_CAN_DM_VALUES.includes(row.whoCanDm as WhoCanDm)
       ? (row.whoCanDm as WhoCanDm)
       : DEFAULT_SETTINGS.whoCanDm,
@@ -96,6 +102,8 @@ export async function updateSettings(
 ): Promise<SettingsView> {
   const set: Record<string, unknown> = {};
   if (patch.notifyDm !== undefined) set.notifyDm = patch.notifyDm;
+  if (patch.notifyLikes !== undefined) set.notifyLikes = patch.notifyLikes;
+  if (patch.notifyMoments !== undefined) set.notifyMoments = patch.notifyMoments;
   if (patch.whoCanDm !== undefined) set.whoCanDm = patch.whoCanDm;
   if (patch.hideOnline !== undefined) set.hideOnline = patch.hideOnline;
   if (patch.invisibleRoomEntry !== undefined)

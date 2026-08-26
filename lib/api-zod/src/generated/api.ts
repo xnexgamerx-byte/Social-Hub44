@@ -1382,6 +1382,8 @@ export const ListTaskClaimsResponse = zod.array(ListTaskClaimsResponseItem)
  */
 export const GetMySettingsResponse = zod.object({
   "notifyDm": zod.enum(['all', 'none']),
+  "notifyLikes": zod.boolean(),
+  "notifyMoments": zod.boolean(),
   "whoCanDm": zod.enum(['all', 'following', 'none']),
   "hideOnline": zod.boolean(),
   "invisibleRoomEntry": zod.boolean(),
@@ -1394,6 +1396,8 @@ export const GetMySettingsResponse = zod.object({
  */
 export const UpdateMySettingsBody = zod.object({
   "notifyDm": zod.enum(['all', 'none']).optional(),
+  "notifyLikes": zod.boolean().optional(),
+  "notifyMoments": zod.boolean().optional(),
   "whoCanDm": zod.enum(['all', 'following', 'none']).optional(),
   "hideOnline": zod.boolean().optional(),
   "invisibleRoomEntry": zod.boolean().optional(),
@@ -1402,6 +1406,8 @@ export const UpdateMySettingsBody = zod.object({
 
 export const UpdateMySettingsResponse = zod.object({
   "notifyDm": zod.enum(['all', 'none']),
+  "notifyLikes": zod.boolean(),
+  "notifyMoments": zod.boolean(),
   "whoCanDm": zod.enum(['all', 'following', 'none']),
   "hideOnline": zod.boolean(),
   "invisibleRoomEntry": zod.boolean(),

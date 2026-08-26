@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, isAdminUserId, type AuthedRequest } from "../lib/authz";
 import { levelForXp } from "../lib/wallet";
+import { notifyNewMoment, notifyPostLiked } from "../lib/postNotify";
 import { isStorageConfigured, uploadImage, UploadError } from "../lib/storage";
 
 const router: IRouter = Router();
@@ -144,6 +145,14 @@ router.post("/posts", async (req, res): Promise<void> => {
     })
     .returning();
 
+  // Fire and forget — telling followers must never delay the response.
+  void notifyNewMoment({
+    authorId: userId,
+    authorName: profile?.name ?? "",
+    postId: post.id,
+    text,
+  });
+
   res.status(201).json(
     ListPostsResponseItem.parse({
       ...post,
@@ -191,7 +200,7 @@ router.post("/posts/:id/like", async (req, res): Promise<void> => {
   }
   const postId = params.data.id;
   const [post] = await db
-    .select({ id: postsTable.id })
+    .select({ id: postsTable.id, authorId: postsTable.userId })
     .from(postsTable)
     .where(eq(postsTable.id, postId))
     .limit(1);
@@ -213,6 +222,18 @@ router.post("/posts/:id/like", async (req, res): Promise<void> => {
       .insert(postLikesTable)
       .values({ postId, userId })
       .onConflictDoNothing();
+    const [liker] = await db
+      .select({ name: profilesTable.name })
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, userId))
+      .limit(1);
+    // Only a new like is news; taking one back is silent.
+    void notifyPostLiked({
+      authorId: post.authorId,
+      likerId: userId,
+      likerName: liker?.name ?? "",
+      postId,
+    });
   }
 
   const [{ count }] = await db

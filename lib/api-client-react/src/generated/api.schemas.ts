@@ -30,6 +30,8 @@ export const UserSettingsWhoCanDm = {
 
 export interface UserSettings {
   notifyDm: UserSettingsNotifyDm;
+  notifyLikes: boolean;
+  notifyMoments: boolean;
   whoCanDm: UserSettingsWhoCanDm;
   hideOnline: boolean;
   invisibleRoomEntry: boolean;
@@ -65,6 +67,8 @@ export const UserSettingsPatchLanguage = {
  */
 export interface UserSettingsPatch {
   notifyDm?: UserSettingsPatchNotifyDm;
+  notifyLikes?: boolean;
+  notifyMoments?: boolean;
   whoCanDm?: UserSettingsPatchWhoCanDm;
   hideOnline?: boolean;
   invisibleRoomEntry?: boolean;

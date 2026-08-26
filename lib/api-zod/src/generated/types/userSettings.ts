@@ -10,6 +10,8 @@ import type { UserSettingsWhoCanDm } from './userSettingsWhoCanDm';
 
 export interface UserSettings {
   notifyDm: UserSettingsNotifyDm;
+  notifyLikes: boolean;
+  notifyMoments: boolean;
   whoCanDm: UserSettingsWhoCanDm;
   hideOnline: boolean;
   invisibleRoomEntry: boolean;
