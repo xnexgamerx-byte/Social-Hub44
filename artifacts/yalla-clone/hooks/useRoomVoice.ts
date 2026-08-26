@@ -29,6 +29,9 @@ interface Me {
 export function useRoomVoice(roomId: string | undefined, me: Me) {
   const [seats, setSeats] = useState<MicSeat[]>([]);
   const [stageFull, setStageFull] = useState(false);
+  // Surfaced to the screen: a silently swallowed voice failure is
+  // indistinguishable from "the feature is broken".
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const roomRef = useRef(roomId);
   roomRef.current = roomId;
   const meRef = useRef(me);
@@ -70,15 +73,20 @@ export function useRoomVoice(roomId: string | undefined, me: Me) {
   // Expo Go, where the native module cannot load.
   useEffect(() => {
     if (!roomId || !isVoiceAvailable()) return;
-    void joinVoiceChannel(roomId, meRef.current.userId, false).catch(() => {
-      // Voice is optional: text chat and seats must keep working without it.
+    setVoiceError(null);
+    void joinVoiceChannel(roomId, meRef.current.userId, false).catch((err) => {
+      // Voice is optional — text chat and seats keep working — but the reason
+      // must reach the user rather than vanishing.
+      setVoiceError(err instanceof Error ? err.message : "تعذّر تشغيل الصوت");
     });
     return () => leaveVoiceChannel();
   }, [roomId]);
 
   useEffect(() => {
     if (!isVoiceAvailable()) return;
-    void setVoiceSpeaking(onMic).catch(() => {});
+    void setVoiceSpeaking(onMic).catch((err) => {
+      setVoiceError(err instanceof Error ? err.message : "تعذّر تشغيل الميكروفون");
+    });
   }, [onMic]);
 
   useEffect(() => {
@@ -110,5 +118,5 @@ export function useRoomVoice(roomId: string | undefined, me: Me) {
     getSocket().emit("mic:mute", { roomId: rid, userId: meRef.current.userId, muted: next });
   }, []);
 
-  return { seats, onMic, muted, stageFull, takeMic, leaveMic, setMuted };
+  return { seats, onMic, muted, stageFull, voiceError, takeMic, leaveMic, setMuted };
 }

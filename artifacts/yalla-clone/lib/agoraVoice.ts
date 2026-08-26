@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { PermissionsAndroid, Platform } from "react-native";
 import { customFetch } from "@workspace/api-client-react";
 
 /**
@@ -52,6 +53,29 @@ export async function fetchAgoraToken(
   );
 }
 
+/**
+ * Ask for the microphone at runtime. Declaring RECORD_AUDIO in the manifest
+ * only makes it requestable — on Android 6+ the user must grant it or the mic
+ * silently records nothing, which looks exactly like "voice is broken".
+ */
+export async function ensureMicPermission(): Promise<boolean> {
+  if (Platform.OS !== "android") return true;
+  const granted = await PermissionsAndroid.check(
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+  );
+  if (granted) return true;
+  const result = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    {
+      title: "إذن الميكروفون",
+      message: "نحتاج إذن الميكروفون للتحدث في الغرف الصوتية.",
+      buttonPositive: "السماح",
+      buttonNegative: "لاحقاً",
+    },
+  );
+  return result === PermissionsAndroid.RESULTS.GRANTED;
+}
+
 type Engine = {
   initialize: (config: { appId: string }) => void;
   enableAudio: () => void;
@@ -67,6 +91,9 @@ type Engine = {
   release: () => void;
 };
 
+/** Distinguishes a real voice failure from an unsupported environment. */
+export class VoiceError extends Error {}
+
 let engine: Engine | null = null;
 let joinedChannel: string | null = null;
 
@@ -80,6 +107,10 @@ export async function joinVoiceChannel(
   speaking: boolean,
 ): Promise<void> {
   if (isExpoGo) return;
+  // Listeners need no microphone, so only ask when actually publishing.
+  if (speaking && !(await ensureMicPermission())) {
+    throw new VoiceError("لم يُسمح بالوصول إلى الميكروفون");
+  }
   const uid = numericUid(userId);
   const { appId, token } = await fetchAgoraToken(roomId, uid);
 
@@ -111,6 +142,11 @@ export async function joinVoiceChannel(
 /** Switch between speaking on a mic seat and listening only. */
 export async function setVoiceSpeaking(speaking: boolean): Promise<void> {
   if (isExpoGo || !engine) return;
+  // Promoting to speaker without the grant yields a live seat that transmits
+  // silence — the exact symptom of "the mic does not work".
+  if (speaking && !(await ensureMicPermission())) {
+    throw new VoiceError("لم يُسمح بالوصول إلى الميكروفون");
+  }
   const agora = (await import("react-native-agora")) as unknown as {
     ClientRoleType: { ClientRoleBroadcaster: number; ClientRoleAudience: number };
   };

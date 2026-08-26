@@ -48,7 +48,7 @@ export default function RoomDetailScreen() {
     userName: user.name,
     userAvatar: user.avatar,
   });
-  const { seats, onMic, muted, stageFull, takeMic, leaveMic, setMuted } = useRoomVoice(id, {
+  const { seats, onMic, muted, stageFull, voiceError, takeMic, leaveMic, setMuted } = useRoomVoice(id, {
     userId: user.id,
     userName: user.name,
     userAvatar: user.avatar,

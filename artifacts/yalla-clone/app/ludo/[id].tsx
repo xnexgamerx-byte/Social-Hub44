@@ -102,7 +102,7 @@ export default function LudoScreen() {
   // unchanged — no parallel systems.
   const socialRoomId = id ? `ludo:${id}` : undefined;
   const { messages, sendMessage: emitMessage } = useRoomChat(socialRoomId, me);
-  const { seats, onMic, muted, stageFull, takeMic, leaveMic, setMuted } = useRoomVoice(
+  const { seats, onMic, muted, stageFull, voiceError, takeMic, leaveMic, setMuted } = useRoomVoice(
     socialRoomId,
     me,
   );
@@ -244,6 +244,7 @@ export default function LudoScreen() {
 
         {error && <Text style={styles.errorText}>{error}</Text>}
         {stageFull && <Text style={styles.errorText}>المنصة ممتلئة</Text>}
+      {voiceError ? <Text style={styles.errorText}>{voiceError}</Text> : null}
 
         {/* Board with seats pinned to matching corners */}
         <View style={styles.stage}>
