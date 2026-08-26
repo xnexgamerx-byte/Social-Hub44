@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { clerkErrorMessage } from "@/lib/clerkError";
+import { readSsoResult } from "@/lib/ssoFlow";
 
 WebBrowser.maybeCompleteAuthSession();
 

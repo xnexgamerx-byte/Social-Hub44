@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { clerkErrorMessage } from "@/lib/clerkError";
+import { readSsoResult } from "@/lib/ssoFlow";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -66,13 +67,18 @@ export default function SignInScreen() {
     setFormError(null);
     setGoogleLoading(true);
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const result = await startSSOFlow({
         strategy: "oauth_google",
         redirectUrl: AuthSession.makeRedirectUri(),
       });
-      if (createdSessionId && setActive) {
+      const outcome = readSsoResult(result);
+      if (outcome.kind === "session" && result.setActive) {
         // AuthGate redirects once the session is active — see finishNavigate.
-        await setActive({ session: createdSessionId });
+        await result.setActive({ session: outcome.sessionId });
+      } else if (outcome.kind === "incomplete") {
+        // Previously this branch did nothing at all, so the browser closed and
+        // the app sat there unsigned-in with no explanation.
+        setFormError(outcome.message);
       }
     } catch (err) {
       setFormError(clerkErrorMessage(err, "تعذّر تسجيل الدخول عبر Google."));
