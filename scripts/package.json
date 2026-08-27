@@ -6,7 +6,8 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed:revenuecat": "tsx ./src/seedRevenueCat.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:legal": "node --disable-warning=ExperimentalWarning ./src/buildLegalPages.ts"
   },
   "dependencies": {
     "@replit/revenuecat-sdk": "^4.2.0",
