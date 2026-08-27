@@ -45,6 +45,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { readAsStringAsync } from "expo-file-system/legacy";
 import { apiErrorMessage } from "@/lib/apiError";
+import { ModerationPanel } from "@/components/admin/ModerationPanel";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -117,7 +118,16 @@ const ICON_OPTIONS: { name: string; label: string }[] = [
   { name: "eye", label: "زيارة" },
 ];
 
-type Tab = "store" | "packages" | "tasks" | "tiers" | "features" | "notifications" | "admins" | "coins";
+type Tab =
+  | "moderation"
+  | "store"
+  | "packages"
+  | "tasks"
+  | "tiers"
+  | "features"
+  | "notifications"
+  | "admins"
+  | "coins";
 type ItemType = "frame" | "entrance" | "gift" | "background" | "symbol" | "recovery" | "other";
 type AdminRole = "owner" | "admin" | "moderator" | "editor";
 type NotifTarget = "all" | "vip" | "admins";
@@ -139,6 +149,7 @@ const ADMIN_ROLES: { k: AdminRole; l: string; icon: string; color: string }[] = 
 ];
 
 const TAB_ITEMS: { k: Tab; l: string; icon: string }[] = [
+  { k: "moderation", l: "الإشراف", icon: "flag" },
   { k: "store", l: "المتجر", icon: "storefront" },
   { k: "packages", l: "الباقات", icon: "logo-bitcoin" },
   { k: "tasks", l: "المهام", icon: "checkbox" },
@@ -151,7 +162,7 @@ const TAB_ITEMS: { k: Tab; l: string; icon: string }[] = [
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 20 : insets.top;
-  const [tab, setTab] = useState<Tab>("store");
+  const [tab, setTab] = useState<Tab>("moderation");
   const { isAdmin, isAdminLoading, isOwner } = useApp();
 
   const tabs = isOwner
@@ -206,6 +217,7 @@ export default function AdminScreen() {
         })}
       </ScrollView>
 
+      {tab === "moderation" && <ModerationPanel />}
       {tab === "store" && <StoreAdmin />}
       {tab === "packages" && <CoinPackagesAdmin />}
       {tab === "tasks" && <DailyTasksAdmin />}
