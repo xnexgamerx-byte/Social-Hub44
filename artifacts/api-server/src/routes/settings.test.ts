@@ -109,13 +109,17 @@ describe("settings endpoint", () => {
       .send({ invisibleRoomEntry: true })
       .expect(200);
 
+    // Deliberately exhaustive: a new column that the endpoint forgets to
+    // return, or returns as undefined, fails here rather than in the app.
     expect(res.body).toEqual({
       notifyDm: "none",
       notifyLikes: true,
       notifyMoments: true,
+      notifyVisitors: true,
       whoCanDm: "none",
       hideOnline: true,
       invisibleRoomEntry: true,
+      invisibleBrowsing: false,
       language: "ar",
     });
   });

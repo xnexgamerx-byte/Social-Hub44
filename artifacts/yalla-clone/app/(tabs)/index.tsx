@@ -49,7 +49,13 @@ function UserRow({ user, onChat }: { user: Profile; onChat: (u: Profile) => void
   const colors = useColors();
 
   return (
-    <View style={[styles.userRow, { backgroundColor: colors.card }]}>
+    <TouchableOpacity
+      style={[styles.userRow, { backgroundColor: colors.card }]}
+      activeOpacity={0.75}
+      onPress={() =>
+        router.push({ pathname: "/user/[userId]", params: { userId: user.userId } })
+      }
+    >
       <View style={styles.avatarContainer}>
         <UserAvatar uri={user.avatar} name={user.name} size={54} online={user.isOnline} />
       </View>
@@ -100,7 +106,7 @@ function UserRow({ user, onChat }: { user: Profile; onChat: (u: Profile) => void
       >
         <Ionicons name="chatbubble-ellipses" size={18} color={colors.primaryForeground} />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 

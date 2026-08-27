@@ -79,6 +79,15 @@ export default function NotificationSettingsScreen() {
               />
             </SettingsGroup>
 
+            <SettingsGroup title="ملفي الشخصي">
+              <SettingsRow
+                label="إشعار زائر"
+                hint="تنبيه لمّا أحد يفتح ملفك الشخصي"
+                switchValue={settings?.notifyVisitors ?? true}
+                onSwitchChange={(v) => void save({ notifyVisitors: v })}
+              />
+            </SettingsGroup>
+
             <Text style={[styles.footnote, { color: colors.mutedForeground }]}>
               الإشعارات تصل على النسخة المثبّتة من التطبيق فقط، ولا تعمل داخل Expo Go.
             </Text>

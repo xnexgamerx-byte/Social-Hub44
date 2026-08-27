@@ -12,8 +12,10 @@ export interface UserSettings {
   notifyDm: UserSettingsNotifyDm;
   notifyLikes: boolean;
   notifyMoments: boolean;
+  notifyVisitors: boolean;
   whoCanDm: UserSettingsWhoCanDm;
   hideOnline: boolean;
   invisibleRoomEntry: boolean;
+  invisibleBrowsing: boolean;
   language: string;
 }

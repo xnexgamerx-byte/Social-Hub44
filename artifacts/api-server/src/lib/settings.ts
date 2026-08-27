@@ -19,9 +19,11 @@ export interface SettingsView {
   notifyDm: NotifyDm;
   notifyLikes: boolean;
   notifyMoments: boolean;
+  notifyVisitors: boolean;
   whoCanDm: WhoCanDm;
   hideOnline: boolean;
   invisibleRoomEntry: boolean;
+  invisibleBrowsing: boolean;
   language: string;
 }
 
@@ -34,9 +36,11 @@ export const DEFAULT_SETTINGS: SettingsView = {
   notifyDm: "all",
   notifyLikes: true,
   notifyMoments: true,
+  notifyVisitors: true,
   whoCanDm: "all",
   hideOnline: false,
   invisibleRoomEntry: false,
+  invisibleBrowsing: false,
   language: "ar",
 };
 
@@ -50,11 +54,13 @@ function toView(row: UserSettings): SettingsView {
       : DEFAULT_SETTINGS.notifyDm,
     notifyLikes: row.notifyLikes,
     notifyMoments: row.notifyMoments,
+    notifyVisitors: row.notifyVisitors,
     whoCanDm: WHO_CAN_DM_VALUES.includes(row.whoCanDm as WhoCanDm)
       ? (row.whoCanDm as WhoCanDm)
       : DEFAULT_SETTINGS.whoCanDm,
     hideOnline: row.hideOnline,
     invisibleRoomEntry: row.invisibleRoomEntry,
+    invisibleBrowsing: row.invisibleBrowsing,
     language: row.language,
   };
 }
@@ -104,10 +110,13 @@ export async function updateSettings(
   if (patch.notifyDm !== undefined) set.notifyDm = patch.notifyDm;
   if (patch.notifyLikes !== undefined) set.notifyLikes = patch.notifyLikes;
   if (patch.notifyMoments !== undefined) set.notifyMoments = patch.notifyMoments;
+  if (patch.notifyVisitors !== undefined) set.notifyVisitors = patch.notifyVisitors;
   if (patch.whoCanDm !== undefined) set.whoCanDm = patch.whoCanDm;
   if (patch.hideOnline !== undefined) set.hideOnline = patch.hideOnline;
   if (patch.invisibleRoomEntry !== undefined)
     set.invisibleRoomEntry = patch.invisibleRoomEntry;
+  if (patch.invisibleBrowsing !== undefined)
+    set.invisibleBrowsing = patch.invisibleBrowsing;
   if (patch.language !== undefined) set.language = patch.language;
 
   if (Object.keys(set).length === 0) return getSettings(userId);

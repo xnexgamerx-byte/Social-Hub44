@@ -103,11 +103,6 @@ export default function SettingsHubScreen() {
         </SettingsGroup>
 
         <SettingsGroup>
-          <SettingsRow
-            label="تبديل الحساب"
-            disabled
-            disabledReason="قيد التحضير — حساب واحد لكل جهاز حالياً"
-          />
           <SettingsRow label="تسجيل الخروج" destructive onPress={confirmSignOut} />
         </SettingsGroup>
       </ScrollView>

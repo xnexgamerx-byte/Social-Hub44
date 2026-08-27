@@ -82,6 +82,7 @@ import type {
   VipTier,
   VipTierInput,
   VipTierUpdate,
+  Visitor,
   Wallet,
   WalletLookup,
   WalletTransaction
@@ -6095,6 +6096,83 @@ export function useGetSupportContact<TData = Awaited<ReturnType<typeof getSuppor
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetSupportContactQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListVisitorsUrl = () => {
+
+
+
+
+  return `/api/visitors`
+}
+
+/**
+ * @summary People who opened my profile, newest first
+ */
+export const listVisitors = async ( options?: RequestInit): Promise<Visitor[]> => {
+
+  return customFetch<Visitor[]>(getListVisitorsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVisitorsQueryKey = () => {
+    return [
+    `/api/visitors`
+    ] as const;
+    }
+
+
+export const getListVisitorsQueryOptions = <TData = Awaited<ReturnType<typeof listVisitors>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisitors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVisitorsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVisitors>>> = ({ signal }) => listVisitors({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVisitors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVisitorsQueryResult = NonNullable<Awaited<ReturnType<typeof listVisitors>>>
+export type ListVisitorsQueryError = ErrorType<Error>
+
+
+/**
+ * @summary People who opened my profile, newest first
+ */
+
+export function useListVisitors<TData = Awaited<ReturnType<typeof listVisitors>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisitors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVisitorsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

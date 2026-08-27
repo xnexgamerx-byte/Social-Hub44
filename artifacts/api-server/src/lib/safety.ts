@@ -11,6 +11,7 @@ import {
   followsTable,
   pushTokensTable,
   userSettingsTable,
+  profileVisitsTable,
   hostSessionsTable,
   hostsTable,
   userItemsTable,
@@ -151,6 +152,14 @@ export async function purgeUserData(userId: string): Promise<void> {
     await tx.delete(roomKicksTable).where(eq(roomKicksTable.userId, userId));
     await tx.delete(roomsTable).where(eq(roomsTable.ownerId, userId));
     await tx.delete(userSettingsTable).where(eq(userSettingsTable.userId, userId));
+    await tx
+      .delete(profileVisitsTable)
+      .where(
+        or(
+          eq(profileVisitsTable.profileUserId, userId),
+          eq(profileVisitsTable.visitorUserId, userId),
+        ),
+      );
     await tx.delete(profilesTable).where(eq(profilesTable.userId, userId));
   });
 }

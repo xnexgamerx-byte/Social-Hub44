@@ -28,6 +28,9 @@ export const userSettingsTable = pgTable("user_settings", {
   // Someone I follow posted a new moment. Enforced in routes/posts.ts.
   notifyMoments: boolean("notify_moments").notNull().default(true),
 
+  // Someone opened my profile. Enforced in routes/profiles.ts.
+  notifyVisitors: boolean("notify_visitors").notNull().default(true),
+
   // Who may open a direct message with this user.
   // "all" | "following" (only accounts this user follows) | "none".
   // Enforced in lib/dm.ts sendDm. The official account always bypasses it.
@@ -39,6 +42,10 @@ export const userSettingsTable = pgTable("user_settings", {
   // Join rooms without playing the equipped entrance effect.
   // Enforced in lib/socket.ts on room join.
   invisibleRoomEntry: boolean("invisible_room_entry").notNull().default(false),
+
+  // Browse profiles without appearing in anyone's visitors list.
+  // Enforced in routes/profiles.ts before a visit is recorded.
+  invisibleBrowsing: boolean("invisible_browsing").notNull().default(false),
 
   // UI language. Only "ar" is implemented today; the column exists so the
   // preference survives the app build that adds a second language.

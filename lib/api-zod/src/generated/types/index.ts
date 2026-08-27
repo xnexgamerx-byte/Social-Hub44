@@ -81,6 +81,7 @@ export * from './vipFeatureUpdate';
 export * from './vipTier';
 export * from './vipTierInput';
 export * from './vipTierUpdate';
+export * from './visitor';
 export * from './wallet';
 export * from './walletLookup';
 export * from './walletTransaction';

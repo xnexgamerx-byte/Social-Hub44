@@ -1896,8 +1896,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /visitors:
+    get:
+      operationId: listVisitors
+      tags: [profiles]
+      summary: People who opened my profile, newest first
+      responses:
+        "200":
+          description: Recent visitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Visitor"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
+    Visitor:
+      type: object
+      properties:
+        userId:
+          type: string
+        name:
+          type: string
+        avatar:
+          type: string
+        country:
+          type: string
+        level:
+          type: integer
+        isOfficial:
+          type: boolean
+        visitedAt:
+          type: string
+      required:
+        - userId
+        - name
+        - avatar
+        - country
+        - level
+        - isOfficial
+        - visitedAt
     SupportContact:
       type: object
       properties:
@@ -1921,6 +1966,8 @@ components:
           type: boolean
         notifyMoments:
           type: boolean
+        notifyVisitors:
+          type: boolean
         whoCanDm:
           type: string
           enum: [all, following, none]
@@ -1928,15 +1975,19 @@ components:
           type: boolean
         invisibleRoomEntry:
           type: boolean
+        invisibleBrowsing:
+          type: boolean
         language:
           type: string
       required:
         - notifyDm
         - notifyLikes
         - notifyMoments
+        - notifyVisitors
         - whoCanDm
         - hideOnline
         - invisibleRoomEntry
+        - invisibleBrowsing
         - language
     UserSettingsPatch:
       type: object
@@ -1951,12 +2002,16 @@ components:
           type: boolean
         notifyMoments:
           type: boolean
+        notifyVisitors:
+          type: boolean
         whoCanDm:
           type: string
           enum: [all, following, none]
         hideOnline:
           type: boolean
         invisibleRoomEntry:
+          type: boolean
+        invisibleBrowsing:
           type: boolean
         language:
           type: string

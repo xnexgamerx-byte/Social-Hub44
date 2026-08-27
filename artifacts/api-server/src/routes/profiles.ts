@@ -3,6 +3,7 @@ import { and, desc, eq, ne, notInArray } from "drizzle-orm";
 import { db, profilesTable, walletsTable, type Profile } from "@workspace/db";
 import {
   ListProfilesResponse,
+  ListVisitorsResponse,
   UpsertMyProfileBody,
   UpsertMyProfileResponse,
   GetProfileParams,
@@ -13,6 +14,7 @@ import { levelForXp } from "../lib/wallet";
 import { sendWelcomeDm } from "../lib/official";
 import { blockedIdsFor } from "../lib/safety";
 import { getSettings, settingsForUsers } from "../lib/settings";
+import { listVisitors, recordProfileVisit } from "../lib/visitors";
 
 const router: IRouter = Router();
 
@@ -22,6 +24,9 @@ const MAX_DIRECTORY = 100;
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 router.use("/profiles", requireAuth);
+// Path-scoped guards: /visitors lives on this router but is not under
+// /profiles, so it needs its own — without this it would be public.
+router.use("/visitors", requireAuth);
 
 /**
  * `hideOnline` comes from the profile owner's own privacy setting. When it is
@@ -153,9 +158,30 @@ router.get("/profiles/:userId", async (req, res): Promise<void> => {
   }
   // Viewing your own profile always shows your true state; the setting hides
   // you from other people, not from yourself.
-  const isSelf = params.data.userId === (req as AuthedRequest).userId;
+  const viewerId = (req as AuthedRequest).userId!;
+  const isSelf = params.data.userId === viewerId;
   const hideOnline = isSelf ? false : (await getSettings(params.data.userId)).hideOnline;
+
+  if (!isSelf) {
+    // Fire and forget — the profile must render whether or not this lands.
+    const [viewer] = await db
+      .select({ name: profilesTable.name })
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, viewerId))
+      .limit(1);
+    void recordProfileVisit({
+      profileUserId: params.data.userId,
+      visitorUserId: viewerId,
+      visitorName: viewer?.name ?? "",
+    });
+  }
+
   res.json(GetProfileResponse.parse(serialize(row.profile, row.xp, hideOnline)));
+});
+
+router.get("/visitors", async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId!;
+  res.json(ListVisitorsResponse.parse(await listVisitors(userId)));
 });
 
 export default router;

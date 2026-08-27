@@ -5,6 +5,16 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface Visitor {
+  userId: string;
+  name: string;
+  avatar: string;
+  country: string;
+  level: number;
+  isOfficial: boolean;
+  visitedAt: string;
+}
+
 export interface SupportContact {
   userId: string;
   name: string;
@@ -32,9 +42,11 @@ export interface UserSettings {
   notifyDm: UserSettingsNotifyDm;
   notifyLikes: boolean;
   notifyMoments: boolean;
+  notifyVisitors: boolean;
   whoCanDm: UserSettingsWhoCanDm;
   hideOnline: boolean;
   invisibleRoomEntry: boolean;
+  invisibleBrowsing: boolean;
   language: string;
 }
 
@@ -69,9 +81,11 @@ export interface UserSettingsPatch {
   notifyDm?: UserSettingsPatchNotifyDm;
   notifyLikes?: boolean;
   notifyMoments?: boolean;
+  notifyVisitors?: boolean;
   whoCanDm?: UserSettingsPatchWhoCanDm;
   hideOnline?: boolean;
   invisibleRoomEntry?: boolean;
+  invisibleBrowsing?: boolean;
   language?: UserSettingsPatchLanguage;
 }
 

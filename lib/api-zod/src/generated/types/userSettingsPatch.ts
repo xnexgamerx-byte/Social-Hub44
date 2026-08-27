@@ -16,8 +16,10 @@ export interface UserSettingsPatch {
   notifyDm?: UserSettingsPatchNotifyDm;
   notifyLikes?: boolean;
   notifyMoments?: boolean;
+  notifyVisitors?: boolean;
   whoCanDm?: UserSettingsPatchWhoCanDm;
   hideOnline?: boolean;
   invisibleRoomEntry?: boolean;
+  invisibleBrowsing?: boolean;
   language?: UserSettingsPatchLanguage;
 }

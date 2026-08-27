@@ -103,18 +103,7 @@ export default function AccountSecurityScreen() {
             hint={hasPassword ? undefined : "حسابك مسجّل عبر Google — عيّن كلمة مرور للدخول المباشر"}
             onPress={() => setShowPassword((v) => !v)}
           />
-          <SettingsRow
-            icon="phone-portrait-outline"
-            label="ربط رقم الهاتف"
-            disabled
-            disabledReason="قيد التحضير — يحتاج تفعيل إرسال الرموز عبر SMS"
-          />
-          <SettingsRow
-            icon="card-outline"
-            label="إعدادات حماية المدفوعات"
-            disabled
-            disabledReason="تُفعَّل مع تشغيل الشراء داخل التطبيق"
-          />
+
         </SettingsGroup>
 
         {showPassword ? (

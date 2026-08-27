@@ -19,7 +19,9 @@ import { useColors } from "@/hooks/useColors";
 const TOOLS = [
   { icon: "gift" as const, label: "ادعُ صديقاً", color: "#7C5CFC", route: "/invite" as const },
   { icon: "checkbox" as const, label: "المهام", color: "#22C55E", route: "/tasks" as const },
-  { icon: "diamond" as const, label: "VIP", color: "#FF6B9D", route: "/vip" as const },
+  // VIP keeps its own card above, so this slot goes to visitors — the tools
+  // row in the reference app is family / tasks / visitors / diamonds.
+  { icon: "eye" as const, label: "الزوار", color: "#FF6B9D", route: "/visitors" as const },
   { icon: "storefront" as const, label: "المتجر", color: "#06B6D4", route: "/store" as const },
 ];
 

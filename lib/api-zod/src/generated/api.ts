@@ -1384,9 +1384,11 @@ export const GetMySettingsResponse = zod.object({
   "notifyDm": zod.enum(['all', 'none']),
   "notifyLikes": zod.boolean(),
   "notifyMoments": zod.boolean(),
+  "notifyVisitors": zod.boolean(),
   "whoCanDm": zod.enum(['all', 'following', 'none']),
   "hideOnline": zod.boolean(),
   "invisibleRoomEntry": zod.boolean(),
+  "invisibleBrowsing": zod.boolean(),
   "language": zod.string()
 })
 
@@ -1398,9 +1400,11 @@ export const UpdateMySettingsBody = zod.object({
   "notifyDm": zod.enum(['all', 'none']).optional(),
   "notifyLikes": zod.boolean().optional(),
   "notifyMoments": zod.boolean().optional(),
+  "notifyVisitors": zod.boolean().optional(),
   "whoCanDm": zod.enum(['all', 'following', 'none']).optional(),
   "hideOnline": zod.boolean().optional(),
   "invisibleRoomEntry": zod.boolean().optional(),
+  "invisibleBrowsing": zod.boolean().optional(),
   "language": zod.enum(['ar']).optional()
 }).describe('Every field is optional. Fields that are omitted keep whatever value is already stored, so a client toggling one switch cannot blank the rest.')
 
@@ -1408,9 +1412,11 @@ export const UpdateMySettingsResponse = zod.object({
   "notifyDm": zod.enum(['all', 'none']),
   "notifyLikes": zod.boolean(),
   "notifyMoments": zod.boolean(),
+  "notifyVisitors": zod.boolean(),
   "whoCanDm": zod.enum(['all', 'following', 'none']),
   "hideOnline": zod.boolean(),
   "invisibleRoomEntry": zod.boolean(),
+  "invisibleBrowsing": zod.boolean(),
   "language": zod.string()
 })
 
@@ -1423,5 +1429,20 @@ export const GetSupportContactResponse = zod.object({
   "name": zod.string(),
   "avatar": zod.string()
 })
+
+
+/**
+ * @summary People who opened my profile, newest first
+ */
+export const ListVisitorsResponseItem = zod.object({
+  "userId": zod.string(),
+  "name": zod.string(),
+  "avatar": zod.string(),
+  "country": zod.string(),
+  "level": zod.number(),
+  "isOfficial": zod.boolean(),
+  "visitedAt": zod.string()
+})
+export const ListVisitorsResponse = zod.array(ListVisitorsResponseItem)
 
 
