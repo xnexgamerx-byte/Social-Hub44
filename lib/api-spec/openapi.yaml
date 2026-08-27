@@ -1916,8 +1916,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admins/media:
+    post:
+      operationId: uploadStoreAsset
+      tags: [admins]
+      summary: Upload a store asset and get back its public URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetUploadInput"
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetUploadResult"
+        "400":
+          description: Unsupported format, too large, or storage not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
+    AssetUploadInput:
+      type: object
+      description: A base64 data URI, e.g. "data:video/mp4;base64,AAAA...".
+      properties:
+        data:
+          type: string
+      required:
+        - data
+    AssetUploadResult:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
     Visitor:
       type: object
       properties:

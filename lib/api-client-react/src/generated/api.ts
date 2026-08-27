@@ -24,6 +24,8 @@ import type {
   Admin,
   AdminAuditEvent,
   AdminInput,
+  AssetUploadInput,
+  AssetUploadResult,
   AuthMe,
   BanEntry,
   BanInput,
@@ -6184,4 +6186,75 @@ export function useListVisitors<TData = Awaited<ReturnType<typeof listVisitors>>
 
 
 
+
+export const getUploadStoreAssetUrl = () => {
+
+
+
+
+  return `/api/admins/media`
+}
+
+/**
+ * @summary Upload a store asset and get back its public URL
+ */
+export const uploadStoreAsset = async (assetUploadInput: AssetUploadInput, options?: RequestInit): Promise<AssetUploadResult> => {
+
+  return customFetch<AssetUploadResult>(getUploadStoreAssetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assetUploadInput,)
+  }
+);}
+
+
+
+
+export const getUploadStoreAssetMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadStoreAsset>>, TError,{data: BodyType<AssetUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadStoreAsset>>, TError,{data: BodyType<AssetUploadInput>}, TContext> => {
+
+const mutationKey = ['uploadStoreAsset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadStoreAsset>>, {data: BodyType<AssetUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadStoreAsset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadStoreAssetMutationResult = NonNullable<Awaited<ReturnType<typeof uploadStoreAsset>>>
+    export type UploadStoreAssetMutationBody = BodyType<AssetUploadInput>
+    export type UploadStoreAssetMutationError = ErrorType<Error>
+
+    /**
+ * @summary Upload a store asset and get back its public URL
+ */
+export const useUploadStoreAsset = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadStoreAsset>>, TError,{data: BodyType<AssetUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadStoreAsset>>,
+        TError,
+        {data: BodyType<AssetUploadInput>},
+        TContext
+      > => {
+      return useMutation(getUploadStoreAssetMutationOptions(options));
+    }
 

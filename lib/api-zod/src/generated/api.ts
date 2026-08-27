@@ -1446,3 +1446,11 @@ export const ListVisitorsResponseItem = zod.object({
 export const ListVisitorsResponse = zod.array(ListVisitorsResponseItem)
 
 
+/**
+ * @summary Upload a store asset and get back its public URL
+ */
+export const UploadStoreAssetBody = zod.object({
+  "data": zod.string()
+}).describe('A base64 data URI, e.g. \"data:video\/mp4;base64,AAAA...\".')
+
+

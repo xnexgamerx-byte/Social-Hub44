@@ -3,6 +3,11 @@ import { desc, eq } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import { db, adminsTable, adminAuditTable } from "@workspace/db";
 import {
+  isStorageConfigured,
+  uploadStoreAsset,
+  UploadError,
+} from "../lib/storage";
+import {
   ListAdminsResponse,
   ListAdminsResponseItem,
   CreateAdminBody,
@@ -12,6 +17,7 @@ import {
   LookupWalletByPublicIdResponse,
   GrantCoinsBody,
   GrantCoinsResponse,
+  UploadStoreAssetBody,
 } from "@workspace/api-zod";
 import {
   requireAdmin,
@@ -266,6 +272,31 @@ router.get("/admins/audit", requireAdmin, async (_req, res): Promise<void> => {
       })),
     ),
   );
+});
+
+router.post("/admins/media", requireAdmin, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId!;
+  const parsed = UploadStoreAssetBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (!isStorageConfigured()) {
+    res.status(400).json({ error: "خدمة الملفات غير مهيأة على الخادم" });
+    return;
+  }
+  try {
+    const url = await uploadStoreAsset(userId, parsed.data.data);
+    res.status(201).json({ url });
+  } catch (err) {
+    if (err instanceof UploadError) {
+      // Carries the specific reason — wrong format, too big — so the admin
+      // can fix the file instead of guessing.
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 });
 
 export default router;

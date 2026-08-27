@@ -5,6 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * A base64 data URI, e.g. "data:video/mp4;base64,AAAA...".
+ */
+export interface AssetUploadInput {
+  data: string;
+}
+
+export interface AssetUploadResult {
+  url: string;
+}
+
 export interface Visitor {
   userId: string;
   name: string;

@@ -40,8 +40,11 @@ import {
   type VipTier,
   type WalletLookup,
   GrantCoinsInputCurrency,
+  useUploadStoreAsset,
 } from "@workspace/api-client-react";
 import * as ImagePicker from "expo-image-picker";
+import { readAsStringAsync } from "expo-file-system/legacy";
+import { apiErrorMessage } from "@/lib/apiError";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -263,8 +266,29 @@ function IconPicker({ value, onChange, color }: { value: string; onChange: (i: s
   );
 }
 
+/** Media types the picker returns, mapped to what the server accepts. */
+function guessContentType(uri: string, pickerType: string | null | undefined): string {
+  const ext = uri.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  const byExt: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    mov: "video/quicktime",
+    json: "application/json",
+  };
+  if (byExt[ext]) return byExt[ext];
+  // The picker only tells us "image" or "video"; fall back to the safe
+  // default for each so the server can still reject it with a clear reason.
+  return pickerType === "video" ? "video/mp4" : "image/png";
+}
+
 function MediaUploader({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
+  const uploadM = useUploadStoreAsset();
 
   const pick = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -277,9 +301,23 @@ function MediaUploader({ value, onChange }: { value: string; onChange: (url: str
       quality: 0.85,
       base64: false,
     });
-    if (!result.canceled && result.assets[0]) {
-      setUploading(true);
-      onChange(result.assets[0].uri);
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setUploading(true);
+    try {
+      // Read the bytes and upload them. Setting the local file:// URI here —
+      // which is what this used to do — produced items nobody else could see,
+      // because that path only exists on the admin's own device.
+      const base64 = await readAsStringAsync(asset.uri, { encoding: "base64" });
+      const contentType = guessContentType(asset.uri, asset.type);
+      const { url } = await uploadM.mutateAsync({
+        data: { data: `data:${contentType};base64,${base64}` },
+      });
+      onChange(url);
+    } catch (err) {
+      Alert.alert("تعذّر الرفع", apiErrorMessage(err, "تعذّر رفع الملف"));
+    } finally {
       setUploading(false);
     }
   };
@@ -299,7 +337,7 @@ function MediaUploader({ value, onChange }: { value: string; onChange: (url: str
       </TouchableOpacity>
       {!!value && (
         <View style={S.mediaPreview}>
-          {value.startsWith("http") || value.startsWith("file") ? (
+          {/^https?:/.test(value) && !/\.(mp4|webm|mov|json)(\?|$)/i.test(value) ? (
             <Image source={{ uri: value }} style={S.mediaImg} resizeMode="cover" />
           ) : null}
           <Text style={S.mediaUrl} numberOfLines={1}>{value}</Text>
@@ -308,6 +346,9 @@ function MediaUploader({ value, onChange }: { value: string; onChange: (url: str
           </TouchableOpacity>
         </View>
       )}
+      <Text style={S.mediaHint}>
+        الصيغ المدعومة: PNG · JPG · WebP · GIF · MP4 · WebM · Lottie (JSON) — حتى ١٠ ميغابايت
+      </Text>
       <Text style={S.mediaOrLabel}>— أو أدخل رابطاً —</Text>
       <TextInput
         value={value}
@@ -1167,6 +1208,7 @@ const S = StyleSheet.create({
   mediaPreview: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10, backgroundColor: CARD2, borderRadius: 10, padding: 8 },
   mediaImg: { width: 48, height: 48, borderRadius: 8 },
   mediaUrl: { flex: 1, color: MUTED, fontSize: 11 },
+  mediaHint: { color: MUTED, fontSize: 10.5, lineHeight: 16, marginTop: 6, textAlign: "right" },
   mediaClear: { padding: 4 },
   mediaOrLabel: { color: MUTED, fontSize: 11, textAlign: "center", marginVertical: 10 },
 });

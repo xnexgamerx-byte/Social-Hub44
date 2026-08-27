@@ -11,6 +11,8 @@ export * from './activateVipInputType';
 export * from './admin';
 export * from './adminAuditEvent';
 export * from './adminInput';
+export * from './assetUploadInput';
+export * from './assetUploadResult';
 export * from './authMe';
 export * from './banEntry';
 export * from './banInput';
