@@ -10,6 +10,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
 import {
   generalLimiter,
   uploadLimiter,
@@ -112,5 +113,10 @@ app.use("/api/profiles/me", writeLimiter);
 app.use("/api", generalLimiter);
 
 app.use("/api", router);
+
+// Both must sit after the router: the 404 only fires when nothing matched,
+// and Express identifies the error handler by its four parameters.
+app.use("/api", notFoundHandler);
+app.use(errorHandler);
 
 export default app;
