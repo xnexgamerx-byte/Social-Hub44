@@ -69,6 +69,7 @@ function RootLayoutNav() {
       <Stack.Screen name="support" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="user/[userId]" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="visitors" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="levels" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="legal/[doc]" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="profile-edit" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="store" options={{ headerShown: false, presentation: "card" }} />

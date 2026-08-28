@@ -50,6 +50,7 @@ import type {
   HostInput,
   KickInput,
   KickResult,
+  LevelState,
   ListProfilesParams,
   ListRoomsParams,
   OpenConversationInput,
@@ -6340,6 +6341,83 @@ export function useGetVoiceUsage<TData = Awaited<ReturnType<typeof getVoiceUsage
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetVoiceUsageQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMyLevelUrl = () => {
+
+
+
+
+  return `/api/levels/me`
+}
+
+/**
+ * @summary My level, progress toward the next, and what levels unlock
+ */
+export const getMyLevel = async ( options?: RequestInit): Promise<LevelState> => {
+
+  return customFetch<LevelState>(getGetMyLevelUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyLevelQueryKey = () => {
+    return [
+    `/api/levels/me`
+    ] as const;
+    }
+
+
+export const getGetMyLevelQueryOptions = <TData = Awaited<ReturnType<typeof getMyLevel>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyLevel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyLevelQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyLevel>>> = ({ signal }) => getMyLevel({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyLevel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyLevelQueryResult = NonNullable<Awaited<ReturnType<typeof getMyLevel>>>
+export type GetMyLevelQueryError = ErrorType<Error>
+
+
+/**
+ * @summary My level, progress toward the next, and what levels unlock
+ */
+
+export function useGetMyLevel<TData = Awaited<ReturnType<typeof getMyLevel>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyLevel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyLevelQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

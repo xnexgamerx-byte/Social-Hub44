@@ -1980,8 +1980,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /levels/me:
+    get:
+      operationId: getMyLevel
+      tags: [wallet]
+      summary: My level, progress toward the next, and what levels unlock
+      responses:
+        "200":
+          description: Level state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevelState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
+    LevelPerk:
+      type: object
+      properties:
+        level: { type: integer }
+        cost: { type: integer }
+        title: { type: string }
+        detail: { type: string }
+      required: [level, cost, title, detail]
+    LevelState:
+      type: object
+      properties:
+        level: { type: integer }
+        # Coins spent so far. Only spending counts, never buying or rewards.
+        spent: { type: integer }
+        nextAt: { type: integer }
+        badgeColor: { type: string }
+        roomLimit: { type: integer }
+        perks:
+          type: array
+          items:
+            $ref: "#/components/schemas/LevelPerk"
+      required: [level, spent, nextAt, badgeColor, roomLimit, perks]
     VoiceUsage:
       type: object
       properties:

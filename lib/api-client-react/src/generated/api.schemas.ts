@@ -5,6 +5,22 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface LevelPerk {
+  level: number;
+  cost: number;
+  title: string;
+  detail: string;
+}
+
+export interface LevelState {
+  level: number;
+  spent: number;
+  nextAt: number;
+  badgeColor: string;
+  roomLimit: number;
+  perks: LevelPerk[];
+}
+
 export interface VoiceUsage {
   /** Calendar month in UTC, "YYYY-MM". */
   period: string;

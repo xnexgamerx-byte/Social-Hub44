@@ -40,6 +40,7 @@ import {
   ActivateVipParams,
   ActivateVipBody,
   ActivateVipResponse,
+  GetMyLevelResponse,
 } from "@workspace/api-zod";
 import {
   ensureWallet,
@@ -49,6 +50,7 @@ import {
   InsufficientBalanceError,
   type Currency,
 } from "../lib/wallet";
+import { levelViewFor } from "../lib/levelPerks";
 import { requireAuth, type AuthedRequest } from "../lib/authz";
 import {
   verifyPurchase,
@@ -64,6 +66,17 @@ const router: IRouter = Router();
 // Scoped to /wallet: a bare router.use(requireAuth) would also gate every
 // router mounted after this one (e.g. the public /rooms list).
 router.use("/wallet", requireAuth);
+router.use("/levels", requireAuth);
+router.get("/levels/me", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId!;
+  const [wallet] = await db
+    .select({ xp: walletsTable.xp })
+    .from(walletsTable)
+    .where(eq(walletsTable.userId, userId))
+    .limit(1);
+  res.json(GetMyLevelResponse.parse(levelViewFor(wallet?.xp ?? 0)));
+});
+
 router.param("userId", (req, res, next, userId) => {
   if ((req as AuthedRequest).userId !== userId) {
     res.status(403).json({ error: "غير مصرح لك بالوصول" });

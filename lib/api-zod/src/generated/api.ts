@@ -1478,3 +1478,21 @@ export const GetVoiceUsageResponse = zod.object({
 })
 
 
+/**
+ * @summary My level, progress toward the next, and what levels unlock
+ */
+export const GetMyLevelResponse = zod.object({
+  "level": zod.number(),
+  "spent": zod.number(),
+  "nextAt": zod.number(),
+  "badgeColor": zod.string(),
+  "roomLimit": zod.number(),
+  "perks": zod.array(zod.object({
+  "level": zod.number(),
+  "cost": zod.number(),
+  "title": zod.string(),
+  "detail": zod.string()
+}))
+})
+
+

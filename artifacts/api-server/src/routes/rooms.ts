@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import { db, roomsTable } from "@workspace/db";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { db, roomsTable, walletsTable } from "@workspace/db";
 import {
   CreateRoomBody,
   UpdateRoomBody,
@@ -13,9 +13,12 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, isAdminUserId, type AuthedRequest } from "../lib/authz";
 import { roomOccupancies } from "../lib/socket";
+import { roomLimitForLevel } from "../lib/levelPerks";
+import { levelForXp } from "../lib/wallet";
 
-// Cap rooms per user so a single account cannot flood the directory.
-const MAX_ROOMS_PER_USER = 3;
+// Cap rooms per user so a single account cannot flood the directory. The
+// ceiling rises with the owner's level — one of the few things the level
+// actually unlocks.
 // Ceiling on one directory page, so the list cannot grow without bound.
 const MAX_LIST = 100;
 
@@ -32,11 +35,28 @@ function serialize(room: typeof roomsTable.$inferSelect, listeners = 0) {
  * which is the single thing that empties a voice app. Ordering is by people
  * present, then by newest.
  */
-function withListeners(rooms: (typeof roomsTable.$inferSelect)[]) {
+async function withListeners(rooms: (typeof roomsTable.$inferSelect)[]) {
   const counts = roomOccupancies(rooms.map((r) => String(r.id)));
+
+  // Owner level breaks ties between equally busy rooms — the "priority in the
+  // room list" the level screen promises. One query for the page, not one per
+  // room.
+  const ownerIds = [...new Set(rooms.map((r) => r.ownerId))];
+  const levels = new Map<string, number>();
+  if (ownerIds.length > 0) {
+    const wallets = await db
+      .select({ userId: walletsTable.userId, xp: walletsTable.xp })
+      .from(walletsTable)
+      .where(inArray(walletsTable.userId, ownerIds));
+    for (const w of wallets) levels.set(w.userId, levelForXp(w.xp));
+  }
+
   return rooms
     .map((r) => serialize(r, counts.get(String(r.id)) ?? 0))
-    .sort((a, b) => b.listeners - a.listeners);
+    .sort((a, b) => {
+      if (b.listeners !== a.listeners) return b.listeners - a.listeners;
+      return (levels.get(b.ownerId) ?? 0) - (levels.get(a.ownerId) ?? 0);
+    });
 }
 
 /** Escape the wildcards so a search for "%" does not match everything. */
@@ -69,7 +89,7 @@ router.get("/rooms", async (req, res): Promise<void> => {
     .where(and(...filters))
     .orderBy(desc(roomsTable.createdAt))
     .limit(MAX_LIST);
-  res.json(ListRoomsResponse.parse(withListeners(rooms)));
+  res.json(ListRoomsResponse.parse(await withListeners(rooms)));
 });
 
 // NOTE: must be declared before /rooms/:id so "mine" is not parsed as an id.
@@ -80,7 +100,7 @@ router.get("/rooms/mine", requireAuth, async (req, res): Promise<void> => {
     .from(roomsTable)
     .where(eq(roomsTable.ownerId, userId))
     .orderBy(desc(roomsTable.createdAt));
-  res.json(ListRoomsResponse.parse(withListeners(rooms)));
+  res.json(ListRoomsResponse.parse(await withListeners(rooms)));
 });
 
 router.get("/rooms/:id", async (req, res): Promise<void> => {
@@ -112,8 +132,14 @@ router.post("/rooms", requireAuth, async (req, res): Promise<void> => {
     .select({ id: roomsTable.id })
     .from(roomsTable)
     .where(and(eq(roomsTable.ownerId, userId), eq(roomsTable.active, true)));
-  if (mine.length >= MAX_ROOMS_PER_USER) {
-    res.status(400).json({ error: `الحد الأقصى ${MAX_ROOMS_PER_USER} غرف لكل مستخدم` });
+  const [wallet] = await db
+    .select({ xp: walletsTable.xp })
+    .from(walletsTable)
+    .where(eq(walletsTable.userId, userId))
+    .limit(1);
+  const limit = roomLimitForLevel(levelForXp(wallet?.xp ?? 0));
+  if (mine.length >= limit) {
+    res.status(400).json({ error: `الحد الأقصى ${limit} غرف — ارفع مستواك لفتح المزيد` });
     return;
   }
   const { name, description, category, tags, ownerName, ownerAvatar } = parsed.data;

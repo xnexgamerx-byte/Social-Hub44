@@ -22,6 +22,7 @@ const TOOLS = [
   // VIP keeps its own card above, so this slot goes to visitors — the tools
   // row in the reference app is family / tasks / visitors / diamonds.
   { icon: "eye" as const, label: "الزوار", color: "#FF6B9D", route: "/visitors" as const },
+  { icon: "trending-up" as const, label: "مستواي", color: "#F0B429", route: "/levels" as const },
   { icon: "storefront" as const, label: "المتجر", color: "#06B6D4", route: "/store" as const },
 ];
 
@@ -85,9 +86,18 @@ export default function ProfileScreen() {
             </Text>
           )}
           <View style={styles.badgeRow}>
-            <View style={[styles.lvBadge, { backgroundColor: colors.primary }]}>
+            {/* The badge is the only place the level appears, so it is also
+                the way to find out what it means and how to raise it. */}
+            <TouchableOpacity
+              style={[styles.lvBadge, { backgroundColor: colors.primary }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push("/levels");
+              }}
+              activeOpacity={0.75}
+            >
               <Text style={styles.lvBadgeText}>Lv {user.level}</Text>
-            </View>
+            </TouchableOpacity>
             {user.vipType && (
               <View style={[styles.vipBadge, { backgroundColor: "#C9972B" }]}>
                 <Ionicons name="diamond" size={10} color="#fff" />
