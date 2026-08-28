@@ -29,9 +29,22 @@ import { useRoomGifts } from "@/hooks/useRoomGifts";
 import { useRoomVoice } from "@/hooks/useRoomVoice";
 import type { LudoColor } from "@/lib/ludoBoard";
 
+/**
+ * The lobby's night sky, carried onto the table. This screen used to open on a
+ * different purple from the one LudoBackdrop paints, so walking out of the
+ * lobby into a game swapped worlds mid-tap.
+ */
+const SKY_TOP = "#4038A4";
+const SKY_MID = "#2B2570";
+const SKY_DEEP = "#1D1852";
 const GOLD = "#F5C242";
-const PANEL = "rgba(255,255,255,0.10)";
-const PANEL_LINE = "rgba(255,255,255,0.18)";
+const PANEL = "rgba(12,8,40,0.42)";
+const PANEL_LINE = "rgba(255,255,255,0.16)";
+
+/** Alpha-suffixed variant of a #RRGGBB colour, for fills and glows. */
+function alpha(hex: string, a: number): string {
+  return `${hex}${Math.round(a * 255).toString(16).padStart(2, "0")}`;
+}
 
 /**
  * Seats sit at the board corner matching their colour's yard, the way a
@@ -203,12 +216,17 @@ export default function LudoScreen() {
     return "";
   })();
 
+  // The banner takes the active player's colour, so whose turn it is reads
+  // before the sentence is parsed.
+  const turnHex = state?.phase === "playing" && state.turn ? LUDO_HEX[state.turn] : null;
+
   const cornerFor = (p: LudoPlayer) => styles[CORNER_STYLE[p.color]];
 
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={["#1B0B3B", "#2D1160", "#1B0B3B"]}
+        colors={[SKY_TOP, SKY_MID, SKY_DEEP]}
+        locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -239,12 +257,18 @@ export default function LudoScreen() {
         {/* Turn banner */}
         <View style={styles.bannerWrap}>
           <LinearGradient
-            colors={["rgba(124,92,252,0.35)", "rgba(124,92,252,0.12)"]}
+            colors={
+              turnHex
+                ? [alpha(turnHex, 0.42), alpha(turnHex, 0.1)]
+                : ["rgba(255,255,255,0.14)", "rgba(255,255,255,0.05)"]
+            }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.banner}
+            style={[styles.banner, turnHex ? { borderColor: alpha(turnHex, 0.55) } : null]}
           >
-            <DieFace value={state?.dice ?? null} size={30} />
+            <View
+              style={[styles.turnDot, { backgroundColor: turnHex ?? "rgba(255,255,255,0.4)" }]}
+            />
             <Text style={styles.bannerText} numberOfLines={1}>
               {banner}
             </Text>
@@ -307,7 +331,13 @@ export default function LudoScreen() {
               disabled={!canRoll}
               activeOpacity={0.85}
             >
-              <Ionicons name="dice" size={21} color={canRoll ? "#2A1508" : "#9CA3AF"} />
+              {/* The die sits on the button so the throw and its result are one
+                  object, instead of two halves at opposite ends of the screen. */}
+              {state?.dice ? (
+                <DieFace value={state.dice} size={26} />
+              ) : (
+                <Ionicons name="dice" size={21} color={canRoll ? "#2A1508" : "#9CA3AF"} />
+              )}
               <Text style={[styles.rollText, !canRoll && { color: "#9CA3AF" }]}>
                 {canMove ? "اختر قطعة" : isMyTurn ? "ارمِ النرد" : "بانتظار دورك"}
               </Text>
@@ -433,7 +463,7 @@ export default function LudoScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#1B0B3B" },
+  root: { flex: 1, backgroundColor: SKY_DEEP },
   flex: { flex: 1 },
   topBar: {
     flexDirection: "row",
@@ -474,6 +504,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   bannerText: { color: "#fff", fontSize: 13, fontWeight: "700" as const, flex: 1 },
+  turnDot: { width: 10, height: 10, borderRadius: 5 },
   errorText: {
     color: "#FCA5A5",
     fontSize: 12,
@@ -496,7 +527,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    backgroundColor: "rgba(20,8,48,0.82)",
+    backgroundColor: "rgba(16,12,52,0.86)",
     borderWidth: 1.5,
     borderColor: PANEL_LINE,
     borderRadius: 20,
@@ -566,9 +597,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: PANEL_LINE,
   },
-  sheetBackdrop: { flex: 1, backgroundColor: "rgba(10,4,26,0.6)" },
+  sheetBackdrop: { flex: 1, backgroundColor: "rgba(12,8,40,0.66)" },
   sheet: {
-    backgroundColor: "#241145",
+    backgroundColor: "#251E56",
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     maxHeight: 420,
