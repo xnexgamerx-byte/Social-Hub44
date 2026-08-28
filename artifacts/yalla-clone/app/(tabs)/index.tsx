@@ -23,6 +23,8 @@ import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { UserAvatar } from "@/components/UserAvatar";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
+import { SearchBar } from "@/components/SearchBar";
+import { useDebounced } from "@/hooks/useDebounced";
 import * as Haptics from "expo-haptics";
 
 const TABS = ["الكل", "متصلون الآن"];
@@ -115,9 +117,11 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user: me } = useApp();
   const [activeTab, setActiveTab] = useState(0);
+  const [search, setSearch] = useState("");
+  const query = useDebounced(search);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const profilesQ = useQuery(getListProfilesQueryOptions());
+  const profilesQ = useQuery(getListProfilesQueryOptions(query ? { q: query } : undefined));
   const openConversationM = useOpenConversation();
 
   const people = useMemo(() => {
@@ -165,6 +169,14 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <View style={styles.searchWrap}>
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="ابحث بالاسم أو رقم الحساب"
+        />
+      </View>
+
       <FlatList
         data={people}
         keyExtractor={(u) => u.userId}
@@ -190,9 +202,11 @@ export default function HomeScreen() {
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={36} color={colors.mutedForeground} />
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                {activeTab === 1
-                  ? "ما كو أحد متصل الآن"
-                  : "ما كو مستخدمون بعد — ادعُ أصدقاءك للتطبيق!"}
+                {query
+                  ? `ماكو نتائج لـ«${query}»`
+                  : activeTab === 1
+                    ? "ما كو أحد متصل الآن"
+                    : "ما كو مستخدمون بعد — ادعُ أصدقاءك للتطبيق!"}
               </Text>
             </View>
           )
@@ -205,6 +219,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  searchWrap: { paddingHorizontal: 16, paddingBottom: 10 },
   header: {
     flexDirection: "row",
     alignItems: "flex-end",

@@ -131,12 +131,35 @@ async function closeHostStint(
   }
 }
 
+/**
+ * The live server, so HTTP handlers can read room occupancy.
+ *
+ * Occupancy lives in the Socket.io adapter, which is per-process memory. That
+ * is fine on a single instance — what Render runs — but a second replica would
+ * only ever see its own half of the connections. Moving to more than one
+ * instance means moving this to Redis, or to the database.
+ */
+let ioRef: Server | null = null;
+
+/** How many sockets are currently in a room. Zero when nobody is connected. */
+export function roomOccupancy(roomId: string): number {
+  return ioRef?.sockets.adapter.rooms.get(roomChannel(roomId))?.size ?? 0;
+}
+
+/** Occupancy for many rooms at once, keyed by room id. */
+export function roomOccupancies(roomIds: string[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const id of roomIds) out.set(id, roomOccupancy(id));
+  return out;
+}
+
 export function attachSocketServer(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
     path: "/api/socket.io",
     cors: { origin: "*" },
     serveClient: false,
   });
+  ioRef = io;
 
   function presenceCount(channel: string): number {
     return io.sockets.adapter.rooms.get(channel)?.size ?? 0;

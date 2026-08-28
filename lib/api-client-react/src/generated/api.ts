@@ -50,6 +50,8 @@ import type {
   HostInput,
   KickInput,
   KickResult,
+  ListProfilesParams,
+  ListRoomsParams,
   OpenConversationInput,
   Post,
   PostInput,
@@ -2153,20 +2155,27 @@ export const useDeleteDailyTask = <TError = ErrorType<Error>,
       return useMutation(getDeleteDailyTaskMutationOptions(options));
     }
 
-export const getListRoomsUrl = () => {
+export const getListRoomsUrl = (params?: ListRoomsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/rooms`
+  return stringifiedParams.length > 0 ? `/api/rooms?${stringifiedParams}` : `/api/rooms`
 }
 
 /**
  * @summary List active rooms
  */
-export const listRooms = async ( options?: RequestInit): Promise<Room[]> => {
+export const listRooms = async (params?: ListRoomsParams, options?: RequestInit): Promise<Room[]> => {
 
-  return customFetch<Room[]>(getListRoomsUrl(),
+  return customFetch<Room[]>(getListRoomsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2179,23 +2188,23 @@ export const listRooms = async ( options?: RequestInit): Promise<Room[]> => {
 
 
 
-export const getListRoomsQueryKey = () => {
+export const getListRoomsQueryKey = (params?: ListRoomsParams,) => {
     return [
-    `/api/rooms`
+    `/api/rooms`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListRoomsQueryOptions = <TData = Awaited<ReturnType<typeof listRooms>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRooms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListRoomsQueryOptions = <TData = Awaited<ReturnType<typeof listRooms>>, TError = ErrorType<unknown>>(params?: ListRoomsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRooms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListRoomsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListRoomsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRooms>>> = ({ signal }) => listRooms({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRooms>>> = ({ signal }) => listRooms(params, { signal, ...requestOptions });
 
 
 
@@ -2213,11 +2222,11 @@ export type ListRoomsQueryError = ErrorType<unknown>
  */
 
 export function useListRooms<TData = Awaited<ReturnType<typeof listRooms>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRooms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListRoomsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRooms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListRoomsQueryOptions(options)
+  const queryOptions = getListRoomsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4345,20 +4354,27 @@ export const useRegisterPushToken = <TError = ErrorType<Error>,
       return useMutation(getRegisterPushTokenMutationOptions(options));
     }
 
-export const getListProfilesUrl = () => {
+export const getListProfilesUrl = (params?: ListProfilesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/profiles`
+  return stringifiedParams.length > 0 ? `/api/profiles?${stringifiedParams}` : `/api/profiles`
 }
 
 /**
  * @summary List app users, most recently active first
  */
-export const listProfiles = async ( options?: RequestInit): Promise<Profile[]> => {
+export const listProfiles = async (params?: ListProfilesParams, options?: RequestInit): Promise<Profile[]> => {
 
-  return customFetch<Profile[]>(getListProfilesUrl(),
+  return customFetch<Profile[]>(getListProfilesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -4371,23 +4387,23 @@ export const listProfiles = async ( options?: RequestInit): Promise<Profile[]> =
 
 
 
-export const getListProfilesQueryKey = () => {
+export const getListProfilesQueryKey = (params?: ListProfilesParams,) => {
     return [
-    `/api/profiles`
+    `/api/profiles`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListProfilesQueryOptions = <TData = Awaited<ReturnType<typeof listProfiles>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListProfilesQueryOptions = <TData = Awaited<ReturnType<typeof listProfiles>>, TError = ErrorType<Error>>(params?: ListProfilesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListProfilesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListProfilesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfiles>>> = ({ signal }) => listProfiles({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfiles>>> = ({ signal }) => listProfiles(params, { signal, ...requestOptions });
 
 
 
@@ -4405,11 +4421,11 @@ export type ListProfilesQueryError = ErrorType<Error>
  */
 
 export function useListProfiles<TData = Awaited<ReturnType<typeof listProfiles>>, TError = ErrorType<Error>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListProfilesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListProfilesQueryOptions(options)
+  const queryOptions = getListProfilesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

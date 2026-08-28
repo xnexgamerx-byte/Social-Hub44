@@ -45,7 +45,17 @@ export function RoomCard({ room, onEdit, onDelete }: RoomCardProps) {
       onPress={() => router.push(`/room/${room.id}`)}
       activeOpacity={0.88}
     >
-      <UserAvatar uri={room.ownerAvatar} name={room.ownerName || room.name} size={64} />
+      <View>
+        <UserAvatar uri={room.ownerAvatar} name={room.ownerName || room.name} size={64} />
+        {/* A live count is what makes the directory usable: without it every
+            tap is a gamble on whether anyone is inside. */}
+        {room.listeners > 0 ? (
+          <View style={[styles.liveBadge, { borderColor: colors.card }]}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveCount}>{room.listeners}</Text>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.body}>
         <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
           {room.name}
@@ -91,6 +101,21 @@ export function RoomCard({ room, onEdit, onDelete }: RoomCardProps) {
 }
 
 const styles = StyleSheet.create({
+  liveBadge: {
+    position: "absolute",
+    bottom: -3,
+    left: -4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#1E9E4A",
+    borderRadius: 9,
+    borderWidth: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+  },
+  liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#FFFFFF" },
+  liveCount: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" as const },
   card: {
     flexDirection: "row",
     alignItems: "center",

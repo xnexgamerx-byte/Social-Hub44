@@ -172,6 +172,7 @@ export interface Room {
   tags: string[];
   active: boolean;
   createdAt: string;
+  listeners: number;
 }
 
 export type RoomInputCategory = typeof RoomInputCategory[keyof typeof RoomInputCategory];
@@ -758,4 +759,19 @@ export interface VipTierUpdate {
   features?: string[];
   active?: boolean;
 }
+
+export type ListRoomsParams = {
+/**
+ * Match against room name, description or owner name.
+ */
+q?: string;
+category?: string;
+};
+
+export type ListProfilesParams = {
+/**
+ * Match against display name or public account id.
+ */
+q?: string;
+};
 

@@ -504,6 +504,11 @@ export const DeleteDailyTaskParams = zod.object({
 /**
  * @summary List active rooms
  */
+export const ListRoomsQueryParams = zod.object({
+  "q": zod.coerce.string().optional().describe('Match against room name, description or owner name.'),
+  "category": zod.coerce.string().optional()
+})
+
 export const ListRoomsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -514,7 +519,8 @@ export const ListRoomsResponseItem = zod.object({
   "ownerAvatar": zod.string(),
   "tags": zod.array(zod.string()),
   "active": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "listeners": zod.number()
 })
 export const ListRoomsResponse = zod.array(ListRoomsResponseItem)
 
@@ -551,7 +557,8 @@ export const ListMyRoomsResponseItem = zod.object({
   "ownerAvatar": zod.string(),
   "tags": zod.array(zod.string()),
   "active": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "listeners": zod.number()
 })
 export const ListMyRoomsResponse = zod.array(ListMyRoomsResponseItem)
 
@@ -573,7 +580,8 @@ export const GetRoomResponse = zod.object({
   "ownerAvatar": zod.string(),
   "tags": zod.array(zod.string()),
   "active": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "listeners": zod.number()
 })
 
 
@@ -608,7 +616,8 @@ export const UpdateRoomResponse = zod.object({
   "ownerAvatar": zod.string(),
   "tags": zod.array(zod.string()),
   "active": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "listeners": zod.number()
 })
 
 
@@ -959,6 +968,10 @@ export const RegisterPushTokenBody = zod.object({
 /**
  * @summary List app users, most recently active first
  */
+export const ListProfilesQueryParams = zod.object({
+  "q": zod.coerce.string().optional().describe('Match against display name or public account id.')
+})
+
 export const ListProfilesResponseItem = zod.object({
   "userId": zod.string(),
   "name": zod.string(),

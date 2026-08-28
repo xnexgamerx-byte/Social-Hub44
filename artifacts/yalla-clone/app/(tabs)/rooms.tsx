@@ -24,8 +24,10 @@ import {
 } from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RoomCard } from "@/components/RoomCard";
+import { SearchBar } from "@/components/SearchBar";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useColors } from "@/hooks/useColors";
+import { useDebounced } from "@/hooks/useDebounced";
 
 const TABS = ["موصى به", "أنا"];
 
@@ -48,9 +50,12 @@ export default function ChatroomScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState(0);
+  const [search, setSearch] = useState("");
+  // One request when typing settles, not one per keystroke.
+  const query = useDebounced(search);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const allRoomsQ = useQuery(getListRoomsQueryOptions());
+  const allRoomsQ = useQuery(getListRoomsQueryOptions(query ? { q: query } : undefined));
   const eventsQ = useQuery(getListRoomEventsQueryOptions());
   const myRoomsQ = useQuery({
     ...getListMyRoomsQueryOptions(),
@@ -103,6 +108,14 @@ export default function ChatroomScreen() {
             <Ionicons name="game-controller-outline" size={18} color="#F59E0B" />
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="ابحث عن غرفة أو مضيف"
+        />
       </View>
 
       <FlatList
@@ -185,7 +198,11 @@ export default function ChatroomScreen() {
             <View style={styles.emptyState}>
               <Ionicons name="home-outline" size={36} color={colors.mutedForeground} />
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                {activeTab === 1 ? "ما عندك غرف بعد — أنشئ غرفتك الأولى!" : "لا توجد غرف متاحة حالياً"}
+                {query && activeTab === 0
+                  ? `ماكو غرفة تطابق «${query}»`
+                  : activeTab === 1
+                    ? "ما عندك غرف بعد — أنشئ غرفتك الأولى!"
+                    : "لا توجد غرف متاحة حالياً"}
               </Text>
               {activeTab === 1 && (
                 <TouchableOpacity
@@ -218,6 +235,7 @@ export default function ChatroomScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  searchWrap: { paddingHorizontal: 16, paddingBottom: 10 },
   header: {
     flexDirection: "row",
     alignItems: "flex-end",

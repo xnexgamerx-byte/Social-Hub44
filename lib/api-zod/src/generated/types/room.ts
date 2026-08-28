@@ -17,4 +17,5 @@ export interface Room {
   tags: string[];
   active: boolean;
   createdAt: string;
+  listeners: number;
 }

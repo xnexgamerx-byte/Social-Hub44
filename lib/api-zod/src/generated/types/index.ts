@@ -38,6 +38,8 @@ export * from './hostEntry';
 export * from './hostInput';
 export * from './kickInput';
 export * from './kickResult';
+export * from './listProfilesParams';
+export * from './listRoomsParams';
 export * from './openConversationInput';
 export * from './post';
 export * from './postInput';

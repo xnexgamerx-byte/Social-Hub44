@@ -614,6 +614,16 @@ paths:
       operationId: listRooms
       tags: [rooms]
       summary: List active rooms
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Match against room name, description or owner name.
+          schema: { type: string }
+        - name: category
+          in: query
+          required: false
+          schema: { type: string }
       responses:
         "200":
           description: List of active rooms
@@ -1291,6 +1301,12 @@ paths:
       operationId: listProfiles
       tags: [profiles]
       summary: List app users, most recently active first
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Match against display name or public account id.
+          schema: { type: string }
       responses:
         "200":
           description: User directory
@@ -2168,6 +2184,7 @@ components:
         - tags
         - active
         - createdAt
+        - listeners
       properties:
         id: { type: integer }
         name: { type: string }
@@ -2181,6 +2198,8 @@ components:
           items: { type: string }
         active: { type: boolean }
         createdAt: { type: string }
+        # People connected to the room right now.
+        listeners: { type: integer }
     RoomInput:
       type: object
       required:

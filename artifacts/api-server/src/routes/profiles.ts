@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, ne, notInArray } from "drizzle-orm";
+import { and, desc, eq, ilike, ne, notInArray, or } from "drizzle-orm";
 import { db, profilesTable, walletsTable, type Profile } from "@workspace/db";
 import {
   ListProfilesResponse,
@@ -57,16 +57,24 @@ router.get("/profiles", async (req, res): Promise<void> => {
   const userId = (req as AuthedRequest).userId!;
   // Blocking hides both ways: neither party surfaces in the other list.
   const hidden = await blockedIdsFor(userId);
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+  // The directory is for discovering other people; exclude the caller.
+  const filters = [ne(profilesTable.userId, userId)];
+  if (hidden.length > 0) filters.push(notInArray(profilesTable.userId, hidden));
+  if (q) {
+    // Escape the wildcards so a search for "%" does not match everyone.
+    const term = `%${q.replace(/[%_]/g, (c) => "\\" + c)}%`;
+    // The public id is the number people actually read off a profile and pass
+    // to a friend, so it searches alongside the display name.
+    filters.push(or(ilike(profilesTable.name, term), ilike(walletsTable.publicId, term))!);
+  }
+
   const rows = await db
     .select({ profile: profilesTable, xp: walletsTable.xp })
     .from(profilesTable)
     .leftJoin(walletsTable, eq(walletsTable.userId, profilesTable.userId))
-    // The directory is for discovering other people; exclude the caller.
-    .where(
-      hidden.length > 0
-        ? and(ne(profilesTable.userId, userId), notInArray(profilesTable.userId, hidden))
-        : ne(profilesTable.userId, userId),
-    )
+    .where(and(...filters))
     .orderBy(desc(profilesTable.lastSeenAt))
     .limit(MAX_DIRECTORY);
   // One query for the whole page rather than one per row — the directory
