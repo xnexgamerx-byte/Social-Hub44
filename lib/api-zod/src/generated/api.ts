@@ -1467,3 +1467,14 @@ export const UploadStoreAssetBody = zod.object({
 }).describe('A base64 data URI, e.g. \"data:video\/mp4;base64,AAAA...\".')
 
 
+/**
+ * @summary Agora voice minutes consumed this month
+ */
+export const GetVoiceUsageResponse = zod.object({
+  "period": zod.string().describe('Calendar month in UTC, \"YYYY-MM\".'),
+  "minutes": zod.number().describe('Participant-minutes consumed so far.'),
+  "freeMinutes": zod.number(),
+  "percent": zod.number()
+})
+
+

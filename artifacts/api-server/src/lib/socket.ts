@@ -25,6 +25,7 @@ import { activeBan, isKickedFromRoom } from "./safety";
 import { sendDm, shapeForUser, DmValidationError } from "./dm";
 import { pushToUser } from "./push";
 import { getSettings } from "./settings";
+import { recordVoiceSeconds } from "./voiceUsage";
 
 interface JoinPayload {
   roomId: string;
@@ -206,6 +207,9 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       const channel = roomChannel(previous);
       if (roomEnteredAt) {
         void closeHostStint(authUserId, previous, roomEnteredAt);
+        // Agora bills per participant, and everyone in a room is on the voice
+        // channel — so a listener costs exactly what a speaker costs.
+        void recordVoiceSeconds((Date.now() - roomEnteredAt.getTime()) / 1000);
         roomEnteredAt = null;
       }
       if (voiceUserId) {
@@ -534,6 +538,7 @@ export function attachSocketServer(httpServer: HttpServer): Server {
       if (joinedRoom) {
         if (roomEnteredAt) {
           void closeHostStint(authUserId, joinedRoom, roomEnteredAt);
+          void recordVoiceSeconds((Date.now() - roomEnteredAt.getTime()) / 1000);
           roomEnteredAt = null;
         }
         if (voiceUserId) leaveMic(io, joinedRoom, voiceUserId);

@@ -87,6 +87,7 @@ import type {
   VipTierInput,
   VipTierUpdate,
   Visitor,
+  VoiceUsage,
   Wallet,
   WalletLookup,
   WalletTransaction
@@ -6273,4 +6274,81 @@ export const useUploadStoreAsset = <TError = ErrorType<Error>,
       > => {
       return useMutation(getUploadStoreAssetMutationOptions(options));
     }
+
+export const getGetVoiceUsageUrl = () => {
+
+
+
+
+  return `/api/admins/voice-usage`
+}
+
+/**
+ * @summary Agora voice minutes consumed this month
+ */
+export const getVoiceUsage = async ( options?: RequestInit): Promise<VoiceUsage> => {
+
+  return customFetch<VoiceUsage>(getGetVoiceUsageUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVoiceUsageQueryKey = () => {
+    return [
+    `/api/admins/voice-usage`
+    ] as const;
+    }
+
+
+export const getGetVoiceUsageQueryOptions = <TData = Awaited<ReturnType<typeof getVoiceUsage>>, TError = ErrorType<Error>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoiceUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVoiceUsageQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVoiceUsage>>> = ({ signal }) => getVoiceUsage({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVoiceUsage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVoiceUsageQueryResult = NonNullable<Awaited<ReturnType<typeof getVoiceUsage>>>
+export type GetVoiceUsageQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Agora voice minutes consumed this month
+ */
+
+export function useGetVoiceUsage<TData = Awaited<ReturnType<typeof getVoiceUsage>>, TError = ErrorType<Error>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoiceUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVoiceUsageQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

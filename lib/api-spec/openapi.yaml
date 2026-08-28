@@ -1962,8 +1962,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admins/voice-usage:
+    get:
+      operationId: getVoiceUsage
+      tags: [admins]
+      summary: Agora voice minutes consumed this month
+      responses:
+        "200":
+          description: Usage against the monthly allowance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceUsage"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
+    VoiceUsage:
+      type: object
+      properties:
+        period:
+          type: string
+          description: Calendar month in UTC, "YYYY-MM".
+        minutes:
+          type: integer
+          description: Participant-minutes consumed so far.
+        freeMinutes:
+          type: integer
+        percent:
+          type: integer
+      required:
+        - period
+        - minutes
+        - freeMinutes
+        - percent
     AssetUploadInput:
       type: object
       description: A base64 data URI, e.g. "data:video/mp4;base64,AAAA...".

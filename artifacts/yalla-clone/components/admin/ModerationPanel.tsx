@@ -15,6 +15,7 @@ import {
   getListBansQueryKey,
   getListBansQueryOptions,
   getListReportsQueryKey,
+  getGetVoiceUsageQueryOptions,
   getListReportsQueryOptions,
   useCreateBan,
   useDeleteBan,
@@ -156,6 +157,7 @@ export function ModerationPanel() {
   const [banning, setBanning] = useState(false);
 
   const reportsQ = useQuery(getListReportsQueryOptions());
+  const usageQ = useQuery(getGetVoiceUsageQueryOptions());
   const bansQ = useQuery(getListBansQueryOptions());
   const createBanM = useCreateBan();
   const deleteBanM = useDeleteBan();
@@ -209,6 +211,42 @@ export function ModerationPanel() {
 
   return (
     <ScrollView contentContainerStyle={S.wrap} showsVerticalScrollIndicator={false}>
+      {/* Voice allowance — sits first because it is the only number here
+          that costs money if nobody looks at it. */}
+      {usageQ.data ? (
+        <View style={[S.usage, usageQ.data.percent >= 80 && S.usageHot]}>
+          <View style={S.usageHead}>
+            <Ionicons
+              name={usageQ.data.percent >= 80 ? "warning" : "mic"}
+              size={16}
+              color={usageQ.data.percent >= 80 ? RED : GREEN}
+            />
+            <Text style={S.usageTitle}>دقائق الصوت — {usageQ.data.period}</Text>
+            <Text
+              style={[S.usagePct, usageQ.data.percent >= 80 && { color: RED }]}
+            >
+              {usageQ.data.percent}%
+            </Text>
+          </View>
+          <View style={S.usageBarTrack}>
+            <View
+              style={[
+                S.usageBarFill,
+                {
+                  width: `${Math.min(100, usageQ.data.percent)}%`,
+                  backgroundColor: usageQ.data.percent >= 80 ? RED : GREEN,
+                },
+              ]}
+            />
+          </View>
+          <Text style={S.usageMeta}>
+            {usageQ.data.minutes.toLocaleString("en-US")} من{" "}
+            {usageQ.data.freeMinutes.toLocaleString("en-US")} دقيقة مجانية ·
+            تُحتسب لكل مشارك، فغرفة فيها ١٠ أشخاص تستهلك ١٠ دقائق بالدقيقة
+          </Text>
+        </View>
+      ) : null}
+
       {/* Reports */}
       <View style={S.sectionHead}>
         <Text style={S.sectionTitle}>البلاغات</Text>
@@ -333,6 +371,27 @@ export function ModerationPanel() {
 }
 
 const S = StyleSheet.create({
+  usage: {
+    backgroundColor: CARD,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 14,
+    marginBottom: 18,
+    gap: 9,
+  },
+  usageHot: { borderColor: "rgba(239,68,68,0.5)" },
+  usageHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  usageTitle: { flex: 1, color: TEXT, fontSize: 14, fontWeight: "800", textAlign: "right" },
+  usagePct: { color: GREEN, fontSize: 15, fontWeight: "900" },
+  usageBarTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+  },
+  usageBarFill: { height: "100%", borderRadius: 4 },
+  usageMeta: { color: MUTED, fontSize: 11, lineHeight: 17, textAlign: "right" },
   wrap: { padding: 16, paddingBottom: 60 },
   sectionHead: {
     flexDirection: "row",

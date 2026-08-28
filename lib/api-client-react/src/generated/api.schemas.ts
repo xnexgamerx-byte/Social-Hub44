@@ -5,6 +5,15 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface VoiceUsage {
+  /** Calendar month in UTC, "YYYY-MM". */
+  period: string;
+  /** Participant-minutes consumed so far. */
+  minutes: number;
+  freeMinutes: number;
+  percent: number;
+}
+
 /**
  * A base64 data URI, e.g. "data:video/mp4;base64,AAAA...".
  */

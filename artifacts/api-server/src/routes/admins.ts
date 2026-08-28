@@ -7,6 +7,7 @@ import {
   uploadStoreAsset,
   UploadError,
 } from "../lib/storage";
+import { voiceUsage } from "../lib/voiceUsage";
 import {
   ListAdminsResponse,
   ListAdminsResponseItem,
@@ -18,6 +19,7 @@ import {
   GrantCoinsBody,
   GrantCoinsResponse,
   UploadStoreAssetBody,
+  GetVoiceUsageResponse,
 } from "@workspace/api-zod";
 import {
   requireAdmin,
@@ -297,6 +299,10 @@ router.post("/admins/media", requireAdmin, async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+router.get("/admins/voice-usage", requireAdmin, async (_req, res): Promise<void> => {
+  res.json(GetVoiceUsageResponse.parse(await voiceUsage()));
 });
 
 export default router;

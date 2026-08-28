@@ -86,6 +86,7 @@ export * from './vipTier';
 export * from './vipTierInput';
 export * from './vipTierUpdate';
 export * from './visitor';
+export * from './voiceUsage';
 export * from './wallet';
 export * from './walletLookup';
 export * from './walletTransaction';

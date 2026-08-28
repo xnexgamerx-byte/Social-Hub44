@@ -25,3 +25,4 @@ export * from "./pushTokens";
 export * from "./safety";
 export * from "./userSettings";
 export * from "./profileVisits";
+export * from "./voiceUsage";
