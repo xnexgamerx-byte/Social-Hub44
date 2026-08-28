@@ -104,13 +104,18 @@ describe("profiles directory", () => {
     expect(ids).not.toContain(BOB);
   });
 
-  it("reports the level derived from wallet XP", async () => {
+  it("reports the level derived from what the account has spent", async () => {
     actAs(ALICE);
     await request(app).post("/profiles/me").send({ name: `Alice ${TAG}` }).expect(200);
-    await adjustWallet({ userId: ALICE, currency: "coins", amount: 400, type: "recharge" });
 
-    const res = await request(app).get(`/profiles/${ALICE}`).expect(200);
-    expect(res.body.level).toBe(3);
+    // Buying coins does not raise the level — only giving them away does.
+    await adjustWallet({ userId: ALICE, currency: "coins", amount: 20_000, type: "recharge" });
+    const topUp = await request(app).get(`/profiles/${ALICE}`).expect(200);
+    expect(topUp.body.level).toBe(0);
+
+    await adjustWallet({ userId: ALICE, currency: "coins", amount: -12_000, type: "gift_sent" });
+    const spent = await request(app).get(`/profiles/${ALICE}`).expect(200);
+    expect(spent.body.level).toBe(2);
   });
 
   it("returns 404 for an unknown profile", async () => {

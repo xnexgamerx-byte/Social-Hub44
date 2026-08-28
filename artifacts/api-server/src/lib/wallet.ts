@@ -31,29 +31,76 @@ export interface WalletView {
 }
 
 /**
- * User level derived from lifetime XP: level n needs (n-1)^2 * 100 XP, capped
- * at 99. Level is always computed server-side from the stored XP.
+ * Coins that must be *spent* to reach level 1, taken from the reference app,
+ * where the first level reads "0 / 3000".
+ *
+ * The old curve needed 100 XP for level 2, so a single task reward pushed a
+ * brand new account up a level and levels meant nothing.
  */
-export function levelForXp(xp: number): number {
-  if (xp <= 0) return 1;
-  return Math.min(99, Math.floor(Math.sqrt(xp / 100)) + 1);
+export const LEVEL_ONE_COST = 3_000;
+/**
+ * Growth exponent. 2 gives level n at 3,000 x n^2 — level 10 at 300k spent,
+ * level 50 at 7.5M. Only the level-1 anchor comes from the reference app; the
+ * curve past it is a design choice, and this constant is where to tune it.
+ */
+const LEVEL_EXPONENT = 2;
+const MAX_LEVEL = 50;
+
+/** Coins that must have been spent to hold a given level. */
+export function costOfLevel(level: number): number {
+  if (level <= 0) return 0;
+  return Math.round(LEVEL_ONE_COST * Math.pow(level, LEVEL_EXPONENT));
 }
 
 /**
- * XP granted for a ledger entry. Only real economic activity earns XP:
- * recharges, gift sends, store purchases and task rewards — one XP per unit
- * of currency moved. Manual admin adjustments earn nothing.
+ * Level from lifetime spending.
+ *
+ * Starts at 0, not 1: a new account has spent nothing and the reference app
+ * shows it as level 0. Presenting an untouched account as level 1 makes the
+ * first real level worth nothing.
  */
-export function xpGainFor(type: TxType, amount: number): number {
-  switch (type) {
-    case "recharge":
-    case "gift_sent":
-    case "purchase":
-    case "task_reward":
-      return Math.abs(amount);
-    default:
-      return 0;
-  }
+export function levelForXp(xp: number): number {
+  if (xp < LEVEL_ONE_COST) return 0;
+  const level = Math.floor(Math.pow(xp / LEVEL_ONE_COST, 1 / LEVEL_EXPONENT));
+  return Math.min(MAX_LEVEL, level);
+}
+
+/** Coins still needed for the next level, and where this level began. */
+export function levelProgress(xp: number): {
+  level: number;
+  current: number;
+  nextAt: number;
+} {
+  const level = levelForXp(xp);
+  return {
+    level,
+    current: Math.max(0, xp),
+    nextAt: level >= MAX_LEVEL ? costOfLevel(MAX_LEVEL) : costOfLevel(level + 1),
+  };
+}
+
+/**
+ * XP granted for a ledger entry — which is to say, coins *spent*.
+ *
+ * The reference app is explicit that the level tracks spending, not wealth:
+ * gifts sent and store purchases count, while buying coins does not, and
+ * neither do free coins from tasks. That distinction is the whole point —
+ * otherwise a user levels up by claiming daily rewards without ever spending
+ * anything, which is what was happening here.
+ *
+ * An allowlist rather than a denylist: any spend type added later earns
+ * nothing until someone deliberately includes it. Game spending is excluded
+ * by the reference rules and stays excluded by default.
+ */
+const LEVELLING_TYPES = new Set<TxType>(["gift_sent", "purchase"]);
+
+export function xpGainFor(type: TxType, amount: number, currency: Currency = "coins"): number {
+  // Cosmetics bought with earned diamonds are not spending real money.
+  if (currency !== "coins") return 0;
+  // Credits are not spending; only a debit moves the level.
+  if (amount >= 0) return 0;
+  if (!LEVELLING_TYPES.has(type)) return 0;
+  return -amount;
 }
 
 export function toWalletView(w: Wallet): WalletView {
@@ -226,7 +273,7 @@ export async function adjustWalletTx(
   const next = current + amount;
   if (next < 0) throw new InsufficientBalanceError(currency);
 
-  const xpGain = xpGainFor(type, amount);
+  const xpGain = xpGainFor(type, amount, currency);
   const [updated] = await tx
     .update(walletsTable)
     .set({

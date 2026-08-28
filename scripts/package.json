@@ -7,11 +7,13 @@
     "hello": "tsx ./src/hello.ts",
     "seed:revenuecat": "tsx ./src/seedRevenueCat.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:legal": "node --disable-warning=ExperimentalWarning ./src/buildLegalPages.ts"
+    "build:legal": "node --disable-warning=ExperimentalWarning ./src/buildLegalPages.ts",
+    "recompute:levels": "tsx ./src/recomputeLevels.ts"
   },
   "dependencies": {
     "@replit/revenuecat-sdk": "^4.2.0",
-    "@workspace/db": "workspace:*"
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
